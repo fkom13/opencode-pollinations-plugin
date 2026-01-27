@@ -116,17 +116,16 @@ Just type in the chat. You are in **Manual Mode** by default.
 - Model: `openai` (GPT-4o Mini equivalent)
 - Model: `mistral` (Mistral Nemo)
 
-### 2. Going Pro
-1. Get your API Key from [pollinations.ai](https://pollinations.ai).
-2. Run command:
-   ```bash
-   /pollinations config apiKey sk_YourSecretKey
-   ```
-3. Set mode to Pro:
-   ```bash
-   /pollinations mode pro
-   ```
-4. **Reload Window**.
+### 🔑 Configuration (API Key)
+
+1.  Run the setup command:
+    ```bash
+    /connect
+    ```
+2.  Choose "pollinations" and enter your key if you have one (or leave blank for free tier).
+3.  **IMPORTANT**: You must **restart OpenCode** for the model list to update with your new tier (e.g. to see Paid models).
+
+### 🤖 Models
 
 ## 🔗 Links
 

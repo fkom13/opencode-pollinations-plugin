@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { generatePollinationsConfig } from './server/generate-config.js';
-import { loadConfig, updateCache } from './server/config.js';
+import { loadConfig } from './server/config.js';
 import { handleChatCompletion } from './server/proxy.js';
 import { createToastHooks, setGlobalClient } from './server/toast.js';
 import { createStatusHooks } from './server/status.js';
@@ -51,14 +51,12 @@ const startProxy = (): Promise<number> => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     status: "ok",
-                    version: "v4.0.5",
+                    version: "v5.2.0",
                     mode: config.mode
                 }));
                 return;
             }
 
-            // SUPPORT FLEXIBLE DES PATHS
-            // Le SDK peut envoyer /v1/chat/completions ou juste /chat/completions
             if (req.method === 'POST' && (req.url === '/v1/chat/completions' || req.url === '/chat/completions')) {
                 const chunks: any[] = [];
                 req.on('data', chunk => chunks.push(chunk));
@@ -83,7 +81,7 @@ const startProxy = (): Promise<number> => {
         });
 
         server.listen(TRACKING_PORT, '127.0.0.1', () => {
-            log(`[Proxy] Started V4 on port ${TRACKING_PORT}`);
+            log(`[Proxy] Started V5.2 on port ${TRACKING_PORT}`);
             resolve(TRACKING_PORT);
         });
 
@@ -97,17 +95,13 @@ const startProxy = (): Promise<number> => {
 // === PLUGIN EXPORT ===
 
 export const PollinationsPlugin: Plugin = async (ctx) => {
-    log("Plugin Initializing V4.0.5 (Path Fix)...");
-    try {
-        log(`[DEBUG] CTX Keys: ${Object.keys(ctx).join(', ')}`);
-    } catch (e) { log(`[DEBUG] Error inspecting ctx: ${e}`); }
+    log("Plugin Initializing V5.2.0 (Stable)...");
 
+    // START PROXY
     const port = await startProxy();
-    // IMPORTANT: On ajoute /v1 à la base URL pour guider le SDK, 
-    // mais le proxy accepte aussi sans.
     const localBaseUrl = `http://127.0.0.1:${port}/v1`;
 
-    setGlobalClient(ctx.client); // REGISTER CLIENT FOR IMMEDIATE TOASTS
+    setGlobalClient(ctx.client);
     const toastHooks = createToastHooks(ctx.client);
     const commandHooks = createCommandHooks();
 
@@ -115,23 +109,12 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
         async config(config) {
             log("[Hook] config() called");
 
-            // Extract API Key from incoming config to ensure Hot Reload
-            const incomingKey = config.provider?.pollinations?.options?.apiKey ||
-                config.provider?.pollinations_enter?.options?.apiKey;
+            // STARTUP only - No complex hot reload logic
+            // The user must restart OpenCode to refresh this list if they change keys.
+            const modelsArray = await generatePollinationsConfig();
 
-            if (incomingKey) {
-                log(`[Hook] Detected API Key update.`);
-                updateCache({ apiKey: incomingKey, mode: 'pro' });
-            }
-
-            const modelsArray = await generatePollinationsConfig(incomingKey);
             const modelsObj: any = {};
             for (const m of modelsArray) {
-                // Ensure ID is relative for mapping ("free/gemini") 
-                // BUT Provider needs full ID ? No, the object key is the relative ID
-                // OpenCode: provider.models[id]
-                // id comes from generatePollinationsConfig which returns "free/gemini"
-                // So modelsObj["free/gemini"] = ... matches.
                 modelsObj[m.id] = m;
             }
 
@@ -139,7 +122,7 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
 
             config.provider['pollinations'] = {
                 id: 'pollinations',
-                name: 'Pollinations V5.1 (Native)',
+                name: 'Pollinations V5.2 (Native)',
                 options: { baseURL: localBaseUrl },
                 models: modelsObj
             } as any;
@@ -147,7 +130,7 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
             log(`[Hook] Registered ${Object.keys(modelsObj).length} models.`);
         },
         ...toastHooks,
-        ...createStatusHooks(ctx.client), // New Status Bar Logic
+        ...createStatusHooks(ctx.client),
         ...commandHooks
     };
 };
