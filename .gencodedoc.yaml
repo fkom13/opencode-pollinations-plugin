@@ -1,0 +1,73 @@
+project_name: opencode-pollinations-plugin
+ignore:
+  dirs:
+  - node_modules
+  - venv
+  - .venv
+  - env
+  - __pycache__
+  - .git
+  - dist
+  - build
+  - .next
+  - coverage
+  - node_modules
+  - dist
+  - .next
+  - node_modules
+  - dist
+  - build
+  files:
+  - .DS_Store
+  - Thumbs.db
+  - package-lock.json
+  - yarn.lock
+  - package-lock.json
+  - yarn.lock
+  extensions:
+  - .log
+  - .pyc
+  - .pyo
+  - .exe
+  - .bin
+  - .jpg
+  - .png
+  - .gif
+  - .mp4
+  - .pdf
+  - .zip
+  patterns: []
+autosave:
+  enabled: false
+  mode: hybrid
+  timer:
+    interval: 300
+  diff_threshold:
+    threshold: 0.05
+    check_interval: 60
+    ignore_whitespace: true
+    ignore_comments: false
+  hybrid:
+    min_interval: 180
+    max_interval: 600
+    threshold: 0.03
+  retention:
+    max_autosaves: 50
+    compress_after_days: 7
+    delete_after_days: 30
+    keep_manual: true
+diff_format:
+  default: unified
+  unified_context: 3
+  json_include_content: true
+  ast_enabled: false
+output:
+  default_name: '{project}_doc_{date}.md'
+  include_tree: true
+  include_code: true
+  tree_full_code_select: false
+  language_detection: true
+  max_file_size: 1000000
+storage_path: .gencodedoc
+compression_enabled: true
+compression_level: 3

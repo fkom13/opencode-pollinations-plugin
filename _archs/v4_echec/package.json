@@ -1,0 +1,46 @@
+{
+    "name": "opencode-pollinations-plugin",
+    "version": "0.1.0",
+    "description": "Native Pollinations.ai Provider Plugin for OpenCode",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@opencode-ai/plugin": "^1.0.85",
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    },
+    "capabilities": {
+        "commands": [
+            {
+                "name": "pollinations",
+                "description": "Pollinations Configuration & V4 Modes",
+                "args": [
+                    {
+                        "name": "subcommand",
+                        "description": "usage | mode | config | help"
+                    },
+                    {
+                        "name": "param",
+                        "description": "Parameter value"
+                    }
+                ]
+            }
+        ]
+    }
+}

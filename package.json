@@ -1,0 +1,48 @@
+{
+    "name": "opencode-pollinations-plugin",
+    "displayName": "Pollinations AI (V5.1 Beta)",
+    "version": "5.1.3",
+    "description": "Native Pollinations.ai Provider Plugin for OpenCode",
+    "publisher": "pollinations",
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "activationEvents": [
+        "*"
+    ],
+    "contributes": {
+        "commands": [
+            {
+                "command": "pollinations.mode",
+                "title": "Pollinations: Change Mode"
+            },
+            {
+                "command": "pollinations.usage",
+                "title": "Pollinations: Show Usage"
+            }
+        ]
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@opencode-ai/plugin": "^1.0.85",
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    }
+}
