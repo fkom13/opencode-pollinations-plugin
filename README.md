@@ -73,14 +73,22 @@ You spend it to verify API calls on premium models.
 
 This plugin is part of the **OpenCode Ecosystem**.
 
-### Option 1: NPM (Standard Installation)
-This is the native method for OpenCode CLI.
+### Option 1: NPM (Instant Setup) (Recommended)
+This method automatically configures OpenCode to load the plugin.
 
-1. Install the plugin globally:
+1. Install global:
    ```bash
    npm install -g opencode-pollinations-plugin
    ```
-2. Register it in your OpenCode configuration (e.g., `~/.config/opencode/opencode.json`):
+2. Run the Auto-Setup (Magic):
+   ```bash
+   npx opencode-pollinations-plugin
+   ```
+   *This detects your OpenCode config and injects the plugin path automatically.*
+
+### Option 2: Manual Configuration
+1. Install globally as above.
+2. Edit `~/.config/opencode/opencode.json`:
    ```json
    {
      "plugin": [
@@ -88,16 +96,7 @@ This is the native method for OpenCode CLI.
      ]
    }
    ```
-
-### Option 2: Local Development (Source)
-If you are developing the plugin:
-1. Clone the repo.
-2. Link it globally:
-   ```bash
-   cd opencode-pollinations-plugin
-   npm link
-   ```
-3. Use the provided script (`run_dev.sh`) which automatically injects the plugin for testing.
+   *Note: If OpenCode fails to find it, use the absolute path to the global install.*
 
 ## 🚀 Publication (The "Registry")
 OpenCode uses NPM as its registry. To publish:
