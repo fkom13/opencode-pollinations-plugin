@@ -137,6 +137,12 @@ export function loadConfig(): PollinationsConfigV5 {
     return cachedConfig;
 }
 
+export function updateCache(newConfig: Partial<PollinationsConfigV5>) {
+    const current = loadConfig();
+    cachedConfig = { ...current, ...newConfig };
+    logConfig(`Cache Force-Updated via Hook. Mode: ${cachedConfig.mode}`);
+}
+
 // INTERNAL READER (The old loadConfig logic)
 function readConfigFromDisk(): PollinationsConfigV5 {
     let config: any = { ...DEFAULT_CONFIG_V5 };

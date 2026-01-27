@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { generatePollinationsConfig } from './server/generate-config.js';
-import { loadConfig } from './server/config.js';
+import { loadConfig, updateCache } from './server/config.js';
 import { handleChatCompletion } from './server/proxy.js';
 import { createToastHooks, setGlobalClient } from './server/toast.js';
 import { createStatusHooks } from './server/status.js';
@@ -115,7 +115,16 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
         async config(config) {
             log("[Hook] config() called");
 
-            const modelsArray = await generatePollinationsConfig();
+            // Extract API Key from incoming config to ensure Hot Reload
+            const incomingKey = config.provider?.pollinations?.options?.apiKey ||
+                config.provider?.pollinations_enter?.options?.apiKey;
+
+            if (incomingKey) {
+                log(`[Hook] Detected API Key update.`);
+                updateCache({ apiKey: incomingKey, mode: 'pro' });
+            }
+
+            const modelsArray = await generatePollinationsConfig(incomingKey);
             const modelsObj: any = {};
             for (const m of modelsArray) {
                 // Ensure ID is relative for mapping ("free/gemini") 

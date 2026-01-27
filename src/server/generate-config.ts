@@ -74,11 +74,16 @@ function formatName(id: string, censored: boolean = true): string {
 
 // --- MAIN GENERATOR logic ---
 
-export async function generatePollinationsConfig(): Promise<OpenCodeModel[]> {
+// --- MAIN GENERATOR logic ---
+
+export async function generatePollinationsConfig(forceApiKey?: string): Promise<OpenCodeModel[]> {
     const config = loadConfig();
     const modelsOutput: OpenCodeModel[] = [];
 
-    log(`Starting Configuration (V4.5 Clean Dynamic)...`);
+    log(`Starting Configuration (V5.1.22 Hot-Reload)...`);
+
+    // Use forced key (from Hook) or cached key
+    const effectiveKey = forceApiKey || config.apiKey;
 
     // 1. FREE UNIVERSE
     try {
@@ -100,10 +105,10 @@ export async function generatePollinationsConfig(): Promise<OpenCodeModel[]> {
     }
 
     // 2. ENTERPRISE UNIVERSE
-    if (config.apiKey && config.apiKey.length > 5 && config.apiKey !== 'dummy') {
+    if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {
             const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {
-                'Authorization': `Bearer ${config.apiKey}`
+                'Authorization': `Bearer ${effectiveKey}`
             });
             const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
 
