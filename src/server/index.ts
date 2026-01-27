@@ -26,11 +26,25 @@ function log(msg: string) {
         if (!fs.existsSync(path.dirname(LOG_FILE))) {
             fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
         }
-        fs.appendFileSync(LOG_FILE, `[${ts}] ${msg}\n`);
-    } catch (e) {
-        // silent fail
     }
 }
+
+// CRASH GUARD
+const CRASH_LOG = '/tmp/opencode_pollinations_crash.log';
+process.on('uncaughtException', (err) => {
+    try {
+        const msg = `[CRASH] Uncaught Exception: ${err.message}\n${err.stack}\n`;
+        fs.appendFileSync(CRASH_LOG, msg);
+        console.error(msg);
+    } catch (e) { }
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    try {
+        const msg = `[CRASH] Unhandled Rejection: ${reason}\n`;
+        fs.appendFileSync(CRASH_LOG, msg);
+    } catch (e) { }
+});
 
 const server = http.createServer(async (req, res) => {
     log(`${req.method} ${req.url}`);
