@@ -1,7 +1,7 @@
 # 🌸 Pollinations AI Plugin for OpenCode (v5.1)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/pollinations/pollinations/main/assets/logo-text.svg" alt="Pollinations.ai Logo" width="400">
+  <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="200">
   <br>
   <b>The Bridge between OpenCode and the Pollinations.ai Ecosystem.</b>
   <br>
@@ -80,8 +80,9 @@ This plugin is part of the **OpenCode Ecosystem**.
 4. Click **Install**.
 
 ### Option B: Manual VSIX
-1. Download the latest `.vsix` release from GitHub.
-2. Drag and drop into OpenCode Extension view.
+1. Download the latest `.vsix` release from [GitHub Releases](https://github.com/fkom13/opencode-pollinations-plugin/releases).
+2. Drag and drop the file into the **Extensions** view in OpenCode.
+3. Or use command: `Extensions: Install from VSIX...`
 
 ### Option C: NPM (For Devs)
 ```bash
