@@ -93,8 +93,10 @@ export async function generatePollinationsConfig(): Promise<OpenCodeModel[]> {
         log(`Fetched ${modelsOutput.length} Free models.`);
     } catch (e) {
         log(`Error fetching Free models: ${e}`);
-        // Fallback minimal (Network Error case)
-        modelsOutput.push({ id: "free/openai", name: "[Free] OpenAI (Network Error)", object: "model", variants: {} });
+        // Fallback Robust (Offline support)
+        modelsOutput.push({ id: "free/openai", name: "[Free] OpenAI (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/mistral", name: "[Free] Mistral Nemo (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Fallback)", object: "model", variants: {} });
     }
 
     // 2. ENTERPRISE UNIVERSE
@@ -114,7 +116,10 @@ export async function generatePollinationsConfig(): Promise<OpenCodeModel[]> {
 
         } catch (e) {
             log(`Error fetching Enterprise models: ${e}`);
-            // Pas de fallback statique pour Enterprise, c'est le réseau qui décide.
+            // Fallback Robust for Enterprise (User has Key but discovery failed)
+            modelsOutput.push({ id: "enter/gpt-4o", name: "[Enter] GPT-4o (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/claude-3-5-sonnet", name: "[Enter] Claude 3.5 Sonnet (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/deepseek-reasoner", name: "[Enter] DeepSeek R1 (Fallback)", object: "model", variants: {} });
         }
     }
 
