@@ -150,7 +150,12 @@ try {
 
 // LIFECYCLE DEBUG (Sync Write)
 const LIFE_LOG = '/tmp/POLLI_LIFECYCLE.log';
-try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [STARTUP] PID:${process.pid} Initializing...\n`); } catch (e) { }
+const LOC_LOG = '/tmp/POLLI_LOCATION.log'; // NEW: Track source location
+
+try {
+    fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [STARTUP] PID:${process.pid} Initializing...\n`);
+    fs.writeFileSync(LOC_LOG, `[${new Date().toISOString()}] RUNNING FROM: ${__filename}\n`);
+} catch (e) { }
 
 process.on('exit', (code) => {
     try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [EXIT] PID:${process.pid} Exiting with code ${code}\n`); } catch (e) { }
