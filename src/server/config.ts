@@ -14,7 +14,7 @@ const AUTH_FILE = path.join(HOMEDIR, '.local', 'share', 'opencode', 'auth.json')
 // === V5 CONFIGURATION SCHEMA ===
 
 export interface PollinationsConfigV5 {
-    version: number; // 5
+    version: string | number; // Dynamic from package.json
     mode: 'manual' | 'alwaysfree' | 'pro';
     apiKey?: string;
 
@@ -46,8 +46,18 @@ export interface PollinationsConfigV5 {
     statusBar: boolean;
 }
 
+// LOAD PACKAGE VERSION
+let PKG_VERSION = '5.0.0';
+try {
+    const pkgPath = path.join(__dirname, '../../package.json');
+    if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        PKG_VERSION = pkg.version;
+    }
+} catch (e) { }
+
 const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
-    version: 5,
+    version: PKG_VERSION,
     mode: 'manual',
     gui: {
         status: 'alert',
