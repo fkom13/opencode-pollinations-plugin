@@ -7,6 +7,15 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const args = process.argv.slice(2);
+
+// VERSION CHECK
+if (args.includes('--version') || args.includes('-v')) {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+    console.log(pkg.version);
+    process.exit(0);
+}
+
 console.log('🌸 Pollinations Plugin Setup');
 
 // 1. Locate Config
