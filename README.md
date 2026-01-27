@@ -73,21 +73,42 @@ You spend it to verify API calls on premium models.
 
 This plugin is part of the **OpenCode Ecosystem**.
 
-### Option A: OpenCode Registry (Recommended)
-1. Open **OpenCode**.
-2. Go to **Extensions**.
-3. Search for `opencode-pollinations-plugin`.
-4. Click **Install**.
+### Option 1: NPM (Standard Installation)
+This is the native method for OpenCode CLI.
 
-### Option B: Manual VSIX
-1. Download the latest `.vsix` release from [GitHub Releases](https://github.com/fkom13/opencode-pollinations-plugin/releases).
-2. Drag and drop the file into the **Extensions** view in OpenCode.
-3. Or use command: `Extensions: Install from VSIX...`
+1. Install the plugin globally:
+   ```bash
+   npm install -g opencode-pollinations-plugin
+   ```
+2. Register it in your OpenCode configuration (e.g., `~/.config/opencode/opencode.json`):
+   ```json
+   {
+     "plugin": [
+       "opencode-pollinations-plugin"
+     ]
+   }
+   ```
 
-### Option C: NPM (For Devs)
-```bash
-npm install -g opencode-pollinations-plugin
-```
+### Option 2: Local Development (Source)
+If you are developing the plugin:
+1. Clone the repo.
+2. Link it globally:
+   ```bash
+   cd opencode-pollinations-plugin
+   npm link
+   ```
+3. Use the provided script (`run_dev.sh`) which automatically injects the plugin for testing.
+
+## 🚀 Publication (The "Registry")
+OpenCode uses NPM as its registry. To publish:
+
+1. **Publish to NPM**:
+   ```bash
+   npm login
+   npm publish
+   ```
+2. **Join Ecosystem**: Submit a Pull Request to [OpenCode Ecosystem](https://github.com/opencode-ai/ecosystem) to list your plugin officially.
+   *Once accepted, users can find it via documentation or future registry commands.*
 
 ## 🚀 Getting Started
 
