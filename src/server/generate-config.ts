@@ -94,8 +94,8 @@ export async function generatePollinationsConfig(): Promise<OpenCodeModel[]> {
     } catch (e) {
         log(`Error fetching Free models: ${e}`);
         // Fallback Robust (Offline support)
-        modelsOutput.push({ id: "free/openai", name: "[Free] OpenAI (Fallback)", object: "model", variants: {} });
         modelsOutput.push({ id: "free/mistral", name: "[Free] Mistral Nemo (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/openai", name: "[Free] OpenAI (Fallback)", object: "model", variants: {} });
         modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Fallback)", object: "model", variants: {} });
     }
 
