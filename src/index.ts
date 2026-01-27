@@ -130,7 +130,7 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
 
             config.provider['pollinations'] = {
                 id: 'pollinations',
-                name: 'Pollinations V4',
+                name: 'Pollinations V5.1 (Native)',
                 options: { baseURL: localBaseUrl },
                 models: modelsObj
             } as any;
