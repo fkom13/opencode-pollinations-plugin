@@ -159,6 +159,9 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         const body: ChatRequest = JSON.parse(bodyRaw);
         const config = loadConfig();
 
+        // DEBUG: Trace Config State for Hot Reload verification
+        log(`[Proxy Request] Config Loaded. Mode: ${config.mode}, HasKey: ${!!config.apiKey}, KeyLength: ${config.apiKey ? config.apiKey.length : 0}`);
+
         // 0. COMMAND HANDLING
         if (body.messages && body.messages.length > 0) {
             const lastMsg = body.messages[body.messages.length - 1];

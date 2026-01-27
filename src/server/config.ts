@@ -82,6 +82,17 @@ function logConfig(msg: string) {
 
 // CACHE & WATCHER
 let cachedConfig: PollinationsConfigV5 | null = null;
+const listeners: Array<() => void> = [];
+
+export function subscribeToConfigChange(callback: () => void) {
+    listeners.push(callback);
+}
+
+function notifyListeners() {
+    listeners.forEach(cb => {
+        try { cb(); } catch (e) { logConfig(`Listener Error: ${e}`); }
+    });
+}
 
 // Watchers (Debounced)
 const watchedFiles = new Set<string>();
@@ -89,11 +100,12 @@ const watchedFiles = new Set<string>();
 function watchFileSafe(filePath: string) {
     if (watchedFiles.has(filePath)) return;
     try {
-        if (!fs.existsSync(filePath)) return; // Can't watch non-existent, but we retry on load
+        if (!fs.existsSync(filePath)) return;
         fs.watchFile(filePath, { interval: 2000 }, (curr, prev) => {
             if (curr.mtime !== prev.mtime) {
                 logConfig(`File Changed: ${path.basename(filePath)}. Reloading Config...`);
-                cachedConfig = readConfigFromDisk(); // Force fresh read
+                cachedConfig = readConfigFromDisk();
+                notifyListeners();
             }
         });
         watchedFiles.add(filePath);

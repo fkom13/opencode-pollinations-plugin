@@ -3,10 +3,21 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getAggregatedModels } from './pollinations-api.js';
-import { loadConfig, saveConfig } from './config.js';
+import { loadConfig, saveConfig, subscribeToConfigChange } from './config.js';
 import { handleChatCompletion } from './proxy.js';
+import { emitStatusToast } from './toast.js';
 
 const LOG_FILE = path.join(process.env.HOME || '/tmp', '.config/opencode/plugins/pollinations-v3.log');
+
+// Hot Reload Listener
+subscribeToConfigChange(() => {
+    const config = loadConfig();
+    const mode = config.mode.toUpperCase();
+    const hasKey = !!config.apiKey;
+
+    log(`[HOT RELOAD] Config Updated. Mode: ${mode}, HasKey: ${hasKey}`);
+    emitStatusToast('info', `Configuration Updated (Hot Reload) | Mode: ${mode}`, 'Pollinations System');
+});
 
 // Simple file logger
 function log(msg: string) {
