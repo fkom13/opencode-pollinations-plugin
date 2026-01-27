@@ -7,4 +7,9 @@ out/
 .env
 .pollinations/
 *.log
-coverage/
+logs/
+_archs/
+config.json
+.gencodedoc/
+.gencodedoc.yaml
+

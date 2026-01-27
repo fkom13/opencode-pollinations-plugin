@@ -51,7 +51,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     mode: 'manual',
     gui: {
         status: 'alert',
-        logs: 'error'
+        logs: 'none'
     },
     thresholds: {
         tier: 10,  // Alert if < 10%
@@ -60,14 +60,14 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     fallbacks: {
         free: {
             main: 'free/mistral', // Fallback gratuit solide
-            agent: 'free/gemini-thinking' // Agent gratuit puissant
+            agent: 'free/openai-fast' // Agent gratuit rapide
         },
         enter: {
-            agent: 'free/gemini-thinking' // Par défault, agent gratuit même en pro (économique)
+            agent: 'free/gemini' // Agent de secours (Free Gemini)
         }
     },
     enablePaidTools: false,
-    statusBar: false
+    statusBar: true
 };
 
 // Debug Helper
