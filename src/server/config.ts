@@ -44,6 +44,7 @@ export interface PollinationsConfigV5 {
     // Misc
     enablePaidTools: boolean;
     statusBar: boolean;
+    _loadedAt?: number; // Internal Timestamp
 }
 
 // LOAD PACKAGE VERSION
@@ -134,12 +135,24 @@ export function loadConfig(): PollinationsConfigV5 {
     watchFileSafe(AUTH_FILE);
     watchFileSafe(OPENCODE_CONFIG_FILE);
 
+    // SMART CACHE: Check mtime to ensure freshness (Hot Reload Fix)
+    try {
+        if (fs.existsSync(AUTH_FILE)) {
+            const stats = fs.statSync(AUTH_FILE);
+            // If cache is null or file is newer than our last load
+            if (!cachedConfig || !cachedConfig._loadedAt || stats.mtimeMs > cachedConfig._loadedAt) {
+                logConfig(`[SmartCache] Auth file changed (mtime). Reloading...`);
+                cachedConfig = readConfigFromDisk();
+            }
+        }
+    } catch (e) { logConfig(`[SmartCache] Error checking mtime: ${e}`); }
+
     return cachedConfig;
 }
 
 export function updateCache(newConfig: Partial<PollinationsConfigV5>) {
     const current = loadConfig();
-    cachedConfig = { ...current, ...newConfig };
+    cachedConfig = { ...current, ...newConfig, _loadedAt: Date.now() }; // Update timestamp
     logConfig(`Cache Force-Updated via Hook. Mode: ${cachedConfig.mode}`);
 }
 
@@ -213,7 +226,7 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         config.mode = 'manual';
     }
 
-    return { ...config, version: PKG_VERSION } as PollinationsConfigV5;
+    return { ...config, version: PKG_VERSION, _loadedAt: Date.now() } as PollinationsConfigV5;
 }
 
 export function saveConfig(updates: Partial<PollinationsConfigV5>) {
