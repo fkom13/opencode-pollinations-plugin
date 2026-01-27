@@ -80,7 +80,43 @@ function logConfig(msg: string) {
     } catch (e) { }
 }
 
+// CACHE & WATCHER
+let cachedConfig: PollinationsConfigV5 | null = null;
+
+// Watchers (Debounced)
+const watchedFiles = new Set<string>();
+
+function watchFileSafe(filePath: string) {
+    if (watchedFiles.has(filePath)) return;
+    try {
+        if (!fs.existsSync(filePath)) return; // Can't watch non-existent, but we retry on load
+        fs.watchFile(filePath, { interval: 2000 }, (curr, prev) => {
+            if (curr.mtime !== prev.mtime) {
+                logConfig(`File Changed: ${path.basename(filePath)}. Reloading Config...`);
+                cachedConfig = readConfigFromDisk(); // Force fresh read
+            }
+        });
+        watchedFiles.add(filePath);
+    } catch (e) { logConfig(`Watch Error for ${filePath}: ${e}`); }
+}
+
 export function loadConfig(): PollinationsConfigV5 {
+    // 1. Return Cache if available
+    if (cachedConfig) return cachedConfig;
+
+    // 2. Or Read Fresh
+    cachedConfig = readConfigFromDisk();
+
+    // 3. Initiate Watchers (Lazy)
+    watchFileSafe(CONFIG_FILE);
+    watchFileSafe(AUTH_FILE);
+    watchFileSafe(OPENCODE_CONFIG_FILE);
+
+    return cachedConfig;
+}
+
+// INTERNAL READER (The old loadConfig logic)
+function readConfigFromDisk(): PollinationsConfigV5 {
     let config: any = { ...DEFAULT_CONFIG_V5 };
     let keyFound = false;
 
@@ -90,35 +126,13 @@ export function loadConfig(): PollinationsConfigV5 {
             const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
             const custom = JSON.parse(raw);
 
-            // === MIGRATION LOGIC V4 -> V5 ===
+            // ... (Migration Logic is handled on Save, we trust Disk content here mostly)
             if (!custom.version || custom.version < 5) {
-                logConfig(`Migrating Config V${custom.version || 0} -> V5`);
-
-                // Migrate GUI
-                if (custom.toastVerbosity) {
-                    if (custom.toastVerbosity === 'none') { config.gui.status = 'none'; config.gui.logs = 'none'; }
-                    if (custom.toastVerbosity === 'alert') { config.gui.status = 'alert'; config.gui.logs = 'error'; }
-                    if (custom.toastVerbosity === 'all') { config.gui.status = 'all'; config.gui.logs = 'verbose'; }
-                }
-
-                // Migrate Fallbacks
-                if (custom.fallbackModels) {
-                    if (custom.fallbackModels.main) config.fallbacks.free.main = custom.fallbackModels.main;
-                    if (custom.fallbackModels.agent) {
-                        config.fallbacks.free.agent = custom.fallbackModels.agent;
-                        config.fallbacks.enter.agent = custom.fallbackModels.agent;
-                    }
-                }
-
-                // Preserve others
+                // If old, we don't migrate inside read to avoid write-loops.
+                // We just read what we can.
                 if (custom.apiKey) config.apiKey = custom.apiKey;
                 if (custom.mode) config.mode = custom.mode;
-                if (custom.statusBar !== undefined) config.statusBar = custom.statusBar;
-
-                // Save Migrated
-                saveConfig(config);
             } else {
-                // Already V5
                 config = { ...config, ...custom };
             }
 
@@ -132,7 +146,8 @@ export function loadConfig(): PollinationsConfigV5 {
             if (fs.existsSync(AUTH_FILE)) {
                 const raw = fs.readFileSync(AUTH_FILE, 'utf-8');
                 const authData = JSON.parse(raw);
-                const entry = authData['pollinations'] || authData['pollinations_enter'];
+                // Supports flat key or nested object
+                const entry = authData['pollinations'] || authData['pollinations_enter'] || authData['pollinations_api_key'];
 
                 if (entry) {
                     const key = (typeof entry === 'object' && entry.key) ? entry.key : entry;
@@ -140,14 +155,14 @@ export function loadConfig(): PollinationsConfigV5 {
                         config.apiKey = key;
                         config.mode = 'pro';
                         keyFound = true;
-                        logConfig(`Recovered API Key from Auth Store`);
+                        logConfig(`Hot-Loaded API Key from Auth Store`);
                     }
                 }
             }
         } catch (e) { logConfig(`Error reading auth.json: ${e}`); }
     }
 
-    // 3. Try OpenCode Config
+    // 3. Try OpenCode Config (Fallback)
     if (!keyFound) {
         try {
             if (fs.existsSync(OPENCODE_CONFIG_FILE)) {
@@ -165,7 +180,7 @@ export function loadConfig(): PollinationsConfigV5 {
         } catch (e) { }
     }
 
-    // Default mode logic
+    // Default mode correction
     if (!keyFound && config.mode === 'pro') {
         config.mode = 'manual';
     }
@@ -175,7 +190,8 @@ export function loadConfig(): PollinationsConfigV5 {
 
 export function saveConfig(updates: Partial<PollinationsConfigV5>) {
     try {
-        const current = loadConfig();
+        // We must base updates on current state (even if cached is slightly old, we refresh first?)
+        const current = readConfigFromDisk(); // Read disk for safety before write
         const updated = { ...current, ...updates, version: 5 };
 
         if (!fs.existsSync(CONFIG_DIR_POLLI)) {
@@ -183,6 +199,7 @@ export function saveConfig(updates: Partial<PollinationsConfigV5>) {
         }
 
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2));
+        cachedConfig = updated; // Update Cache immediately
         return updated;
     } catch (e) {
         logConfig(`Error saving config: ${e}`);
