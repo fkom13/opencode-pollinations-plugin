@@ -246,12 +246,12 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = "Quota Unreachable (Safety)";
-                } else if (quota.tierRemaining <= 0.1) {
-                    log(`[SafetyNet] AlwaysFree Mode: Daily Tier Empty. Switching to Free Fallback.`);
+                } else if (quota.tierRemaining <= (config.thresholds.tier / 100)) {
+                    log(`[SafetyNet] AlwaysFree Mode: Tier threshold (${config.thresholds.tier}%) reached. Switching to Free Fallback.`);
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = "Daily Tier Empty (Wallet Protected)";
+                    fallbackReason = `Daily Tier < ${config.thresholds.tier}% (Wallet Protected)`;
                 }
             }
         }
@@ -263,12 +263,12 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = "Quota Unreachable (Safety)";
-                } else if (quota.walletBalance < 0.10 && quota.tierRemaining <= 0.1) {
-                    log(`[SafetyNet] Pro Mode: Wallet Critical (<$0.10). Switching to Free Fallback.`);
+                } else if (quota.walletBalance < config.thresholds.wallet && quota.tierRemaining <= 0.1) { // Tier is loose here, wallet is primary
+                    log(`[SafetyNet] Pro Mode: Wallet Critical (<$${config.thresholds.wallet}). Switching to Free Fallback.`);
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = "Wallet Critical";
+                    fallbackReason = `Wallet < $${config.thresholds.wallet}`;
                 }
             }
         }
