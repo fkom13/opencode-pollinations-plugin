@@ -207,14 +207,14 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         config.mode = 'manual';
     }
 
-    return config as PollinationsConfigV5;
+    return { ...config, version: PKG_VERSION } as PollinationsConfigV5;
 }
 
 export function saveConfig(updates: Partial<PollinationsConfigV5>) {
     try {
         // We must base updates on current state (even if cached is slightly old, we refresh first?)
         const current = readConfigFromDisk(); // Read disk for safety before write
-        const updated = { ...current, ...updates, version: 5 };
+        const updated = { ...current, ...updates, version: PKG_VERSION };
 
         if (!fs.existsSync(CONFIG_DIR_POLLI)) {
             fs.mkdirSync(CONFIG_DIR_POLLI, { recursive: true });
