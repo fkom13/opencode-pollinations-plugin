@@ -26,6 +26,9 @@ function log(msg: string) {
         if (!fs.existsSync(path.dirname(LOG_FILE))) {
             fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
         }
+        fs.appendFileSync(LOG_FILE, `[${ts}] ${msg}\n`);
+    } catch (e) {
+        // silent fail
     }
 }
 
@@ -145,8 +148,17 @@ try {
     }
 } catch (e) { }
 
+// LIFECYCLE DEBUG (Sync Write)
+const LIFE_LOG = '/tmp/POLLI_LIFECYCLE.log';
+try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [STARTUP] PID:${process.pid} Initializing...\n`); } catch (e) { }
+
+process.on('exit', (code) => {
+    try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [EXIT] PID:${process.pid} Exiting with code ${code}\n`); } catch (e) { }
+});
+
 server.listen(PORT, '127.0.0.1', () => {
     const url = `http://127.0.0.1:${PORT}`;
     log(`[SERVER] Started V3 Phase 3 (Auth Enabled) on port ${PORT}`);
+    try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [LISTEN] PID:${process.pid} Listening on ${PORT}\n`); } catch (e) { }
     console.log(`POLLINATIONS_V3_URL=${url}`);
 });
