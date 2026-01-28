@@ -246,12 +246,15 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = "Quota Unreachable (Safety)";
-                } else if (quota.tierRemaining <= (config.thresholds.tier / 100)) {
-                    log(`[SafetyNet] AlwaysFree Mode: Tier threshold (${config.thresholds.tier}%) reached. Switching to Free Fallback.`);
-                    actualModel = config.fallbacks.free.main.replace('free/', '');
-                    isEnterprise = false;
-                    isFallbackActive = true;
-                    fallbackReason = `Daily Tier < ${config.thresholds.tier}% (Wallet Protected)`;
+                } else {
+                    const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
+                    if (tierRatio <= (config.thresholds.tier / 100)) {
+                        log(`[SafetyNet] AlwaysFree Mode: Tier (${(tierRatio * 100).toFixed(1)}%) <= Threshold (${config.thresholds.tier}%). Switching.`);
+                        actualModel = config.fallbacks.free.main.replace('free/', '');
+                        isEnterprise = false;
+                        isFallbackActive = true;
+                        fallbackReason = `Daily Tier < ${config.thresholds.tier}% (Wallet Protected)`;
+                    }
                 }
             }
         }
