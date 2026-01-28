@@ -20,20 +20,46 @@ function log(msg: string) {
 
 const TRACKING_PORT = 10001;
 
-// === ANTI-ZOMBIE ATOMIC CLEANUP ===
-try {
-    log(`[Init] Checking port ${TRACKING_PORT} for zombies...`);
-    execSync(`fuser -k ${TRACKING_PORT}/tcp || true`);
-    log(`[Init] Port ${TRACKING_PORT} cleaned.`);
-} catch (e) {
-    log(`[Init] Zombie cleanup warning: ${e}`);
-}
+// === ANTI-ZOMBIE / PORT MANAGMENT (CROSS-PLATFORM) ===
+// Instead of killing specific PIDs (which requires OS-specific commands like fuser/taskkill),
+// we use a "Try to Listen" approach. If the port is busy, we assume it's a previous instance
+// of ourselves (or another plugin instance) and we try to reuse it or fail gracefully.
+// This works on Windows, Linux, and macOS without external dependencies.
+
+const tryListen = (server: http.Server, port: number, retries = 3): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        server.once('error', (err: any) => {
+            if (err.code === 'EADDRINUSE') {
+                if (retries > 0) {
+                    log(`[Init] Port ${port} busy. Retrying in 500ms... (${retries} left)`);
+                    setTimeout(() => {
+                        server.close();
+                        server.listen(port, '127.0.0.1'); // Retry listen
+                    }, 500);
+                } else {
+                    log(`[Init] Port ${port} still busy. Assuming persistent instance.`);
+                    resolve(); // Resolve anyway, assuming existing instance will handle requests
+                }
+            } else {
+                reject(err);
+            }
+        });
+
+        server.once('listening', () => {
+            log(`[Init] Proxy successfully bound to port ${port}`);
+            resolve();
+        });
+
+        server.listen(port, '127.0.0.1');
+    });
+};
 
 // === GESTION DU CYCLE DE VIE PROXY ===
 
 const startProxy = (): Promise<number> => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         const server = http.createServer(async (req, res) => {
+            // ... (Request Handling - Unchanged) ...
             log(`[Proxy] Request: ${req.method} ${req.url}`);
 
             res.setHeader('Access-Control-Allow-Origin', '*');
@@ -51,7 +77,7 @@ const startProxy = (): Promise<number> => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     status: "ok",
-                    version: "v5.2.0",
+                    version: "v5.3.0",
                     mode: config.mode
                 }));
                 return;
@@ -80,15 +106,14 @@ const startProxy = (): Promise<number> => {
             res.end("Not Found");
         });
 
-        server.listen(TRACKING_PORT, '127.0.0.1', () => {
-            log(`[Proxy] Started V5.2 on port ${TRACKING_PORT}`);
+        // Robust Startup Logic
+        try {
+            await tryListen(server, TRACKING_PORT, 3);
             resolve(TRACKING_PORT);
-        });
-
-        server.on('error', (e: any) => {
-            log(`[Proxy] Fatal Error: ${e}`);
-            resolve(0);
-        });
+        } catch (e) {
+            log(`[Proxy] Fatal Bind Error: ${e}`);
+            resolve(0); // Should handle gracefully upper in stack
+        }
     });
 };
 
