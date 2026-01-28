@@ -266,12 +266,22 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = "Quota Unreachable (Safety)";
-                } else if (quota.walletBalance < config.thresholds.wallet && quota.tierRemaining <= 0.1) { // Tier is loose here, wallet is primary
-                    log(`[SafetyNet] Pro Mode: Wallet Critical (<$${config.thresholds.wallet}). Switching to Free Fallback.`);
-                    actualModel = config.fallbacks.free.main.replace('free/', '');
-                    isEnterprise = false;
-                    isFallbackActive = true;
-                    fallbackReason = `Wallet < $${config.thresholds.wallet}`;
+                } else {
+                    const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
+
+                    // Logic: Fallback if Wallet is Low (< Threshold) AND Tier is Exhausted (< Threshold %)
+                    // Wait, user wants priority to Free Tier.
+                    // If Free Tier is available (Ratio > Threshold), we usage it (don't fallback).
+                    // If Free Tier is exhausted (Ratio <= Threshold), THEN check Wallet.
+                    // If Wallet also Low, THEN Fallback.
+
+                    if (quota.walletBalance < config.thresholds.wallet && tierRatio <= (config.thresholds.tier / 100)) {
+                        log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet} AND Tier < ${config.thresholds.tier}%. Switching.`);
+                        actualModel = config.fallbacks.free.main.replace('free/', '');
+                        isEnterprise = false;
+                        isFallbackActive = true;
+                        fallbackReason = `Wallet & Tier Critical`;
+                    }
                 }
             }
         }
