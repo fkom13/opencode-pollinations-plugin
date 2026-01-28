@@ -475,15 +475,19 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         if (!fetchRes.ok) {
             log(`Upstream Error: ${fetchRes.status} ${fetchRes.statusText}`);
 
-            // TRANSPARENT FALLBACK ON 402 (Payment) or 429 (Rate Limit) IF Enterprise
-            if ((fetchRes.status === 402 || fetchRes.status === 429) && isEnterprise) {
+            // TRANSPARENT FALLBACK ON 4xx Errors (Payment, Rate Limit, Auth) IF Enterprise
+            if ((fetchRes.status === 402 || fetchRes.status === 429 || fetchRes.status === 401 || fetchRes.status === 403) && isEnterprise) {
                 log(`[SafetyNet] Upstream Rejection (${fetchRes.status}). Triggering Transparent Fallback.`);
 
                 // 1. Switch Config
                 actualModel = config.fallbacks.free.main.replace('free/', '');
                 isEnterprise = false;
                 isFallbackActive = true;
-                fallbackReason = fetchRes.status === 402 ? "Insufficient Funds (Upstream 402)" : "Rate Limit (Upstream 429)";
+
+                if (fetchRes.status === 402) fallbackReason = "Insufficient Funds (Upstream 402)";
+                else if (fetchRes.status === 429) fallbackReason = "Rate Limit (Upstream 429)";
+                else if (fetchRes.status === 401) fallbackReason = "Invalid API Key (Upstream 401)";
+                else fallbackReason = `Access Denied (${fetchRes.status})`;
 
                 // 2. Notify
                 emitStatusToast('warning', `⚠️ Safety Net: ${actualModel} (${fallbackReason})`, 'Pollinations Safety');
