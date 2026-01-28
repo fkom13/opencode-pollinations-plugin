@@ -156,11 +156,11 @@ const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
 const TRACKING_PORT = 10001;
 ```
 
-**Anti-Zombie Cleanup:**
+**Anti-Zombie Cleanup (Legacy Stable):**
 ```typescript
 execSync(`fuser -k ${TRACKING_PORT}/tcp || true`);
 ```
-> ⚠️ Utilise `fuser` (Linux). Non portable sur macOS/Windows.
+> ✅ **Linux Native**. Méthode éprouvée et stable pour nettoyer les processus. Non compatible Windows/Mac.
 
 **Server HTTP:**
 
@@ -794,8 +794,8 @@ Le plugin Pollinations pour OpenCode vise à être:
 
 | Feature | Status | Notes |
 |---|---|---|
-| Anti-zombie cleanup (Legacy) | ✅ | `fuser -k` (v5.2) |
-| Cross-Platform Port Logic | ✅ | Native Node.js `tryListen` (v5.3) |
+| Anti-zombie cleanup (v5.3.2) | ✅ | legacy `fuser -k` (Stable) |
+| Cross-Platform Port Logic | ❌ | Rollback to prioritize Stability |
 | Signature tracking Gemini | ✅ | Multi-round support |
 | Tool sanitization Azure/Vertex | ✅ | Truncate + dereference |
 | Stop reason normalization | ✅ | tool_calls vs stop |

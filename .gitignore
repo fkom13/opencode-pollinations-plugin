@@ -13,3 +13,11 @@ config.json
 .gencodedoc/
 .gencodedoc.yaml
 
+
+# Legacy/Cleanup
+_archs/
+.gencodedoc/
+.gencodedoc.yaml
+opencode-pollinations-plugin_tree_code.md
+scripts/
+.npmrc

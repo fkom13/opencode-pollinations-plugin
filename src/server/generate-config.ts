@@ -104,6 +104,20 @@ export async function generatePollinationsConfig(forceApiKey?: string): Promise<
         modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Fallback)", object: "model", variants: {} });
     }
 
+    // 1.5 FORCE ENSURE CRITICAL MODELS
+    // Sometimes the API list changes or is cached weirdly. We force vital models.
+    const hasGemini = modelsOutput.find(m => m.id === 'free/gemini');
+    if (!hasGemini) {
+        log(`[ConfigGen] Force-injecting free/gemini.`);
+        modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Force)", object: "model", variants: {} });
+    }
+
+    // ALIAS for Full ID matching (Fix ProviderModelNotFoundError) - ALWAYS CHECK SEPARATELY
+    const hasGeminiAlias = modelsOutput.find(m => m.id === 'pollinations/free/gemini');
+    if (!hasGeminiAlias) {
+        modelsOutput.push({ id: "pollinations/free/gemini", name: "[Free] Gemini Flash (Alias)", object: "model", variants: {} });
+    }
+
     // 2. ENTERPRISE UNIVERSE
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {

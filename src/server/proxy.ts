@@ -133,7 +133,9 @@ async function fetchWithRetry(url: string, options: any, retries: number = MAX_R
             // Don't retry client errors (except rate limit)
             return response;
         }
-        if (retries > 0 && (response.status === 429 || response.status >= 500)) {
+        if (retries > 0 && (response.status === 429 || response.status >= 500 || response.status === 520)) {
+            // Check for specific "Queue" message in 520/429 body if possible (async read?)
+            // For now, just retry blindly on 520/5xx
             log(`[Retry] Upstream Error ${response.status}. Retrying in ${RETRY_DELAY_MS}ms... (${retries} left)`);
             await sleep(RETRY_DELAY_MS);
             return fetchWithRetry(url, options, retries - 1);
@@ -322,11 +324,11 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         if (isEnterprise) proxyBody.private = true;
         if (proxyBody.stream_options) delete proxyBody.stream_options;
 
-        // 3.6 STOP SEQUENCES (Prevent Looping - CRITICAL FIX)
-        // Inject explicit stop sequences to prevent "User:" hallucinations
-        if (!proxyBody.stop) {
-            proxyBody.stop = ["\nUser:", "\nModel:", "User:", "Model:"];
-        }
+        // 3.6 STOP SEQUENCES (-REMOVED-)
+        // We do NOT inject 'stop' automatically anymore.
+        // Azure OpenAI strictly rejects 'stop' for many models (o1, etc) and throws 400.
+        // We rely on the upstream model to handle stops, or the client to send it if needed.
+
 
         // 3.5 PREPARE SIGNATURE HASHING
         let currentRequestHash: string | null = null;
@@ -353,6 +355,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             // A. AZURE/OPENAI FIXES
             if (actualModel.includes("gpt") || actualModel.includes("openai") || actualModel.includes("azure")) {
                 proxyBody.tools = truncateTools(proxyBody.tools, 120);
+
                 if (proxyBody.messages) {
                     proxyBody.messages.forEach((m: any) => {
                         if (m.tool_calls) {
@@ -376,36 +379,40 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             }
             // B2. GEMINI FREE / FAST (CRASH FIX: STRICT SANITIZATION)
             // Restore Tools but REMOVE conflicting ones (Search)
-            else if (
-                (actualModel.includes("gemini") && !isEnterprise) ||
-                (actualModel.includes("gemini") && actualModel.includes("fast"))
-            ) {
-                const hasFunctions = proxyBody.tools.some((t: any) => t.type === 'function' || t.function);
-                if (hasFunctions) {
-                    // 1. Disable Magic Grounding (Source of loops/crashes)
-                    proxyBody.tools_config = { google_search_retrieval: { disable: true } };
+            // B. GEMINI UNIFIED FIX (Free, Fast, Pro, Enterprise, Legacy)
+            // Handles: "tools" vs "grounding" conflicts, and "infinite loops" via Stop Sequences.
+            // B. GEMINI UNIFIED FIX (Free, Fast, Pro, Enterprise, Legacy)
+            // Fixes "Multiple tools" error (Vertex) and "JSON body validation failed" (v5.3.5 regression)
+            else if (actualModel.includes("gemini")) {
+                let hasFunctions = false;
+                if (proxyBody.tools && Array.isArray(proxyBody.tools)) {
+                    hasFunctions = proxyBody.tools.some((t: any) => t.type === 'function' || t.function);
+                }
 
-                    // 2. Remove 'google_search' explicitly (Replica of V3.5.5 logic)
+                if (hasFunctions) {
+                    // 1. Strict cleanup of 'google_search' tool
                     proxyBody.tools = proxyBody.tools.filter((t: any) => {
                         const isFunc = t.type === 'function' || t.function;
                         const name = t.function?.name || t.name;
                         return isFunc && name !== 'google_search';
                     });
 
-                    // 3. Ensure tools are Vertex-Compatible
-                    proxyBody.tools = sanitizeToolsForVertex(proxyBody.tools);
-                    log(`[Proxy] Gemini Free: Tools RESTORED but Sanitized (No Search/Grounding).`);
+                    // 2. Sanitize & RESTORE GROUNDING CONFIG (Essential for Vertex Auth)
+                    if (proxyBody.tools.length > 0) {
+                        // v5.4.1: MUST send tools_config to avoid 401 Unauthorized on Vertex
+                        proxyBody.tools_config = { google_search_retrieval: { disable: true } };
+                        proxyBody.tools = sanitizeToolsForVertex(proxyBody.tools);
+                    } else {
+                        // 3. If no tools left (or only search was present), DELETE 'tools' entirely
+                        delete proxyBody.tools;
+                        if (proxyBody.tools_config) delete proxyBody.tools_config;
+                    }
                 }
-            }
-            // B3. GEMINI ENTERPRISE 3.0+
-            else if (actualModel.includes("gemini")) {
-                const hasFunctions = proxyBody.tools.some((t: any) => t.type === 'function' || t.function);
-                if (hasFunctions) {
-                    proxyBody.tools_config = { google_search_retrieval: { disable: true } };
-                    // Keep Search Tool in List
-                    proxyBody.tools = proxyBody.tools.filter((t: any) => t.type === 'function' || t.function);
-                    proxyBody.tools = sanitizeToolsForVertex(proxyBody.tools);
-                }
+
+                // 4. STOP SEQUENCES REMOVED (Validation Fix v5.4.0/1)
+                // Do NOT inject stop sequences (User:/Model:) as they cause "JSON body validation failed".
+
+                log(`[Proxy] Gemini Logic: Tools=${proxyBody.tools ? proxyBody.tools.length : 'REMOVED'}, Stops NOT Injected.`);
             }
         }
 
@@ -485,19 +492,32 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         if (!fetchRes.ok) {
             log(`Upstream Error: ${fetchRes.status} ${fetchRes.statusText}`);
 
-            // TRANSPARENT FALLBACK ON 4xx Errors (Payment, Rate Limit, Auth) IF Enterprise
-            if ((fetchRes.status === 402 || fetchRes.status === 429 || fetchRes.status === 401 || fetchRes.status === 403) && isEnterprise) {
+            // TRANSPARENT FALLBACK LOGIC
+            // 1. Enterprise Safety Net (Quota/Auth/RateLimit)
+            // 2. Gemini Tools Fix (Gemini + Tools -> 401 -> Fallback to OpenAI)
+            const isEnterpriseFallback = (fetchRes.status === 402 || fetchRes.status === 429 || fetchRes.status === 401 || fetchRes.status === 403) && isEnterprise;
+            const isGeminiToolsFallback = fetchRes.status === 401 && actualModel.includes('gemini') && !isEnterprise && proxyBody.tools && proxyBody.tools.length > 0;
+
+            if (isEnterpriseFallback || isGeminiToolsFallback) {
                 log(`[SafetyNet] Upstream Rejection (${fetchRes.status}). Triggering Transparent Fallback.`);
 
-                // 1. Switch Config
-                actualModel = config.fallbacks.free.main.replace('free/', '');
-                isEnterprise = false;
-                isFallbackActive = true;
+                if (isEnterpriseFallback) {
+                    // 1a. Enterprise -> Free Fallback
+                    actualModel = config.fallbacks.free.main.replace('free/', '');
+                    isEnterprise = false;
+                    isFallbackActive = true;
 
-                if (fetchRes.status === 402) fallbackReason = "Insufficient Funds (Upstream 402)";
-                else if (fetchRes.status === 429) fallbackReason = "Rate Limit (Upstream 429)";
-                else if (fetchRes.status === 401) fallbackReason = "Invalid API Key (Upstream 401)";
-                else fallbackReason = `Access Denied (${fetchRes.status})`;
+                    if (fetchRes.status === 402) fallbackReason = "Insufficient Funds (Upstream 402)";
+                    else if (fetchRes.status === 429) fallbackReason = "Rate Limit (Upstream 429)";
+                    else if (fetchRes.status === 401) fallbackReason = "Invalid API Key (Upstream 401)";
+                    else fallbackReason = `Access Denied (${fetchRes.status})`;
+                } else {
+                    // 1b. Gemini Tools -> OpenAI Fallback
+                    log(`[Fix] Gemini Tools 401 detected. Falling back to 'openai' model.`);
+                    actualModel = 'openai'; // Assume gpt-4o-mini or similar capable of tools
+                    isFallbackActive = true;
+                    fallbackReason = "Gemini Tools Auth Failed (Fallback to OpenAI)";
+                }
 
                 // 2. Notify
                 emitStatusToast('warning', `⚠️ Safety Net: ${actualModel} (${fallbackReason})`, 'Pollinations Safety');

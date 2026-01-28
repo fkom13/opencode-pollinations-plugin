@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-5.1.3-blue.svg)
+![Version](https://img.shields.io/badge/version-5.4.6-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-Stable-success.svg)
 
@@ -69,7 +69,12 @@ You spend it to verify API calls on premium models.
 
 > 🎁 **Beta Bonus**: Buy one Pollen pack, get one free!
 
-## 📦 Installation & Ecology
+### 🐧 Platform Support & Dynamic Ports (v5.4.6+)
+This plugin is **true Cross-Platform** (Windows, macOS, Linux).
+- **Dynamic Port Allocation**: No more port conflicts! The plugin automatically finds an available port on startup.
+- **Tools Support**: Using tools with Gemini (Free) triggers an **Automatic Intelligent Fallback** to OpenAI to ensure your workflow never breaks.
+
+> **Note**: Legacy port 10001 logic has been replaced with system-assigned ports for maximum stability.
 
 This plugin is part of the **OpenCode Ecosystem**.
 

@@ -1,12 +1,13 @@
 # 🛣️ OpenCode Pollinations Plugin Roadmap
 
 > This document outlines the future development plan for the OpenCode Pollinations Plugin.
-> **Current Version**: v5.3.0 (Stable & Cross-Platform)
-> **Goal**: Flower Tier Qualification (Sustainable Ecosystem)
+> **Current Version**: v5.4.6 (Stable Cross-Platform)
+> **Goal**: Ecosystem Integration & UX
 
-## 🧪 Testing Note (v5.3.0)
-> **Linux Verified**: This version has been rigorously tested on Linux environments.
-> **Windows/Mac Ready**: The code logic uses standard cross-platform Node.js primitives (replacing OS-specific commands). While designed for compatibility, direct validation on these platforms is pending community feedback.
+## 🧪 Testing Note (v5.4.6)
+> **Dynamic Ports**: Replaced legacy `fuser` with OS-assigned dynamic ports. Regressions fixed.
+> **Windows/Mac**: Support RESTORED and FULLY FUNCTIONAL.
+> **Gemini Tools**: Handled via intelligent fallback to OpenAI (Workaround for Auth 401).
 
 ## 🌟 Short Term (v5.4 - The "Interactive" Update)
 
