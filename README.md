@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v5.1)
+# 🌸 Pollinations AI Plugin for OpenCode (v5.4.6)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="200">
@@ -74,7 +74,7 @@ This plugin is **true Cross-Platform** (Windows, macOS, Linux).
 - **Dynamic Port Allocation**: No more port conflicts! The plugin automatically finds an available port on startup.
 - **Tools Support**: Using tools with Gemini (Free) triggers an **Automatic Intelligent Fallback** to OpenAI to ensure your workflow never breaks.
 
-> **Note**: Legacy port 10001 logic has been replaced with system-assigned ports for maximum stability.
+> **Note**: Legacy static port (10001) logic has been replaced with system-assigned ports (0). This eliminates "Address in use" errors and effectively removes the need for Linux-specific `fuser` commands, making the plugin fully **Cross-Platform**.
 
 This plugin is part of the **OpenCode Ecosystem**.
 

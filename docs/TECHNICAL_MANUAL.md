@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.2
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.6 (Stable)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -28,7 +28,7 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         POLLINATIONS PLUGIN (v5.2)                          │
+│                         POLLINATIONS PLUGIN (v5.4.6)                        │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │   index.ts  │──│  config.ts  │──│  proxy.ts   │──│ generate-config.ts  │ │
 │  │  (Entry)    │  │ (Settings)  │  │  (Router)   │  │  (Model Discovery)  │ │
@@ -156,11 +156,15 @@ const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
 const TRACKING_PORT = 10001;
 ```
 
-**Anti-Zombie Cleanup (Legacy Stable):**
+**Dynamic Port Allocation (v5.4.6+):**
 ```typescript
-execSync(`fuser -k ${TRACKING_PORT}/tcp || true`);
+server.listen(0, '127.0.0.1', () => {
+    const assignedPort = server.address().port;
+    log(`[Proxy] Started V5.4.6 (Dynamic Port) on port ${assignedPort}`);
+    resolve(assignedPort);
+});
 ```
-> ✅ **Linux Native**. Méthode éprouvée et stable pour nettoyer les processus. Non compatible Windows/Mac.
+> ✅ **Cross-Platform**. Le plugin demande un port libre au système (0). Plus de conflits de ports, compatible Windows/Mac/Linux. La logique `fuser -k` a été supprimée.
 
 **Server HTTP:**
 
@@ -174,7 +178,7 @@ execSync(`fuser -k ${TRACKING_PORT}/tcp || true`);
 ```typescript
 config.provider['pollinations'] = {
     id: 'pollinations',
-    name: 'Pollinations V5.2 (Native)',
+    name: 'Pollinations V5.4.6 (Native)',
     options: { baseURL: localBaseUrl },
     models: modelsObj
 };
@@ -789,15 +793,15 @@ Le plugin Pollinations pour OpenCode vise à être:
 - ✅ Quota tracking
 - ✅ Commands system (/pollinations)
 
-### Version Actuelle (v5.3)
-**Statut: ✅ Complété**
+### Version Actuelle (v5.4.6)
+**Statut: ✅ STABLE (Cross-Platform)**
 
 | Feature | Status | Notes |
 |---|---|---|
-| Anti-zombie cleanup (v5.3.2) | ✅ | legacy `fuser -k` (Stable) |
-| Cross-Platform Port Logic | ❌ | Rollback to prioritize Stability |
+| Dynamic Port Allocation | ✅ | System-assigned ports (No conflict) |
+| Cross-Platform Support | ✅ | Windows/Mac/Linux fully supported |
+| Gemini Tools Auto-Fallback | ✅ | Fallback to OpenAI on 401 Auth Error |
 | Signature tracking Gemini | ✅ | Multi-round support |
-| Tool sanitization Azure/Vertex | ✅ | Truncate + dereference |
 | Stop reason normalization | ✅ | tool_calls vs stop |
 | Loop detection (Guillotine) | ✅ | Hard stop on "User:" |
 | Transparent fallback 402/429/401/403 | ✅ | Switch + inject warning |
