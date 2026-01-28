@@ -789,12 +789,13 @@ Le plugin Pollinations pour OpenCode vise à être:
 - ✅ Quota tracking
 - ✅ Commands system (/pollinations)
 
-### Version Actuelle (v5.2)
+### Version Actuelle (v5.3)
 **Statut: ✅ Complété**
 
 | Feature | Status | Notes |
 |---|---|---|
-| Anti-zombie cleanup | ✅ | `fuser -k` au démarrage |
+| Anti-zombie cleanup (Legacy) | ✅ | `fuser -k` (v5.2) |
+| Cross-Platform Port Logic | ✅ | Native Node.js `tryListen` (v5.3) |
 | Signature tracking Gemini | ✅ | Multi-round support |
 | Tool sanitization Azure/Vertex | ✅ | Truncate + dereference |
 | Stop reason normalization | ✅ | tool_calls vs stop |
@@ -804,14 +805,17 @@ Le plugin Pollinations pour OpenCode vise à être:
 | Config GUI verbosity | ✅ | status + logs channels |
 | Usage dashboard `/poll usage full` | ✅ | Model breakdown |
 
+**🧪 Note sur la Validation (Testing Disclaimer)**
+> La version v5.3.0 a été **validée fonctionnellement sur Linux** (Ubuntu/WSL).
+> Le support Windows et macOS repose sur l'utilisation de primitives Node.js standard (`net` / `http`) qui s'abstiennent de commandes système spécifiques (`fuser`, `kill`). Bien que théoriquement robuste, la validation communautaire sur ces OS est en attente.
+
 **🐛 Known Issues**
 
 | Issue | Severity | Workaround |
 |---|---|---|
-| fuser not on macOS | Medium | Manual port kill |
 | Signature map unbounded | Low | Restart clears |
 | 30s quota cache stale | Low | Force refresh |
-| No Windows support | High | WSL only |
+| Cache NPM Global | Medium | `npm install -g` requis pour update |
 
 ### Court Terme (v5.3 - v5.5)
 
@@ -820,7 +824,6 @@ Le plugin Pollinations pour OpenCode vise à être:
 
 | Feature | Priority | Effort | Description |
 |---|---|---|---|
-| Cross-platform zombie cleanup | 🔴 High | Medium | Remplacer fuser par solution Node.js pure |
 | Signature map rotation | 🟡 Medium | Low | Garder max 1000 entrées, LRU eviction |
 | Config file watcher | 🟡 Medium | Medium | Hot reload sans restart |
 | Unit tests | 🔴 High | High | Coverage proxy.ts, quota.ts |

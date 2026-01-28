@@ -1,10 +1,14 @@
 # 🛣️ OpenCode Pollinations Plugin Roadmap
 
 > This document outlines the future development plan for the OpenCode Pollinations Plugin.
-> **Current Version**: v5.1.3 (Stable)
+> **Current Version**: v5.3.0 (Stable & Cross-Platform)
 > **Goal**: Flower Tier Qualification (Sustainable Ecosystem)
 
-## 🌟 Short Term (v5.2 - The "Interactive" Update)
+## 🧪 Testing Note (v5.3.0)
+> **Linux Verified**: This version has been rigorously tested on Linux environments.
+> **Windows/Mac Ready**: The code logic uses standard cross-platform Node.js primitives (replacing OS-specific commands). While designed for compatibility, direct validation on these platforms is pending community feedback.
+
+## 🌟 Short Term (v5.4 - The "Interactive" Update)
 
 - [ ] **Interactive Onboarding**: A "Welcome" walkthrough that runs on first install to guide users through Mode selection and Key setup.
 - [ ] **Model Picker GUI**: Replace slash commands (`/pollinations fallback ...`) with a QuickPick menu (`Ctrl+Shift+P > Pollinations: Select Model`).
