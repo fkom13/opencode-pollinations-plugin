@@ -662,8 +662,10 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
             const fullMsg = `${dashboardMsg} | ⚙️ ${modeLabel}`;
 
-            // Only emit if not silenced (handled inside emitStatusToast)
-            emitStatusToast('info', fullMsg, 'Pollinations Status');
+            // Only emit if not silenced AND only for Enterprise/Paid requests
+            if (isEnterprise) {
+                emitStatusToast('info', fullMsg, 'Pollinations Status');
+            }
         }
 
         res.end();

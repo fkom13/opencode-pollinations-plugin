@@ -52,6 +52,7 @@ Pollinations.ai is an open-source platform built by and for the community. We pr
 - **🛡️ Safety Net V5**: never get blocked.
     - **Transparent Fallback**: If your Pro quota runs out mid-chat, the plugin automatically switches to a free model instantly. No errors, just a seamless experience.
 - **📊 Real-time Dashboard**: Track your **Pollen** usage, Tier Status, and Wallet Balance inside OpenCode.
+- **🔇 Stealth Mode (v5.4.7)**: Status notifications are now strictly limited to Pollinations Enter (Paid) sessions. No more cluttered notifications when using other providers like Nvidia or Google AI.
 
 ## 🐝 Understanding Pollen & Tiers
 
