@@ -45,6 +45,19 @@
 │  │   127.0.0.1:XXXXX/v1/chat/completions → Pollinations APIs            │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+┌───────────────────────────────────┐  ┌───────────────────────────────────────┐
+│       FREE UNIVERSE               │  │         ENTERPRISE UNIVERSE            │
+│  text.pollinations.ai             │  │     gen.pollinations.ai                │
+│  • /models                        │  │     • /v1/chat/completions             │
+│  • /openai/chat/completions       │  │     • /text/models                     │
+│  • Pas d'authentification         │  │     • /account/profile                 │
+│                                   │  │     • /account/balance                 │
+│                                   │  │     • /account/usage                   │
+│                                   │  │     • Bearer Token requis              │
+└───────────────────────────────────┘  └───────────────────────────────────────┘
 
 > **Note sur le Stealth Mode (v5.4.7)**: Pour éviter de polluer l'interface utilisateur lors de l'utilisation d'autres providers (Nvidia, etc.), les notifications de statut ne sont désormais déclenchées que par le module `proxy.ts` à la suite d'une requête authentifiée vers l'univers Enterprise. Le hook global `session.idle` a été désactivé à cet effet.
 
