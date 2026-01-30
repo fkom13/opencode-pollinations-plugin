@@ -1,12 +1,11 @@
 # 🛣️ OpenCode Pollinations Plugin Roadmap
 
 > This document outlines the future development plan for the OpenCode Pollinations Plugin.
-> **Current Version**: v5.4.7 (Stable Cross-Platform)
+> **Current Version**: v5.4.6 (Stable Cross-Platform)
 > **Goal**: Ecosystem Integration & UX
 
-## 🧪 Testing Note (v5.4.7)
-> **Stealth Mode**: Implemented notification filtering. Toasts are now restricted to authenticated Pollinations sessions, preventing clutter in multi-provider environments.
-> **Dynamic Ports**: Replaced legacy `fuser` with OS-assigned dynamic ports.
+## 🧪 Testing Note (v5.4.6)
+> **Dynamic Ports**: Replaced legacy `fuser` with OS-assigned dynamic ports. Regressions fixed.
 > **Windows/Mac**: Support RESTORED and FULLY FUNCTIONAL.
 > **Gemini Tools**: Handled via intelligent fallback to OpenAI (Workaround for Auth 401).
 

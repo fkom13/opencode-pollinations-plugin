@@ -303,7 +303,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             targetUrl = 'https://text.pollinations.ai/openai/chat/completions';
             authHeader = undefined;
             log(`Routing to FREE: ${actualModel} ${isFallbackActive ? '(FALLBACK)' : ''}`);
-            emitLogToast('info', `Routing to: FREE UNIVERSE (${actualModel})`, 'Pollinations Routing');
+            // emitLogToast('info', `Routing to: FREE UNIVERSE (${actualModel})`, 'Pollinations Routing'); // Too noisy
         }
 
         // NOTIFY SWITCH
@@ -341,7 +341,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         // LOGIC BLOCK: MODEL SPECIFIC ADAPTATIONS
         // =========================================================
 
-        if (proxyBody.tools && Array.isArray(proxyBody.tools)) {
+        if (proxyBody.tools && Array.isArray(proxyBody.tools) && proxyBody.tools.length > 0) {
 
             // B0. KIMI / MOONSHOT SURGICAL FIX (Restored for Debug)
             // Tools are ENABLED. We rely on penalties and strict stops to fight loops.
@@ -399,9 +399,15 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
                     // 2. Sanitize & RESTORE GROUNDING CONFIG (Essential for Vertex Auth)
                     if (proxyBody.tools.length > 0) {
-                        // v5.4.1: MUST send tools_config to avoid 401 Unauthorized on Vertex
-                        proxyBody.tools_config = { google_search_retrieval: { disable: true } };
-                        proxyBody.tools = sanitizeToolsForVertex(proxyBody.tools);
+                        if (hasFunctions) {
+                            proxyBody.tools = sanitizeToolsForVertex(proxyBody.tools);
+
+                            // ONLY for Free/Vertex: Add tools_config to disable search grounding (required for free tier).
+                            // For Enterprise, adding this causes 403 Forbidden on some keys.
+                            if (!isEnterprise) {
+                                proxyBody.tools_config = { google_search_retrieval: { disable: true } };
+                            }
+                        }
                     } else {
                         // 3. If no tools left (or only search was present), DELETE 'tools' entirely
                         delete proxyBody.tools;
@@ -498,7 +504,8 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             const isEnterpriseFallback = (fetchRes.status === 402 || fetchRes.status === 429 || fetchRes.status === 401 || fetchRes.status === 403) && isEnterprise;
             const isGeminiToolsFallback = fetchRes.status === 401 && actualModel.includes('gemini') && !isEnterprise && proxyBody.tools && proxyBody.tools.length > 0;
 
-            if (isEnterpriseFallback || isGeminiToolsFallback) {
+            // STRICT MANUAL MODE: Disable "Magic" Fallbacks
+            if ((isEnterpriseFallback || isGeminiToolsFallback) && config.mode !== 'manual') {
                 log(`[SafetyNet] Upstream Rejection (${fetchRes.status}). Triggering Transparent Fallback.`);
 
                 if (isEnterpriseFallback) {

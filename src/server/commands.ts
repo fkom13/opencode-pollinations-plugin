@@ -127,6 +127,8 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             return handleModeCommand(args);
         case 'usage':
             return await handleUsageCommand(args);
+        case 'connect':
+            return handleConnectCommand(args);
         case 'fallback':
             return handleFallbackCommand(args);
         case 'config':
@@ -255,6 +257,35 @@ function handleFallbackCommand(args: string[]): CommandResult {
     return {
         handled: true,
         response: `✅ Fallback (Free) configuré: main=${main}, agent=${agent || config.fallbacks.free.agent}`
+    };
+}
+
+function handleConnectCommand(args: string[]): CommandResult {
+    const key = args[0];
+
+    if (!key) {
+        return {
+            handled: true,
+            error: `Utilisation: /pollinations connect <sk-xxxx>`
+        };
+    }
+
+    if (!key.startsWith('sk-')) {
+        return {
+            handled: true,
+            error: `Clé invalide. Elle doit commencer par 'sk-'.`
+        };
+    }
+
+    // Save API Key only (User decides mode manually)
+    saveConfig({ apiKey: key });
+
+    // Confirm
+    emitStatusToast('success', 'API Key enregistrée', 'Pollinations Config');
+
+    return {
+        handled: true,
+        response: `✅ API Key connectée. (Utilisez /pollinations mode pro pour l'activer)`
     };
 }
 

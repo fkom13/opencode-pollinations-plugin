@@ -54,7 +54,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     thresholds: { tier: 10, wallet: 5 },
     fallbacks: {
         free: { main: 'free/mistral', agent: 'free/openai-fast' },
-        enter: { agent: 'free/gemini' }
+        enter: { agent: 'free/openai-fast' }
     },
     enablePaidTools: false,
     statusBar: true
