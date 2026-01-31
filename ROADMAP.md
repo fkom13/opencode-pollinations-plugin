@@ -9,15 +9,10 @@
 > **Safety Nets**: Paid-Only blocks in AlwaysFree mode active.
 > **Tools**: Native support for Gemini/Vertex (Free) and OpenAI (Pro). Intelligent Fallback exists *only* on Auth Failure (401).
 
-## 🌟 Short Term (v5.5 - Stability & Tools)
+## 🌟 Next Steps (v6.0 - The "Multimodal" Update)
 
-- [ ] **Tools Stability**:
-    - Improve reliability of "Code Interpreter" and "Web Search" on Enterprise models (currently prone to signature issues or 401s).
-    - Refine the intelligent fallback to be less aggressive if possible (User Feedback).
-- [ ] **Config Refresh**:
-    - Expose a manual command `/pollinations configuration refresh` to force a reload of the model list without restarting OpenCode.
-
-## 🚀 Medium Term (v6.0 - The "Multimodal" Update)
+> The v5.x cycle is considered feature-complete (Stability + Cross-Platform + Enterprise).
+> Focus shifts to functional expansions.
 
 - [ ] **Image Generation**:
     - Select text -> Right Click -> "Illustrate with Pollinations" (Flux/SDXL).
