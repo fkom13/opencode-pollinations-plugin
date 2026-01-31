@@ -79,65 +79,85 @@ export function loadConfig(): PollinationsConfigV5 {
 
 function readConfigFromDisk(): PollinationsConfigV5 {
     let config: any = { ...DEFAULT_CONFIG_V5 };
-    let keyFound = false;
+    let finalKey: string | undefined = undefined;
+    let source: string = 'none';
 
-    // 1. Custom Config
-    try {
-        if (fs.existsSync(CONFIG_FILE)) {
+    // TIMESTAMP BASED PRIORITY LOGIC
+    // We want the most recently updated Valid Key to win.
+
+    let configTime = 0;
+    let authTime = 0;
+
+    try { if (fs.existsSync(CONFIG_FILE)) configTime = fs.statSync(CONFIG_FILE).mtime.getTime(); } catch (e) { }
+    try { if (fs.existsSync(AUTH_FILE)) authTime = fs.statSync(AUTH_FILE).mtime.getTime(); } catch (e) { }
+
+    // 1. EXTRACT KEYS
+    let configKey: string | undefined = undefined;
+    if (fs.existsSync(CONFIG_FILE)) {
+        try {
             const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
             const custom = JSON.parse(raw);
-            config = { ...config, ...custom };
-            if (config.apiKey) keyFound = true;
-        }
-    } catch (e) { logConfig(`Error loading config: ${e}`); }
-
-    // 2. Auth Store (Fallback ONLY if config.json didn't exist or we are in a clear state)
-    // If config.json exists, it is the source of truth. We shouldn't resurrect old keys from auth.json
-    // UNLESS config.json is "empty" (just created default).
-    // But how to know? 
-    // New logic: If Custom Config was loaded (fs.exists(CONFIG_FILE)), we trust it.
-    // We only check Auth Store if NO custom config exists OR if custom config is explicitly "manual" and we want to auto-discover?
-    // User complaint: "Old key comes back".
-    // Fix: If config.json exists, we DO NOT check auth.json.
-    if (!fs.existsSync(CONFIG_FILE) && !keyFound) {
-        try {
-            if (fs.existsSync(AUTH_FILE)) {
-                const raw = fs.readFileSync(AUTH_FILE, 'utf-8');
-                const authData = JSON.parse(raw);
-                const entry = authData['pollinations'] || authData['pollinations_enter'] || authData['pollinations_api_key'];
-
-                if (entry) {
-                    const key = (typeof entry === 'object' && entry.key) ? entry.key : entry;
-                    if (key && typeof key === 'string' && key.length > 10) {
-                        config.apiKey = key;
-                        config.mode = 'pro';
-                        keyFound = true;
-                    }
-                }
-            }
-        } catch (e) { logConfig(`Error reading auth.json: ${e}`); }
+            config = { ...config, ...custom }; // Helper: We load the rest of config anyway
+            if (custom.apiKey && custom.apiKey.length > 5) configKey = custom.apiKey;
+        } catch (e) { }
     }
 
-    // 3. OpenCode Config (Fallback ONLY if config.json does NOT exist)
-    if (!fs.existsSync(CONFIG_FILE) && !keyFound) {
+    let authKey: string | undefined = undefined;
+    if (fs.existsSync(AUTH_FILE)) {
+        try {
+            const raw = fs.readFileSync(AUTH_FILE, 'utf-8');
+            const authData = JSON.parse(raw);
+            const entry = authData['pollinations'] || authData['pollinations_enter'] || authData['pollinations_api_key'];
+            if (entry) {
+                const k = (typeof entry === 'object' && entry.key) ? entry.key : entry;
+                if (k && typeof k === 'string' && k.length > 10) authKey = k;
+            }
+        } catch (e) { }
+    }
+
+    // 2. DETERMINE WINNER
+    // If both exist, newest wins. If one exists, it wins.
+    if (configKey && authKey) {
+        if (configTime >= authTime) {
+            finalKey = configKey;
+            source = 'config.json';
+        } else {
+            finalKey = authKey;
+            source = 'auth.json';
+        }
+    } else if (configKey) {
+        finalKey = configKey;
+        source = 'config.json';
+    } else if (authKey) {
+        finalKey = authKey;
+        source = 'auth.json';
+    }
+
+    // 3. Fallback to OpenCode Global Config (Lowest Priority)
+    if (!finalKey) {
         try {
             if (fs.existsSync(OPENCODE_CONFIG_FILE)) {
                 const raw = fs.readFileSync(OPENCODE_CONFIG_FILE, 'utf-8');
                 const data = JSON.parse(raw);
                 const nativeKey = data?.provider?.pollinations?.options?.apiKey ||
                     data?.provider?.pollinations_enter?.options?.apiKey;
-
                 if (nativeKey && nativeKey.length > 5 && nativeKey !== 'dummy') {
-                    config.apiKey = nativeKey;
-                    config.mode = 'pro';
-                    keyFound = true;
+                    finalKey = nativeKey;
+                    source = 'opencode.json';
                 }
             }
         } catch (e) { }
     }
 
-    if (!keyFound && config.mode === 'pro') {
-        config.mode = 'manual';
+    // 4. APPLY
+    if (finalKey) {
+        config.apiKey = finalKey;
+        config.mode = 'pro';
+        // logConfig(`Loaded Key from ${source}`); // Debug
+    } else {
+        // Ensure no phantom key remains
+        delete config.apiKey;
+        if (config.mode === 'pro') config.mode = 'manual';
     }
 
     return { ...config, version: PKG_VERSION } as PollinationsConfigV5;
