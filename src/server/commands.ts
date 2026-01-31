@@ -2,6 +2,7 @@ import { loadConfig, saveConfig, PollinationsConfigV5 } from './config.js';
 import { getQuotaStatus, QuotaStatus } from './quota.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
 import { getDetailedUsage, DetailedUsageEntry } from './pollinations-api.js';
+import { generatePollinationsConfig } from './generate-config.js';
 
 // === CONSTANTS & PRICING ===
 const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
@@ -260,33 +261,75 @@ function handleFallbackCommand(args: string[]): CommandResult {
     };
 }
 
-function handleConnectCommand(args: string[]): CommandResult {
+async function handleConnectCommand(args: string[]): Promise<CommandResult> {
     const key = args[0];
 
     if (!key) {
         return {
             handled: true,
-            error: `Utilisation: /pollinations connect <sk-xxxx>`
+            error: `Utilisation: /pollinations connect <votre_clé_api>`
         };
     }
 
-    if (!key.startsWith('sk-')) {
+    // 1. Universal Validation (No Syntax Check) - Functional Check
+    emitStatusToast('info', 'Vérification de la clé...', 'Pollinations Config');
+
+    try {
+        const models = await generatePollinationsConfig(key);
+
+        // 2. Check if we got Enterprise models
+        const enterpriseModels = models.filter(m => m.id.startsWith('enter/'));
+
+        if (enterpriseModels.length > 0) {
+            // SUCCESS
+            saveConfig({ apiKey: key, mode: 'pro' });
+
+            const masked = key.substring(0, 6) + '...';
+            // Count Paid Only models found
+            const diamondCount = enterpriseModels.filter(m => m.name.includes('💎')).length;
+
+            emitStatusToast('success', `Clé Valide! (${enterpriseModels.length} modèles Pro débloqués)`, 'Pollinations Config');
+
+            return {
+                handled: true,
+                response: `✅ **Connexion Réussie!**\n- Clé: \`${masked}\`\n- Mode: **PRO** (Activé)\n- Modèles Débloqués: ${enterpriseModels.length} (dont ${diamondCount} 💎 Paid)`
+            };
+        } else {
+            // FAILURE (Valid JSON but no Enterprise models - likely Invalid Key or Free plan only?)
+            // If key is invalid, generatePollinationsConfig usually returns fallback free models BUT
+            // we specifically checked 'enter/'. If 0 enterprise models found for a *provided* key, it's suspicious.
+            // Actually config generator returns Free models + Enter models if key works.
+            // If key is BAD, fetchJson throws/logs error, and returns fallbacks (Enter GPT-4o Fallback).
+            // Wait, generate-config falls back to providing a list containing "[Enter] GPT-4o (Fallback)" if fetch failed.
+            // So we need to detect if it's a "REAL" fetch or a "FALLBACK" fetch.
+            // The fallback models have `variants: {}` usually, but real ones might too.
+            // A better check: The fallback list is hardcoded in generate-config.ts catch block.
+            // Let's modify generate-config to return EMPTY list on error?
+            // Or just check if the returned models work?
+            // Simplest: If `generatePollinationsConfig` returns any model starting with `enter/` that includes "(Fallback)" in name, we assume failure?
+            // "GPT-4o (Fallback)" is the name.
+
+            const isFallback = models.some(m => m.name.includes('(Fallback)') && m.id.startsWith('enter/'));
+
+            if (isFallback) {
+                throw new Error("Clé rejetée par l'API (Accès refusé ou invalide).");
+            }
+
+            // If we are here, we got no enter models, or empty list?
+            // If key is valid but has no access?
+            throw new Error("Aucun modèle Enterprise détecté pour cette clé.");
+        }
+
+    } catch (e: any) {
+        // 3. FAILURE HANDLING - Revert to FREE
+        saveConfig({ apiKey: undefined, mode: 'manual' }); // Clear Key, Set Manual
+
+        emitStatusToast('error', `Clé Invalide. Retour au mode Gratuit.`, 'Pollinations Config');
         return {
             handled: true,
-            error: `Clé invalide. Elle doit commencer par 'sk-'.`
+            error: `❌ **Échec Connexion**: ${e.message || e}\n\nLa configuration a été réinitialisée (Mode Gratuit/Manuel).`
         };
     }
-
-    // Save API Key only (User decides mode manually)
-    saveConfig({ apiKey: key });
-
-    // Confirm
-    emitStatusToast('success', 'API Key enregistrée', 'Pollinations Config');
-
-    return {
-        handled: true,
-        response: `✅ API Key connectée. (Utilisez /pollinations mode pro pour l'activer)`
-    };
 }
 
 function handleConfigCommand(args: string[]): CommandResult {
