@@ -281,7 +281,25 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         // B. SAFETY NETS (The Core V5 Logic)
         if (config.mode === 'alwaysfree') {
             if (isEnterprise) {
-                if (quota.tier === 'error') {
+                // NEW: Paid Only Check for Always Free
+                // If the user asks for a 💎 Paid Only model while in Always Free, we BLOCK it to save wallet
+                // and fallback to free specific message.
+                try {
+                    const homedir = process.env.HOME || '/tmp';
+                    const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
+                    if (fs.existsSync(standardPaidPath)) {
+                        const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
+                        if (paidModels.includes(actualModel)) {
+                            log(`[SafetyNet] alwaysfree Mode: Request for Paid Only Model (${actualModel}). FALLBACK.`);
+                            actualModel = config.fallbacks.free.main.replace('free/', '');
+                            isEnterprise = false;
+                            isFallbackActive = true;
+                            fallbackReason = "Mode AlwaysFree actif: Ce modèle payant consomme du wallet. Passez en mode PRO.";
+                        }
+                    }
+                } catch (e) { }
+
+                if (!isFallbackActive && quota.tier === 'error') {
                     log(`[SafetyNet] AlwaysFree Mode: Quota Check Failed. Switching to Free Fallback.`);
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
