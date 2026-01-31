@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.8 (Stable)
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.9 (Stable)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -409,6 +409,11 @@ interface QuotaStatus {
 }
 ```
 
+**STRATÉGIE "PAID-ONLY" (v5.5+)**
+Certains modèles (ex: `gemini-large`, `veo`) sont tagués `paid_only: true`.
+- **Règle**: Ces modèles nécessitent `walletBalance > 0`. Le crédit gratuit (Tier) n'est pas utilisable.
+- **Enforcement**: Le Proxy vérifie cette condition avant d'envoyer la requête. Si Solde=0, fallback immédiat.
+
 **Tier Limits:**
 
 | Tier | Pollen/Jour | Emoji |
@@ -793,7 +798,7 @@ Le plugin Pollinations pour OpenCode vise à être:
 - ✅ Quota tracking
 - ✅ Commands system (/pollinations)
 
-### Version Actuelle (v5.4.8)
+### Version Actuelle (v5.4.9)
 **Statut: ✅ STABLE (Cross-Platform)**
 
 | Feature | Status | Notes |
