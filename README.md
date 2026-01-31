@@ -146,6 +146,11 @@ Just type in the chat. You are in **Manual Mode** by default.
 
 ### 🤖 Models
 
+### 🔑 Types de Clés Supportés
+- **Clés Standard (`sk-...`)**: Accès complet (Modèles + Dashboard Usage + Quota).
+- **Clés Limitées**: Accès Génération uniquement. Le dashboard affichera une alerte de restriction (v5.4.11).
+- **Support Legacy**: Les anciennes clés (`sk_...`) sont aussi acceptées.
+
 ## 🔗 Links
 
 - **Pollinations Website**: [pollinations.ai](https://pollinations.ai)

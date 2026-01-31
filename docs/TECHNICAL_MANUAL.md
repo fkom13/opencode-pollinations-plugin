@@ -414,6 +414,14 @@ Certains modèles (ex: `gemini-large`, `veo`) sont tagués `paid_only: true`.
 - **Règle**: Ces modèles nécessitent `walletBalance > 0`. Le crédit gratuit (Tier) n'est pas utilisable.
 - **Enforcement**: Le Proxy vérifie cette condition avant d'envoyer la requête. Si Solde=0, fallback immédiat.
 
+**GESTION DES CLÉS "LIMITÉES" (v5.4.11+)**
+Certaines clés API permettent la génération (chat/images) mais refusent l'accès aux endpoints de profil/quota (`/account/usage`).
+- **Détection**: Lors de la connexion, `commands.ts` tente un accès au profil.
+- **Config**: Si échec (403/401) mais modèles OK, `keyHasAccessToProfile` est mis à `false`.
+- **Comportement**:
+    - Génération: OK.
+    - Dashboard (`/poll usage`): Affiche une restriction au lieu de tenter un fetch voué à l'échec.
+
 **Tier Limits:**
 
 | Tier | Pollen/Jour | Emoji |

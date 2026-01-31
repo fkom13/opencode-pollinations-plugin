@@ -17,6 +17,7 @@ export interface PollinationsConfigV5 {
     version: string | number;
     mode: 'manual' | 'alwaysfree' | 'pro';
     apiKey?: string;
+    keyHasAccessToProfile?: boolean;
 
     gui: {
         status: 'none' | 'alert' | 'all';
@@ -57,6 +58,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
         enter: { agent: 'free/openai-fast' }
     },
     enablePaidTools: false,
+    keyHasAccessToProfile: true, // Default true for legacy keys
     statusBar: true
 };
 

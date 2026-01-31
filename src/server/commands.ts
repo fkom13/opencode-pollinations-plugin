@@ -196,23 +196,27 @@ async function handleUsageCommand(args: string[]): Promise<CommandResult> {
         response += `- **Reset**: ${resetDate} (dans ${durationStr})\n`;
 
         if (isFull && config.apiKey) {
-            const usageData = await getDetailedUsage(config.apiKey);
-            if (usageData && usageData.usage) {
-                const lastReset = calculateResetDate(quota.nextResetAt);
-                const stats = calculateCurrentPeriodStats(usageData.usage, lastReset, quota.tierLimit);
-
-                response += `\n### 📊 Détail Période (depuis ${lastReset.toLocaleTimeString()})\n`;
-                response += `**Total Requêtes**: ${stats.totalRequests} | **Tokens**: In ${formatTokens(stats.inputTokens)} / Out ${formatTokens(stats.outputTokens)}\n\n`;
-
-                response += `| Modèle | Reqs | Coût | Tokens |\n`;
-                response += `| :--- | :---: | :---: | :---: |\n`;
-
-                const sorted = Array.from(stats.models.entries()).sort((a, b) => b[1].cost - a[1].cost);
-                for (const [model, data] of sorted) {
-                    response += `| \`${model}\` | ${data.requests} | ${formatPollen(data.cost)} | ${formatTokens(data.inputTokens + data.outputTokens)} |\n`;
-                }
+            if (config.keyHasAccessToProfile === false) {
+                response += `\n> ⚠️ *Votre clé API ne permet pas l'accès aux détails d'usage (Restriction).*`;
             } else {
-                response += `\n> ⚠️ *Impossible de récupérer l'historique détaillé.*\n`;
+                const usageData = await getDetailedUsage(config.apiKey);
+                if (usageData && usageData.usage) {
+                    const lastReset = calculateResetDate(quota.nextResetAt);
+                    const stats = calculateCurrentPeriodStats(usageData.usage, lastReset, quota.tierLimit);
+
+                    response += `\n### 📊 Détail Période (depuis ${lastReset.toLocaleTimeString()})\n`;
+                    response += `**Total Requêtes**: ${stats.totalRequests} | **Tokens**: In ${formatTokens(stats.inputTokens)} / Out ${formatTokens(stats.outputTokens)}\n\n`;
+
+                    response += `| Modèle | Reqs | Coût | Tokens |\n`;
+                    response += `| :--- | :---: | :---: | :---: |\n`;
+
+                    const sorted = Array.from(stats.models.entries()).sort((a, b) => b[1].cost - a[1].cost);
+                    for (const [model, data] of sorted) {
+                        response += `| \`${model}\` | ${data.requests} | ${formatPollen(data.cost)} | ${formatTokens(data.inputTokens + data.outputTokens)} |\n`;
+                    }
+                } else {
+                    response += `\n> ⚠️ *Impossible de récupérer l'historique détaillé.*\n`;
+                }
             }
         } else if (isFull) {
             response += `\n> ⚠️ *Mode Full nécessite une API Key.*\n`;
