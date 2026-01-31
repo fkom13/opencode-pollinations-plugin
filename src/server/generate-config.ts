@@ -81,7 +81,7 @@ function formatName(id: string, censored: boolean = true): string {
 
 // --- MAIN GENERATOR logic ---
 
-export async function generatePollinationsConfig(forceApiKey?: string): Promise<OpenCodeModel[]> {
+export async function generatePollinationsConfig(forceApiKey?: string, forceStrict: boolean = false): Promise<OpenCodeModel[]> {
     const config = loadConfig();
     const modelsOutput: OpenCodeModel[] = [];
 
@@ -153,6 +153,10 @@ export async function generatePollinationsConfig(forceApiKey?: string): Promise<
 
         } catch (e) {
             log(`Error fetching Enterprise models: ${e}`);
+
+            // STRICT MODE (Validation): Do not return fake fallback models.
+            if (forceStrict) throw e;
+
             // Fallback Robust for Enterprise (User has Key but discovery failed)
             modelsOutput.push({ id: "enter/gpt-4o", name: "[Enter] GPT-4o (Fallback)", object: "model", variants: {} });
             // ...

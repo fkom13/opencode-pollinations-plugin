@@ -118,8 +118,8 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         } catch (e) { logConfig(`Error reading auth.json: ${e}`); }
     }
 
-    // 3. OpenCode Config (Fallback)
-    if (!keyFound) {
+    // 3. OpenCode Config (Fallback ONLY if config.json does NOT exist)
+    if (!fs.existsSync(CONFIG_FILE) && !keyFound) {
         try {
             if (fs.existsSync(OPENCODE_CONFIG_FILE)) {
                 const raw = fs.readFileSync(OPENCODE_CONFIG_FILE, 'utf-8');

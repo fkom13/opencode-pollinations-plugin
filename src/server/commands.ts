@@ -279,7 +279,7 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
     emitStatusToast('info', 'Vérification de la clé...', 'Pollinations Config');
 
     try {
-        const models = await generatePollinationsConfig(key);
+        const models = await generatePollinationsConfig(key, true);
 
         // 2. Check if we got Enterprise models
         const enterpriseModels = models.filter(m => m.id.startsWith('enter/'));
