@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.9 (Stable)
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.16 (Stable)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -261,6 +261,9 @@ const RETRY_DELAY_MS = 1000;
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                    MODE: alwaysfree                      │   │
+│  │  IF isEnterprise AND model in paid-list:                 │   │
+│  │     → BLOCK (Message: Paid Only requires Pro)            │   │
+│  │     → Fallback to free/mistral                           │   │
 │  │  IF isEnterprise AND quota.tier == 'error':              │   │
 │  │     → Fallback to free/mistral                           │   │
 │  │  IF isEnterprise AND tierRatio <= threshold:             │   │
@@ -716,11 +719,15 @@ if (chunkStr.match(/(\n|^)\s*(User|user)\s*:/)) {
 
 ### Stockage API Key
 
+### Stockage API Key
+
+**Autorité Temporelle (v5.4.14+)** : Le plugin compare la date de modification (`mtime`) de `config.json` et `auth.json`. Le fichier le plus récent fait autorité pour la Clé API. `opencode.json` reste un fallback de dernier recours.
+
 | Location | Priority | Format |
 |---|---|---|
-| `auth.json` | 1 (Highest) | `{ "pollinations": { "key": "..." } }` |
-| `config.json` | 2 | `{ "apiKey": "..." }` |
-| `opencode.json` | 3 | `{ "provider": { "pollinations": { "options": { "apiKey": "..." } } } }` |
+| `config.json` | Timestamp (Winner) | `{ "apiKey": "..." }` |
+| `auth.json` | Timestamp (Winner) | `{ "pollinations": { "key": "..." } }` |
+| `opencode.json` | Fallback (Last) | `{ "provider": { "pollinations": { "options": { "apiKey": "..." } } } }` |
 
 ### Transmission
 - API Key transmise uniquement vers `gen.pollinations.ai`
