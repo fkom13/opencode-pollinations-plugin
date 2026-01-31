@@ -91,8 +91,15 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         }
     } catch (e) { logConfig(`Error loading config: ${e}`); }
 
-    // 2. Auth Store (Priority)
-    if (!keyFound) {
+    // 2. Auth Store (Fallback ONLY if config.json didn't exist or we are in a clear state)
+    // If config.json exists, it is the source of truth. We shouldn't resurrect old keys from auth.json
+    // UNLESS config.json is "empty" (just created default).
+    // But how to know? 
+    // New logic: If Custom Config was loaded (fs.exists(CONFIG_FILE)), we trust it.
+    // We only check Auth Store if NO custom config exists OR if custom config is explicitly "manual" and we want to auto-discover?
+    // User complaint: "Old key comes back".
+    // Fix: If config.json exists, we DO NOT check auth.json.
+    if (!fs.existsSync(CONFIG_FILE) && !keyFound) {
         try {
             if (fs.existsSync(AUTH_FILE)) {
                 const raw = fs.readFileSync(AUTH_FILE, 'utf-8');

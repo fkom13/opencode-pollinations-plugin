@@ -126,7 +126,7 @@ export async function generatePollinationsConfig(forceApiKey?: string): Promise<
     // 2. ENTERPRISE UNIVERSE
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {
-            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {
+            const enterListRaw = await fetchJson('https://gen.pollinations.ai/models', {
                 'Authorization': `Bearer ${effectiveKey}`
             });
             const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
