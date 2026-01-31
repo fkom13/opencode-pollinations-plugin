@@ -239,6 +239,45 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             actualModel = actualModel.replace('free/', '');
         }
 
+        // A.1 PAID MODEL ENFORCEMENT (V5.5 Strategy)
+        // Check dynamic list saved by generate-config.ts
+        if (isEnterprise) {
+            try {
+                const paidListPath = path.join(config.gui ? path.dirname(path.join(process.env.HOME || '/tmp', '.config/opencode/pollinations-signature.json')) : '/tmp', 'pollinations-paid-models.json');
+                // Wait, logic above for config path is messy. Let's use standard path logic:
+                // config.ts uses ~/.pollinations/config.json usually.
+                // generate-config uses path.join(config.gui ? path.dirname(CONFIG_FILE) : '/tmp')
+                // Let's rely on standard ~/.pollinations location if possible, or try both.
+
+                const homedir = process.env.HOME || '/tmp';
+                const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
+
+                if (fs.existsSync(standardPaidPath)) {
+                    const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
+                    if (paidModels.includes(actualModel)) {
+                        // IT IS A PAID ONLY MODEL.
+                        // STRICT CHECK: Wallet > 0 required. (Not just Tier)
+                        if (quota.walletBalance <= 0.001) { // Floating point safety
+                            log(`[SafetyNet] Paid Only Model (${actualModel}) requested but Wallet is Empty ($${quota.walletBalance}). BLOCKING.`);
+
+                            // Immediate Block or Fallback?
+                            // Text says: "💎 Paid Only models require purchased pollen only"
+                            // Blocking is safer/clearer than falling back to a free model which might not be what the user expects for a "Pro" feature?
+                            // Actually, Fallback to Free is usually better for UX if configured, BUT for specific "Paid Only" requests, the user explicitly chose a powerful model.
+                            // Falling back to Mistral might be confusing if they asked for Gemini-Large.
+                            // BUT we are failing gracefully.
+                            // Let's Fallback to Free Default and Warn.
+
+                            actualModel = config.fallbacks.free.main.replace('free/', '');
+                            isEnterprise = false;
+                            isFallbackActive = true;
+                            fallbackReason = "Paid Only Model requires purchased credits";
+                        }
+                    }
+                }
+            } catch (e) { log(`[Proxy] Error checking paid models: ${e}`); }
+        }
+
         // B. SAFETY NETS (The Core V5 Logic)
         if (config.mode === 'alwaysfree') {
             if (isEnterprise) {

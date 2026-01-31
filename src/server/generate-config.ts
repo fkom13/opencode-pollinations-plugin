@@ -1,7 +1,12 @@
 
 import * as https from 'https';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { loadConfig } from './config.js';
+const HOMEDIR = os.homedir();
+const CONFIG_DIR_POLLI = path.join(HOMEDIR, '.pollinations');
+const CONFIG_FILE = path.join(CONFIG_DIR_POLLI, 'config.json');
 
 // --- INTERFACES SCRICT ---
 
@@ -126,17 +131,31 @@ export async function generatePollinationsConfig(forceApiKey?: string): Promise<
             });
             const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
 
+            const paidModels: string[] = [];
             enterList.forEach((m: any) => {
                 if (m.tools === false) return;
                 const mapped = mapModel(m, 'enter/', '[Enter] ');
                 modelsOutput.push(mapped);
+                if (m.paid_only) {
+                    paidModels.push(mapped.id.replace('enter/', '')); // Store bare ID "gemini-large"
+                }
             });
             log(`Total models (Free+Pro): ${modelsOutput.length}`);
+
+            // Save Paid Models List for Proxy
+            try {
+                const paidListPath = path.join(config.gui ? path.dirname(CONFIG_FILE) : '/tmp', 'pollinations-paid-models.json');
+                // Ensure dir exists (re-use config dir logic from config.ts if possible, or just assume it exists since config loaded)
+                if (fs.existsSync(path.dirname(paidListPath))) {
+                    fs.writeFileSync(paidListPath, JSON.stringify(paidModels));
+                }
+            } catch (e) { log(`Error saving paid models list: ${e}`); }
 
         } catch (e) {
             log(`Error fetching Enterprise models: ${e}`);
             // Fallback Robust for Enterprise (User has Key but discovery failed)
             modelsOutput.push({ id: "enter/gpt-4o", name: "[Enter] GPT-4o (Fallback)", object: "model", variants: {} });
+            // ...
             modelsOutput.push({ id: "enter/claude-3-5-sonnet", name: "[Enter] Claude 3.5 Sonnet (Fallback)", object: "model", variants: {} });
             modelsOutput.push({ id: "enter/deepseek-reasoner", name: "[Enter] DeepSeek R1 (Fallback)", object: "model", variants: {} });
         }
@@ -162,7 +181,12 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         baseName = baseName.split(' - ')[0].trim();
     }
 
-    const finalName = `${namePrefix}${baseName}`;
+    let namePrefixFinal = namePrefix;
+    if (raw.paid_only) {
+        namePrefixFinal = namePrefix.replace('[Enter]', '[💎 Paid]');
+    }
+
+    const finalName = `${namePrefixFinal}${baseName}`;
 
     const modelObj: OpenCodeModel = {
         id: fullId,
