@@ -1,20 +1,21 @@
 # 🛣️ OpenCode Pollinations Plugin Roadmap
 
 > This document outlines the future development plan for the OpenCode Pollinations Plugin.
-> **Current Version**: v5.4.6 (Stable Cross-Platform)
-> **Goal**: Ecosystem Integration & UX
+> **Current Version**: v5.4.16 (Stable Architecture)
+> **Goal**: Performance, Tools Stability & Enterprise Features
 
-## 🧪 Testing Note (v5.4.6)
-> **Dynamic Ports**: Replaced legacy `fuser` with OS-assigned dynamic ports. Regressions fixed.
-> **Windows/Mac**: Support RESTORED and FULLY FUNCTIONAL.
-> **Gemini Tools**: Handled via intelligent fallback to OpenAI (Workaround for Auth 401).
+## 🧪 Testing Note (v5.4.16)
+> **Architecture**: Decoupled Mode (Manual/Pro) & Timestamp Authority (Config) fully implemented.
+> **Safety Nets**: Paid-Only blocks in AlwaysFree mode active.
+> **Tools**: Native support for Gemini/Vertex (Free) and OpenAI (Pro). Intelligent Fallback exists *only* on Auth Failure (401).
 
-## 🌟 Short Term (v5.4 - The "Interactive" Update)
+## 🌟 Short Term (v5.5 - Stability & Tools)
 
-- [ ] **Interactive Onboarding**: A "Welcome" walkthrough that runs on first install to guide users through Mode selection and Key setup.
-- [ ] **Model Picker GUI**: Replace slash commands (`/pollinations fallback ...`) with a QuickPick menu (`Ctrl+Shift+P > Pollinations: Select Model`).
-- [ ] **Auto-Update Models**: A periodic fetch of available models from `https://text.pollinations.ai/models` to keep the list fresh without plugin updates.
-- [ ] **Localization**: Complete French (fr) and Spanish (es) translations for all Toasts and Logs.
+- [ ] **Tools Stability**:
+    - Improve reliability of "Code Interpreter" and "Web Search" on Enterprise models (currently prone to signature issues or 401s).
+    - Refine the intelligent fallback to be less aggressive if possible (User Feedback).
+- [ ] **Config Refresh**:
+    - Expose a manual command `/pollinations configuration refresh` to force a reload of the model list without restarting OpenCode.
 
 ## 🚀 Medium Term (v6.0 - The "Multimodal" Update)
 
@@ -22,7 +23,7 @@
     - Select text -> Right Click -> "Illustrate with Pollinations" (Flux/SDXL).
     - Insert generated images directly into Markdown/HTML files.
 - [ ] **Context Awareness**:
-    - "Add Current File" to context (already partially supported via OpenCode, but native optimized handling for large files).
+    - "Add Current File" to context (Native large file handling).
 - [ ] **Cost Estimator**:
     - Real-time cost estimation *before* sending the request based on token count (Pro Mode).
 
