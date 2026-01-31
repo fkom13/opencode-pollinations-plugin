@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v5.4.8)
+# 🌸 Pollinations AI Plugin for OpenCode (v5.4.16)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="200">
@@ -10,7 +10,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-5.4.8-blue.svg)
+![Version](https://img.shields.io/badge/version-5.4.16-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-Stable-success.svg)
 
@@ -46,14 +46,14 @@ Pollinations.ai is an open-source platform built by and for the community. We pr
 </p>
 
 <p align="center">
-  <img src="docs/images/free_add.png" alt="Free Chat Example" width="800">
+  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/free_add.png" alt="Free Chat Example" width="800">
   <br>
   <em>Free Universe Chat (Supported by Pollinations Ads)</em>
 </p>
 
 <p align="center">
-  <img src="docs/images/plan_1.png" alt="Plan Build Step 1" width="400">
-  <img src="docs/images/plan_2.png" alt="Plan Build Step 2" width="400">
+  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/plan_1.png" alt="Plan Build Step 1" width="400">
+  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/plan_2.png" alt="Plan Build Step 2" width="400">
   <br>
   <em>Integrated Plan Building Workflow</em>
 </p>
