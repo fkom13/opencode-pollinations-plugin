@@ -152,12 +152,15 @@ function readConfigFromDisk(): PollinationsConfigV5 {
     // 4. APPLY
     if (finalKey) {
         config.apiKey = finalKey;
-        config.mode = 'pro';
-        // logConfig(`Loaded Key from ${source}`); // Debug
+        // config.mode = 'pro'; // REMOVED: Mode is decoupled from Key presence.
     } else {
         // Ensure no phantom key remains
         delete config.apiKey;
-        if (config.mode === 'pro') config.mode = 'manual';
+        // if (config.mode === 'pro') config.mode = 'manual'; // OPTIONAL: Downgrade if no key? User says "No link".
+        // Actually, if I am in PRO mode and lose my key, I am broken. Falling back to manual is safer?
+        // User said "Manual mode is like standard API".
+        // Let's REMOVE this auto-downgrade too to be strictly "Decoupled".
+        // If user is in PRO without key, they get "Missing Key" error, which is correct.
     }
 
     return { ...config, version: PKG_VERSION } as PollinationsConfigV5;

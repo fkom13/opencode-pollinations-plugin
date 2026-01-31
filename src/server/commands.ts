@@ -286,7 +286,7 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
 
         if (enterpriseModels.length > 0) {
             // SUCCESS
-            saveConfig({ apiKey: key, mode: 'pro' });
+            saveConfig({ apiKey: key }); // Don't force mode 'pro'. Let user decide.
 
             const masked = key.substring(0, 6) + '...';
             // Count Paid Only models found
