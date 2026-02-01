@@ -1,23 +1,33 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 out/
+
+# IDE/Editor
 .vscode-test/
 *.vsix
 .DS_Store
+
+# Environment & Config
 .env
+.npmrc
+config.json
+
+# Plugin cache
 .pollinations/
+
+# Logs
 *.log
 logs/
+
+# Archives (legacy/obsolete code)
 _archs/
-config.json
+
+# Gencodedoc (versioning tool)
 .gencodedoc/
 .gencodedoc.yaml
 
-
-# Legacy/Cleanup
-_archs/
-.gencodedoc/
-.gencodedoc.yaml
+# Generated docs
 opencode-pollinations-plugin_tree_code.md
-# scripts/ (Active Utilities now)
-.npmrc
