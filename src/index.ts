@@ -44,7 +44,7 @@ const startProxy = (): Promise<number> => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     status: "ok",
-                    version: "v5.3.2",
+                    version: require('../package.json').version,
                     mode: config.mode
                 }));
                 return;
@@ -77,7 +77,7 @@ const startProxy = (): Promise<number> => {
         server.listen(0, '127.0.0.1', () => {
             // @ts-ignore
             const assignedPort = server.address().port;
-            log(`[Proxy] Started V5.4.5 (Dynamic Port) on port ${assignedPort}`);
+            log(`[Proxy] Started v${require('../package.json').version} (Dynamic Port) on port ${assignedPort}`);
             resolve(assignedPort);
         });
 
@@ -91,7 +91,7 @@ const startProxy = (): Promise<number> => {
 // === PLUGIN EXPORT ===
 
 export const PollinationsPlugin: Plugin = async (ctx) => {
-    log("Plugin Initializing V5.3.2 (Rollback)...");
+    log(`Plugin Initializing v${require('../package.json').version}...`);
 
     // START PROXY
     const port = await startProxy();
