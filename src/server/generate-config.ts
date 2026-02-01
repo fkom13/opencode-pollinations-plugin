@@ -117,11 +117,11 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
         modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Force)", object: "model", variants: {} });
     }
 
-    // ALIAS for Full ID matching (Fix ProviderModelNotFoundError) - ALWAYS CHECK SEPARATELY
-    const hasGeminiAlias = modelsOutput.find(m => m.id === 'pollinations/free/gemini');
-    if (!hasGeminiAlias) {
-        modelsOutput.push({ id: "pollinations/free/gemini", name: "[Free] Gemini Flash (Alias)", object: "model", variants: {} });
-    }
+    // ALIAS Removed for Clean Config
+    // const hasGeminiAlias = modelsOutput.find(m => m.id === 'pollinations/free/gemini');
+    // if (!hasGeminiAlias) {
+    //    modelsOutput.push({ id: "pollinations/free/gemini", name: "[Free] Gemini Flash (Alias)", object: "model", variants: {} });
+    // }
 
     // 2. ENTERPRISE UNIVERSE
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {

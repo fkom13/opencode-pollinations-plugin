@@ -9,6 +9,8 @@ import { handleChatCompletion } from './server/proxy.js';
 import { createToastHooks, setGlobalClient } from './server/toast.js';
 import { createStatusHooks } from './server/status.js';
 import { createCommandHooks } from './server/commands.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
 
@@ -115,9 +117,11 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
 
             if (!config.provider) config.provider = {};
 
+            // Dynamic Provider Name
+            const version = require('../package.json').version;
             config.provider['pollinations'] = {
                 id: 'pollinations',
-                name: 'Pollinations V5.2 (Native)',
+                name: `Pollinations AI (v${version})`,
                 options: { baseURL: localBaseUrl },
                 models: modelsObj
             } as any;
