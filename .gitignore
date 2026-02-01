@@ -19,5 +19,5 @@ _archs/
 .gencodedoc/
 .gencodedoc.yaml
 opencode-pollinations-plugin_tree_code.md
-scripts/
+# scripts/ (Active Utilities now)
 .npmrc
