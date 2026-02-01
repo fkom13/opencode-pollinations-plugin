@@ -240,7 +240,12 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         id: fullId,
         name: finalName,
         object: 'model',
-        variants: {}
+        variants: {},
+        // Declare modalities for OpenCode vision support
+        modalities: {
+            input: raw.input_modalities || ['text'],
+            output: raw.output_modalities || ['text']
+        }
     };
 
     // --- ENRICHISSEMENT ---
