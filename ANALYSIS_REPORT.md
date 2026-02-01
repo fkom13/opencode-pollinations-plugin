@@ -1,7 +1,7 @@
 # 📊 Rapport d'Analyse du Code - OpenCode Pollinations Plugin
 
 > **Date d'analyse**: 2026-02-01  
-> **Version analysée**: v5.6.0 (package.json)  
+> **Version analysée**: v5.6.1 (package.json)  
 > **Auteur de l'analyse**: Gemini_EA
 
 ---

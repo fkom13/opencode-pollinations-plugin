@@ -1,0 +1,29 @@
+# Files to exclude from npm publish
+# (These are included in git but NOT in the npm package)
+
+# Development/Analysis
+ANALYSIS_REPORT.md
+AGENT.md
+ROADMAP.md
+
+# Documentation folder (TECHNICAL_MANUAL stays for reference)
+docs/
+
+# Archives and tools
+_archs/
+scripts/
+logs/
+
+# Config files
+.gencodedoc/
+.gencodedoc.yaml
+.npmrc
+opencode-pollinations-plugin_tree_code.md
+
+# Source (we ship compiled dist/)
+src/
+tsconfig.json
+
+# Git/Dev
+.git/
+.gitignore
