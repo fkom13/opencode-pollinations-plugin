@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.16 (Stable)
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.6.0 (Stable)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -417,13 +417,14 @@ Certains modèles (ex: `gemini-large`, `veo`) sont tagués `paid_only: true`.
 - **Règle**: Ces modèles nécessitent `walletBalance > 0`. Le crédit gratuit (Tier) n'est pas utilisable.
 - **Enforcement**: Le Proxy vérifie cette condition avant d'envoyer la requête. Si Solde=0, fallback immédiat.
 
-**GESTION DES CLÉS "LIMITÉES" (v5.4.11+)**
+**GESTION DES CLÉS "LIMITÉES" (v5.6.0)**
 Certaines clés API permettent la génération (chat/images) mais refusent l'accès aux endpoints de profil/quota (`/account/usage`).
 - **Détection**: Lors de la connexion, `commands.ts` tente un accès au profil.
 - **Config**: Si échec (403/401) mais modèles OK, `keyHasAccessToProfile` est mis à `false`.
-- **Comportement**:
-    - Génération: OK.
-    - Dashboard (`/poll usage`): Affiche une restriction au lieu de tenter un fetch voué à l'échec.
+- **Comportement (Proxy Override)**:
+    - **Mode**: Bascule forcée en `manual` pour éviter les vérifications de quota tierce.
+    - **Génération**: AUTORISÉE. Le Proxy intercepte l'erreur quota 403, affiche un warning, mais laisse passer la requête vers `gen.pollinations.ai`.
+    - **Dashboard**: Affiche "Clé Limitée (Génération Seule)".
 
 **Tier Limits:**
 

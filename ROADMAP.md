@@ -1,13 +1,14 @@
 # 🛣️ OpenCode Pollinations Plugin Roadmap
 
 > This document outlines the future development plan for the OpenCode Pollinations Plugin.
-> **Current Version**: v5.4.16 (Stable Architecture)
-> **Goal**: Performance, Tools Stability & Enterprise Features
+> **Current Version**: v5.6.0 (Stable Release)
+> **Goal**: Enterprise Reliability & Limited Key Support
 
-## 🧪 Testing Note (v5.4.16)
+## 🧪 Testing Note (v5.6.0)
 > **Architecture**: Decoupled Mode (Manual/Pro) & Timestamp Authority (Config) fully implemented.
-> **Safety Nets**: Paid-Only blocks in AlwaysFree mode active.
-> **Tools**: Native support for Gemini/Vertex (Free) and OpenAI (Pro). Intelligent Fallback exists *only* on Auth Failure (401).
+> **Limited Keys**: Full support for "Generation Only" keys (Auth Limited).
+> **Safety Nets**: Non-blocking proxy logic ensures generation continuity even with limited permissions.
+> **Validation**: Verified against Quota 403 errors and Mode Switching logic.
 
 ## 🌟 Short Term (v5.5 - Stability & Tools)
 
