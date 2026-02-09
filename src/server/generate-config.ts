@@ -41,6 +41,10 @@ interface OpenCodeModel {
         context?: number;
         output?: number;
     };
+    modalities?: {
+        input?: string[];
+        output?: string[];
+    };
 }
 
 // --- LOGGING ---
@@ -270,6 +274,15 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         // Also keep variant just in case
         modelObj.variants.bedrock_safe = { options: { maxTokens: 8000 } };
     }
+    
+    // BEDROCK/ENTERPRISE LIMITS (Chickytutor only)
+    if (rawId.includes('chickytutor')) {
+        modelObj.limit = {
+            output: 8192,
+            context: 128000 
+        };
+    }
+
     // NOMNOM FIX: User reported error if max_tokens is missing.
     // Also it is a 'Gemini-scrape' model, so we treat it similar to Gemini but with strict limit.
     if (rawId.includes('nomnom') || rawId.includes('scrape')) {

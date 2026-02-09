@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v5.6.0)
+# 🌸 Pollinations AI Plugin for OpenCode (v5.9.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="200">
@@ -134,8 +134,9 @@ OpenCode uses NPM as its registry. To publish:
 
 ### 1. The Basics (Free Mode)
 Just type in the chat. You are in **Manual Mode** by default.
-- Model: `openai` (GPT-4o Mini equivalent)
-- Model: `mistral` (Mistral Nemo)
+- Model: `openai-fast` (GPT-OSS 20b)
+- Model: `mistral` (Mistral Small 3.1)
+- ...
 
 ### 🔑 Configuration (API Key)
 
@@ -155,6 +156,7 @@ Just type in the chat. You are in **Manual Mode** by default.
 
 ## 🔗 Links
 
+- **Sign up Pollinations Beta (more and best free tiers access and paids models)**: [pollinations.ai](https://enter.pollinations.ai)
 - **Pollinations Website**: [pollinations.ai](https://pollinations.ai)
 - **Discord Community**: [Join us!](https://discord.gg/pollinations-ai-885844321461485618)
 - **OpenCode Ecosystem**: [opencode.ai](https://opencode.ai/docs/ecosystem#plugins)

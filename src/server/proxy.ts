@@ -75,6 +75,26 @@ function dereferenceSchema(schema: any, rootDefs: any): any {
             schema.description = (schema.description || "") + " [Ref Failed]";
         }
     }
+
+    // VERTEX FIX: 'const' not supported -> convert to 'enum'
+    if (schema.const !== undefined) {
+        schema.enum = [schema.const];
+        delete schema.const;
+    }
+
+    // VERTEX FIX: 'anyOf' must be exclusive (no other siblings)
+    if (schema.anyOf || schema.oneOf) {
+        // Vertex demands strict exclusivity.
+        // We keep 'definitions'/'$defs' if present at root (though unlikely here)
+        // But for a property node, we must strip EVERYTHING else.
+        const keys = Object.keys(schema);
+        keys.forEach(k => {
+            if (k !== 'anyOf' && k !== 'oneOf' && k !== 'definitions' && k !== '$defs') {
+                delete schema[k];
+            }
+        });
+    }
+
     if (schema.properties) {
         for (const key in schema.properties) {
             schema.properties[key] = dereferenceSchema(schema.properties[key], rootDefs);
@@ -83,6 +103,16 @@ function dereferenceSchema(schema: any, rootDefs: any): any {
     if (schema.items) {
         schema.items = dereferenceSchema(schema.items, rootDefs);
     }
+    if (schema.anyOf) {
+        schema.anyOf = schema.anyOf.map((s: any) => dereferenceSchema(s, rootDefs));
+    }
+    if (schema.oneOf) {
+        schema.oneOf = schema.oneOf.map((s: any) => dereferenceSchema(s, rootDefs));
+    }
+    if (schema.allOf) {
+        schema.allOf = schema.allOf.map((s: any) => dereferenceSchema(s, rootDefs));
+    }
+
     if (schema.optional !== undefined) delete schema.optional;
     if (schema.title) delete schema.title;
     return schema;
@@ -99,6 +129,40 @@ function sanitizeToolsForVertex(tools: any[]): any[] {
         tool.function.parameters = params;
         return tool;
     });
+}
+
+function sanitizeToolsForBedrock(tools: any[]): any[] {
+    return tools.map(tool => {
+        if (tool.function) {
+            if (!tool.function.description || tool.function.description.length === 0) {
+                tool.function.description = " "; // Force non-empty string
+            }
+        }
+        return tool;
+    });
+}
+
+function sanitizeSchemaForKimi(schema: any): any {
+    if (!schema || typeof schema !== 'object') return schema;
+    
+    // Kimi Fixes
+    if (schema.title) delete schema.title;
+    
+    // Fix empty objects "{}" which Kimi hates.
+    // If it's an empty object without type, assume string or object?
+    // Often happens with "additionalProperties: {}"
+    if (Object.keys(schema).length === 0) {
+        schema.type = "string"; // Fallback to safe type
+        schema.description = "Any value";
+    }
+
+    if (schema.properties) {
+        for (const key in schema.properties) {
+            schema.properties[key] = sanitizeSchemaForKimi(schema.properties[key]);
+        }
+    }
+    if (schema.items) sanitizeSchemaForKimi(schema.items);
+    return schema;
 }
 
 function truncateTools(tools: any[], limit: number = 120): any[] {
@@ -120,6 +184,7 @@ interface ChatRequest {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
+const FETCH_TIMEOUT_MS = 600000; // 10 Minutes global timeout
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -127,7 +192,12 @@ function sleep(ms: number) {
 
 async function fetchWithRetry(url: string, options: any, retries: number = MAX_RETRIES): Promise<Response> {
     try {
-        const response = await fetch(url, options);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+        
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (response.ok) return response;
         if (response.status === 404 || response.status === 401 || response.status === 400) {
             // Don't retry client errors (except rate limit)
@@ -410,18 +480,26 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         if (proxyBody.tools && Array.isArray(proxyBody.tools) && proxyBody.tools.length > 0) {
 
-            // B0. KIMI / MOONSHOT SURGICAL FIX (Restored for Debug)
-            // Tools are ENABLED. We rely on penalties and strict stops to fight loops.
+            // B0. KIMI / MOONSHOT SURGICAL FIX
             if (actualModel.includes("kimi") || actualModel.includes("moonshot")) {
-                log(`[Proxy] Kimi: Tools ENABLED. Applying penalties/stops.`);
+                log(`[Proxy] Kimi: Tools ENABLED. Applying penalties/stops/sanitization.`);
                 proxyBody.frequency_penalty = 1.1;
                 proxyBody.presence_penalty = 0.4;
                 proxyBody.stop = ["<|endoftext|>", "User:", "\nUser", "User :"];
+                
+                // KIMI FIX: Remove 'title' from schema
+                proxyBody.tools = proxyBody.tools.map((t: any) => {
+                    if (t.function && t.function.parameters) {
+                        t.function.parameters = sanitizeSchemaForKimi(t.function.parameters);
+                    }
+                    return t;
+                });
             }
 
-            // A. AZURE/OPENAI FIXES
-            if (actualModel.includes("gpt") || actualModel.includes("openai") || actualModel.includes("azure")) {
-                proxyBody.tools = truncateTools(proxyBody.tools, 120);
+            // A. AZURE/OPENAI FIXES + MIDJOURNEY + GROK
+            if (actualModel.includes("gpt") || actualModel.includes("openai") || actualModel.includes("azure") || actualModel.includes("midijourney") || actualModel.includes("grok")) {
+                const limit = (actualModel.includes("midijourney") || actualModel.includes("grok")) ? 128 : 120;
+                proxyBody.tools = truncateTools(proxyBody.tools, limit);
 
                 if (proxyBody.messages) {
                     proxyBody.messages.forEach((m: any) => {
@@ -437,6 +515,12 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 }
             }
 
+            // BEDROCK FIX (Claude / Nova / ChickyTutor)
+            if (actualModel.includes("claude") || actualModel.includes("nova") || actualModel.includes("bedrock") || actualModel.includes("chickytutor")) {
+                log(`[Proxy] Bedrock: Sanitizing tools description.`);
+                proxyBody.tools = sanitizeToolsForBedrock(proxyBody.tools);
+            }
+
             // B1. NOMNOM SPECIAL (Disable Grounding, KEEP Search Tool)
             if (actualModel === "nomnom") {
                 proxyBody.tools_config = { google_search_retrieval: { disable: true } };
@@ -444,12 +528,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 proxyBody.tools = sanitizeToolsForVertex(proxyBody.tools || []);
                 log(`[Proxy] Nomnom Fix: Grounding Disabled, Search Tool KEPT.`);
             }
-            // B2. GEMINI FREE / FAST (CRASH FIX: STRICT SANITIZATION)
-            // Restore Tools but REMOVE conflicting ones (Search)
             // B. GEMINI UNIFIED FIX (Free, Fast, Pro, Enterprise, Legacy)
-            // Handles: "tools" vs "grounding" conflicts, and "infinite loops" via Stop Sequences.
-            // B. GEMINI UNIFIED FIX (Free, Fast, Pro, Enterprise, Legacy)
-            // Fixes "Multiple tools" error (Vertex) and "JSON body validation failed" (v5.3.5 regression)
             else if (actualModel.includes("gemini")) {
                 let hasFunctions = false;
                 if (proxyBody.tools && Array.isArray(proxyBody.tools)) {

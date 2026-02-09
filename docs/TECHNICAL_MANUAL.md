@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.6.0 (Stable)
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.9.1 (Stable)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -28,7 +28,7 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         POLLINATIONS PLUGIN (v5.6.0)                        │
+│                         POLLINATIONS PLUGIN (v5.9.1)                        │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │   index.ts  │──│  config.ts  │──│  proxy.ts   │──│ generate-config.ts  │ │
 │  │  (Entry)    │  │ (Settings)  │  │  (Router)   │  │  (Model Discovery)  │ │
@@ -803,31 +803,31 @@ Le plugin Pollinations pour OpenCode vise à être:
 - ✅ Support Enterprise (API Key)
 - ✅ Système de toasts
 
-**v5.0 - v5.1 (Safety Net)**
+**v5.0 - v5.6 (Safety Net)**
 - ✅ Modes: manual, alwaysfree, pro
 - ✅ Fallback automatique
 - ✅ Quota tracking
 - ✅ Commands system (/pollinations)
+- ✅ Cross-Platform Support (Dynamic Port)
 
-### Version Actuelle (v5.4.9)
-**Statut: ✅ STABLE (Cross-Platform)**
+### Version Actuelle (v5.9.1)
+**Statut: ✅ STABLE (Enterprise Sanitization)**
 
 | Feature | Status | Notes |
 |---|---|---|
+| Enterprise Sanitization | ✅ | Fixes for Bedrock, Vertex, Kimi, Azure |
+| Tool Truncation | ✅ | Azure/Grok limited to 128 tools |
+| Output Limits | ✅ | Chickytutor/Nova limited to 8192 tokens |
 | Dynamic Port Allocation | ✅ | System-assigned ports (No conflict) |
 | Cross-Platform Support | ✅ | Windows/Mac/Linux fully supported |
 | Gemini Tools Auto-Fallback | ✅ | Fallback to OpenAI on 401 Auth Error |
 | Signature tracking Gemini | ✅ | Multi-round support |
 | Stop reason normalization | ✅ | tool_calls vs stop |
 | Loop detection (Guillotine) | ✅ | Hard stop on "User:" |
-| Transparent fallback 402/429/401/403 | ✅ | Switch + inject warning |
-| Nova/Nomnom limits | ✅ | Hardcoded output limits |
-| Config GUI verbosity | ✅ | status + logs channels |
-| Usage dashboard `/poll usage full` | ✅ | Model breakdown |
+| Transparent fallback | ✅ | Switch + inject warning |
 
-**🧪 Note sur la Validation (Testing Disclaimer)**
-> La version v5.3.0 a été **validée fonctionnellement sur Linux** (Ubuntu/WSL).
-> Le support Windows et macOS repose sur l'utilisation de primitives Node.js standard (`net` / `http`) qui s'abstiennent de commandes système spécifiques (`fuser`, `kill`). Bien que théoriquement robuste, la validation communautaire sur ces OS est en attente.
+**🧪 Note sur la Validation**
+> La version v5.9.1 intègre des correctifs critiques pour l'interopérabilité avec les modèles Enterprise (Bedrock, Vertex, Azure) qui imposent des contraintes strictes sur les schémas JSON (descriptions non vides, anyOf exclusifs, etc.).
 
 **🐛 Known Issues**
 
@@ -837,7 +837,7 @@ Le plugin Pollinations pour OpenCode vise à être:
 | 30s quota cache stale | Low | Force refresh |
 | Cache NPM Global | Medium | `npm install -g` requis pour update |
 
-### Court Terme (v5.3 - v5.5)
+### Court Terme (v6.0 - Next)
 
 **v5.3 - Stabilisation (Q1 2026)**
 *(Objectif: Zero-crash, zero-surprise)*

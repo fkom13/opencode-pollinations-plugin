@@ -1,7 +1,7 @@
 {
     "name": "opencode-pollinations-plugin",
-    "displayName": "Pollinations AI (V5.6)",
-    "version": "5.9.0",
+    "displayName": "Pollinations AI (V5.9)",
+    "version": "5.9.1",
     "description": "Native Pollinations.ai Provider Plugin for OpenCode",
     "publisher": "pollinations",
     "repository": {
