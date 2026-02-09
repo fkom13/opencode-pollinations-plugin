@@ -9,6 +9,8 @@ import { handleChatCompletion } from './server/proxy.js';
 import { createToastHooks, setGlobalClient } from './server/toast.js';
 import { createStatusHooks } from './server/status.js';
 import { createCommandHooks } from './server/commands.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
 
@@ -42,7 +44,7 @@ const startProxy = (): Promise<number> => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     status: "ok",
-                    version: "v5.3.2",
+                    version: require('../package.json').version,
                     mode: config.mode
                 }));
                 return;
@@ -75,7 +77,7 @@ const startProxy = (): Promise<number> => {
         server.listen(0, '127.0.0.1', () => {
             // @ts-ignore
             const assignedPort = server.address().port;
-            log(`[Proxy] Started V5.4.5 (Dynamic Port) on port ${assignedPort}`);
+            log(`[Proxy] Started v${require('../package.json').version} (Dynamic Port) on port ${assignedPort}`);
             resolve(assignedPort);
         });
 
@@ -89,7 +91,7 @@ const startProxy = (): Promise<number> => {
 // === PLUGIN EXPORT ===
 
 export const PollinationsPlugin: Plugin = async (ctx) => {
-    log("Plugin Initializing V5.3.2 (Rollback)...");
+    log(`Plugin Initializing v${require('../package.json').version}...`);
 
     // START PROXY
     const port = await startProxy();
@@ -115,9 +117,11 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
 
             if (!config.provider) config.provider = {};
 
+            // Dynamic Provider Name
+            const version = require('../package.json').version;
             config.provider['pollinations'] = {
                 id: 'pollinations',
-                name: 'Pollinations V5.2 (Native)',
+                name: `Pollinations AI (v${version})`,
                 options: { baseURL: localBaseUrl },
                 models: modelsObj
             } as any;

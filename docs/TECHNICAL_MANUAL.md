@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.4.16 (Stable)
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.6.0 (Stable)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -28,7 +28,7 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         POLLINATIONS PLUGIN (v5.4.8)                        │
+│                         POLLINATIONS PLUGIN (v5.6.0)                        │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │   index.ts  │──│  config.ts  │──│  proxy.ts   │──│ generate-config.ts  │ │
 │  │  (Entry)    │  │ (Settings)  │  │  (Router)   │  │  (Model Discovery)  │ │
@@ -41,8 +41,8 @@
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │                    HTTP PROXY SERVER (Port 10001)                     │  │
-│  │   127.0.0.1:10001/v1/chat/completions → Pollinations APIs            │  │
+│  │                    HTTP PROXY SERVER (Dynamic Port)                  │  │
+│  │   127.0.0.1:<dynamic>/v1/chat/completions → Pollinations APIs        │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
@@ -74,13 +74,8 @@
      │  load plugin   │                │                │
      │───────────────>│                │                │
      │                │                │                │
-     │                │ kill zombies   │                │
-     │                │ (fuser -k)     │                │
-     │                │────────────────│                │
-     │                │                │                │
-     │                │ startProxy()   │                │
-     │                │───────────────>│                │
-     │                │                │ listen(10001)  │
+     │                │                │ listen(0)      │
+     │                │                │ (Dynamic Port) │
      │                │<───────────────│                │
      │                │                │                │
      │  config(cfg)   │                │                │
@@ -153,14 +148,14 @@
 **Constantes:**
 ```typescript
 const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
-const TRACKING_PORT = 10001;
+// Note: TRACKING_PORT supprimé depuis v5.4.6 (port dynamique)
 ```
 
 **Dynamic Port Allocation (v5.4.6+):**
 ```typescript
 server.listen(0, '127.0.0.1', () => {
     const assignedPort = server.address().port;
-    log(`[Proxy] Started V5.4.6 (Dynamic Port) on port ${assignedPort}`);
+    log(`[Proxy] Started V5.6.0 (Dynamic Port) on port ${assignedPort}`);
     resolve(assignedPort);
 });
 ```
@@ -178,7 +173,7 @@ server.listen(0, '127.0.0.1', () => {
 ```typescript
 config.provider['pollinations'] = {
     id: 'pollinations',
-    name: 'Pollinations V5.4.6 (Native)',
+    name: 'Pollinations V5.6.0 (Native)',
     options: { baseURL: localBaseUrl },
     models: modelsObj
 };
@@ -417,13 +412,14 @@ Certains modèles (ex: `gemini-large`, `veo`) sont tagués `paid_only: true`.
 - **Règle**: Ces modèles nécessitent `walletBalance > 0`. Le crédit gratuit (Tier) n'est pas utilisable.
 - **Enforcement**: Le Proxy vérifie cette condition avant d'envoyer la requête. Si Solde=0, fallback immédiat.
 
-**GESTION DES CLÉS "LIMITÉES" (v5.4.11+)**
+**GESTION DES CLÉS "LIMITÉES" (v5.6.0)**
 Certaines clés API permettent la génération (chat/images) mais refusent l'accès aux endpoints de profil/quota (`/account/usage`).
 - **Détection**: Lors de la connexion, `commands.ts` tente un accès au profil.
 - **Config**: Si échec (403/401) mais modèles OK, `keyHasAccessToProfile` est mis à `false`.
-- **Comportement**:
-    - Génération: OK.
-    - Dashboard (`/poll usage`): Affiche une restriction au lieu de tenter un fetch voué à l'échec.
+- **Comportement (Proxy Override)**:
+    - **Mode**: Bascule forcée en `manual` pour éviter les vérifications de quota tierce.
+    - **Génération**: AUTORISÉE. Le Proxy intercepte l'erreur quota 403, affiche un warning, mais laisse passer la requête vers `gen.pollinations.ai`.
+    - **Dashboard**: Affiche "Clé Limitée (Génération Seule)".
 
 **Tier Limits:**
 
@@ -763,16 +759,16 @@ if (chunkStr.match(/(\n|^)\s*(User|user)\s*:/)) {
 
 | Variable | Default | Description |
 |---|---|---|
-| `POLLINATIONS_PORT` | 10001 | Port du proxy (server/index.ts) |
 | `HOME` | - | Répertoire home |
 
+> **Note**: La variable `POLLINATIONS_PORT` n'est plus utilisée depuis v5.4.6. Le port est désormais dynamique (assigné par l'OS).
+
 ### Limitations Connues
-- **Portabilité**: `fuser` n'existe pas sur macOS/Windows (Linux/WSL requis)
-- **Single Instance**: Un seul proxy par port
 - **No Hot Reload Models**: Restart requis pour nouveaux modèles
 - **Cache Quota**: 30s stale possible
 - **Signature Map**: Peut grandir indéfiniment
-- **No Windows support**: High (WSL only)
+
+> ✅ **Corrigé depuis v5.4.6**: Le plugin est désormais **100% Cross-Platform** (Windows, macOS, Linux). La dépendance `fuser` Linux a été supprimée et le port est dynamique.
 
 ---
 
@@ -781,8 +777,8 @@ if (chunkStr.match(/(\n|^)\s*(User|user)\s*:/)) {
 ### Table des Matières
 - Vision
 - Versions Passées
-- Version Actuelle (v5.2)
-- Court Terme (v5.3 - v5.5)
+- Version Actuelle (v5.6)
+- Court Terme (v6.0)
 - Moyen Terme (v6.0)
 - Long Terme (v7.0+)
 - Backlog Ideas

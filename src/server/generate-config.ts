@@ -17,6 +17,17 @@ interface PollinationsModel {
     tools?: boolean;
     reasoning?: boolean;
     context?: number;
+    context_window?: number;
+    input_modalities?: string[];
+    output_modalities?: string[];
+    paid_only?: boolean;
+    pricing?: {
+        promptTextTokens?: number;
+        completionTextTokens?: number;
+        promptImageTokens?: number;
+        promptAudioTokens?: number;
+        completionAudioTokens?: number;
+    };
     [key: string]: any;
 }
 
@@ -117,16 +128,17 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
         modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Force)", object: "model", variants: {} });
     }
 
-    // ALIAS for Full ID matching (Fix ProviderModelNotFoundError) - ALWAYS CHECK SEPARATELY
-    const hasGeminiAlias = modelsOutput.find(m => m.id === 'pollinations/free/gemini');
-    if (!hasGeminiAlias) {
-        modelsOutput.push({ id: "pollinations/free/gemini", name: "[Free] Gemini Flash (Alias)", object: "model", variants: {} });
-    }
+    // ALIAS Removed for Clean Config
+    // const hasGeminiAlias = modelsOutput.find(m => m.id === 'pollinations/free/gemini');
+    // if (!hasGeminiAlias) {
+    //    modelsOutput.push({ id: "pollinations/free/gemini", name: "[Free] Gemini Flash (Alias)", object: "model", variants: {} });
+    // }
 
     // 2. ENTERPRISE UNIVERSE
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {
-            const enterListRaw = await fetchJson('https://gen.pollinations.ai/models', {
+            // Use /text/models for full metadata (input_modalities, tools, reasoning, pricing)
+            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {
                 'Authorization': `Bearer ${effectiveKey}`
             });
             const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
@@ -168,6 +180,36 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     return modelsOutput;
 }
 
+// --- CAPABILITY ICONS ---
+
+function getCapabilityIcons(raw: PollinationsModel): string {
+    const icons: string[] = [];
+
+    // Vision: accepts images
+    if (raw.input_modalities?.includes('image')) icons.push('👁️');
+
+    // Audio Input
+    if (raw.input_modalities?.includes('audio')) icons.push('🎙️');
+
+    // Audio Output
+    if (raw.output_modalities?.includes('audio')) icons.push('🔊');
+
+    // Reasoning capability
+    if (raw.reasoning === true) icons.push('🧠');
+
+    // Web Search (from description)
+    if (raw.description?.toLowerCase().includes('search') ||
+        raw.name?.includes('search') ||
+        raw.name?.includes('perplexity')) {
+        icons.push('🔍');
+    }
+
+    // Tool/Function calling
+    if (raw.tools === true) icons.push('💻');
+
+    return icons.length > 0 ? ` ${icons.join('')}` : '';
+}
+
 // --- MAPPING ENGINE ---
 
 function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
@@ -190,13 +232,20 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         namePrefixFinal = namePrefix.replace('[Enter]', '[💎 Paid]');
     }
 
-    const finalName = `${namePrefixFinal}${baseName}`;
+    // Get capability icons from API metadata
+    const capabilityIcons = getCapabilityIcons(raw);
+    const finalName = `${namePrefixFinal}${baseName}${capabilityIcons}`;
 
     const modelObj: OpenCodeModel = {
         id: fullId,
         name: finalName,
         object: 'model',
-        variants: {}
+        variants: {},
+        // Declare modalities for OpenCode vision support
+        modalities: {
+            input: raw.input_modalities || ['text'],
+            output: raw.output_modalities || ['text']
+        }
     };
 
     // --- ENRICHISSEMENT ---

@@ -1,7 +1,7 @@
 import * as http from 'http'; // V4.2 Snapshot Force
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadConfig } from './config.js';
+import { loadConfig, saveConfig } from './config.js';
 import { handleCommand } from './commands.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
 
@@ -279,11 +279,26 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         }
 
         // B. SAFETY NETS (The Core V5 Logic)
+
+        // 0. GLOBAL CHECK: Auth Limited (403 on Quota)
+        // If we can't read quota because of 403, we downgrade to Manual but ALLOW the request.
+        if (isEnterprise && quota.errorType === 'auth_limited') {
+            // Only warn/switch if we were trying to be smart (Auto Mode)
+            if (config.mode !== 'manual') {
+                log(`[SafetyNet] Limited Key Detected (403). Downgrading to Manual Mode.`);
+                saveConfig({ mode: 'manual', keyHasAccessToProfile: false });
+                config.mode = 'manual'; // Local override to skip safety nets below
+
+                emitStatusToast('warning', 'Clé Limitée: Passage en Mode Manuel', 'Permissions (403)');
+            }
+
+            // WE DO NOT RETURN 403. WE ALLOW THE REQUEST.
+            // Since config.mode is now 'manual', the next checks (alwaysfree/pro) will be skipped.
+        }
+
         if (config.mode === 'alwaysfree') {
             if (isEnterprise) {
                 // NEW: Paid Only Check for Always Free
-                // If the user asks for a 💎 Paid Only model while in Always Free, we BLOCK it to save wallet
-                // and fallback to free specific message.
                 try {
                     const homedir = process.env.HOME || '/tmp';
                     const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
@@ -300,6 +315,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 } catch (e) { }
 
                 if (!isFallbackActive && quota.tier === 'error') {
+                    // Network error or unknown error (but NOT auth_limited, handled above)
                     log(`[SafetyNet] AlwaysFree Mode: Quota Check Failed. Switching to Free Fallback.`);
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
@@ -320,6 +336,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         else if (config.mode === 'pro') {
             if (isEnterprise) {
                 if (quota.tier === 'error') {
+                    // Network error or unknown
                     log(`[SafetyNet] Pro Mode: Quota Unreachable. Switching to Free Fallback.`);
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
@@ -327,13 +344,6 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     fallbackReason = "Quota Unreachable (Safety)";
                 } else {
                     const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
-
-                    // Logic: Fallback if Wallet is Low (< Threshold) AND Tier is Exhausted (< Threshold %)
-                    // Wait, user wants priority to Free Tier.
-                    // If Free Tier is available (Ratio > Threshold), we usage it (don't fallback).
-                    // If Free Tier is exhausted (Ratio <= Threshold), THEN check Wallet.
-                    // If Wallet also Low, THEN Fallback.
-
                     if (quota.walletBalance < config.thresholds.wallet && tierRatio <= (config.thresholds.tier / 100)) {
                         log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet} AND Tier < ${config.thresholds.tier}%. Switching.`);
                         actualModel = config.fallbacks.free.main.replace('free/', '');

@@ -153,9 +153,36 @@ process.on('exit', (code) => {
     try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [EXIT] PID:${process.pid} Exiting with code ${code}\n`); } catch (e) { }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-    const url = `http://127.0.0.1:${PORT}`;
-    log(`[SERVER] Started V3 Phase 3 (Auth Enabled) on port ${PORT}`);
-    try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [LISTEN] PID:${process.pid} Listening on ${PORT}\n`); } catch (e) { }
-    console.log(`POLLINATIONS_V3_URL=${url}`);
-});
+// STARTUP CHECK: Re-validate Key (in case of upgrade/config drift)
+import { checkKeyPermissions } from './commands.js';
+
+(async () => {
+    const config = loadConfig();
+    if (config.apiKey) {
+        try {
+            console.log('Pollinations Plugin: Verifying API Key on startup...');
+            const check = await checkKeyPermissions(config.apiKey);
+            if (!check.ok) {
+                console.warn(`Pollinations Plugin: Limited Key Detected on Startup (${check.reason}). Enforcing Manual Mode.`);
+                saveConfig({
+                    apiKey: config.apiKey,
+                    mode: 'manual',
+                    keyHasAccessToProfile: false
+                });
+            } else {
+                if (config.keyHasAccessToProfile === false) {
+                    saveConfig({ apiKey: config.apiKey, keyHasAccessToProfile: true });
+                }
+            }
+        } catch (e) {
+            console.error('Pollinations Plugin: Startup Check Failed:', e);
+        }
+    }
+
+    server.listen(PORT, '127.0.0.1', () => {
+        const url = `http://127.0.0.1:${PORT}`;
+        log(`[SERVER] Started V3 Phase 3 (Auth Enabled) on port ${PORT}`);
+        try { fs.appendFileSync(LIFE_LOG, `[${new Date().toISOString()}] [LISTEN] PID:${process.pid} Listening on ${PORT}\n`); } catch (e) { }
+        console.log(`POLLINATIONS_V3_URL=${url}`);
+    });
+})();

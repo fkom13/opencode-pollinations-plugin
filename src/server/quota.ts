@@ -53,6 +53,7 @@ export interface QuotaStatus {
     // Pour les toasts
     tier: string;               // 'spore', 'seed', 'flower', 'nectar'
     tierEmoji: string;
+    errorType?: 'auth_limited' | 'network' | 'unknown'; // NEW: Specific Error Type
 }
 
 // === CACHE ===
@@ -107,12 +108,11 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
     try {
         logQuota("Fetching Quota Data...");
 
-        // Fetch parallèle using HTTPS helper
-        const [profileRes, balanceRes, usageRes] = await Promise.all([
-            fetchAPI<Profile>('/account/profile', config.apiKey),
-            fetchAPI<{ balance: number }>('/account/balance', config.apiKey),
-            fetchAPI<{ usage: DetailedUsageEntry[] }>('/account/usage', config.apiKey)
-        ]);
+        // SEQUENTIAL FETCH (Avoid Rate Limits)
+        // We fetch one by one. If one fails, we catch and return fallback.
+        const profileRes = await fetchAPI<Profile>('/account/profile', config.apiKey);
+        const balanceRes = await fetchAPI<{ balance: number }>('/account/balance', config.apiKey);
+        const usageRes = await fetchAPI<{ usage: DetailedUsageEntry[] }>('/account/usage', config.apiKey);
 
         logQuota(`Fetch Success. Tier: ${profileRes.tier}, Balance: ${balanceRes.balance}`);
 
@@ -155,8 +155,16 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
         lastQuotaFetch = now;
         return cachedQuota;
 
-    } catch (e) {
-        logQuota(`ERROR fetching quota: ${e}`);
+    } catch (e: any) {
+        logQuota(`ERROR fetching quota: ${e.message}`);
+
+        let errorType: 'auth_limited' | 'network' | 'unknown' = 'unknown';
+        if (e.message && e.message.includes('403')) {
+            errorType = 'auth_limited';
+        } else if (e.message && e.message.includes('Network Error')) {
+            errorType = 'network';
+        }
+
         // Retourner le cache ou un état par défaut safe
         return cachedQuota || {
             tierRemaining: 0,
@@ -169,7 +177,8 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
             isUsingWallet: false,
             needsAlert: true,
             tier: 'error',
-            tierEmoji: '⚠️'
+            tierEmoji: '⚠️',
+            errorType
         };
     }
 }
@@ -297,6 +306,10 @@ function calculateCurrentPeriodUsage(
 // === EXPORT POUR LES ALERTES ===
 
 export function formatQuotaForToast(quota: QuotaStatus): string {
+    if (quota.errorType === 'auth_limited') {
+        return `🔑 CLE LIMITÉE (Génération Seule) | 💎 Wallet: N/A | ⏰ Reset: N/A`;
+    }
+
     const tierPercent = quota.tierLimit > 0
         ? Math.round((quota.tierRemaining / quota.tierLimit) * 100)
         : 0;

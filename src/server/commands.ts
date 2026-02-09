@@ -1,8 +1,64 @@
+import * as https from 'https';
 import { loadConfig, saveConfig, PollinationsConfigV5 } from './config.js';
 import { getQuotaStatus, QuotaStatus } from './quota.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
 import { getDetailedUsage, DetailedUsageEntry } from './pollinations-api.js';
 import { generatePollinationsConfig } from './generate-config.js';
+
+// --- HELPER: STRICT PERMISSION CHECK ---
+interface CheckResult { ok: boolean; status?: number | string; reason?: string; }
+
+function checkEndpoint(ep: string, key: string): Promise<CheckResult> {
+    return new Promise((resolve) => {
+        const req = https.request({
+            hostname: 'gen.pollinations.ai',
+            path: ep,
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${key}`,
+                'User-Agent': 'Pollinations-Plugin/5.6.0' // Identify cleanly
+            }
+        }, (res) => {
+            const isJson = res.headers['content-type']?.includes('application/json');
+
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode === 200 && isJson) {
+                    // Double Check Check Body for Logical Errors masked as 200
+                    try {
+                        const json = JSON.parse(data);
+                        if (json.error || json.success === false) {
+                            resolve({ ok: false, reason: "API Logical Error", status: 200 });
+                        } else {
+                            resolve({ ok: true });
+                        }
+                    } catch (e) {
+                        resolve({ ok: false, reason: "Invalid JSON", status: 200 });
+                    }
+                } else {
+                    resolve({ ok: false, status: res.statusCode, reason: isJson ? "API Error" : "Not JSON (Cloudflare?)" });
+                }
+            });
+        });
+        req.on('error', (e) => resolve({ ok: false, status: e.message || 'Error' }));
+        req.setTimeout(10000, () => req.destroy()); // 10s Timeout
+        req.end();
+    });
+}
+
+export async function checkKeyPermissions(key: string): Promise<CheckResult> {
+    // SEQUENTIAL CHECK (Avoid Rate Limits on Key Verification)
+    const endpoints = ['/account/profile', '/account/balance', '/account/usage'];
+
+    for (const ep of endpoints) {
+        const res = await checkEndpoint(ep, key);
+        if (!res.ok) {
+            return { ok: false, reason: `${ep} (${res.status})` };
+        }
+    }
+    return { ok: true };
+}
 
 // === CONSTANTS & PRICING ===
 const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
@@ -125,11 +181,11 @@ export async function handleCommand(command: string): Promise<CommandResult> {
 
     switch (subCommand) {
         case 'mode':
-            return handleModeCommand(args);
+            return await handleModeCommand(args);
         case 'usage':
             return await handleUsageCommand(args);
         case 'connect':
-            return handleConnectCommand(args);
+            return await handleConnectCommand(args);
         case 'fallback':
             return handleFallbackCommand(args);
         case 'config':
@@ -146,7 +202,7 @@ export async function handleCommand(command: string): Promise<CommandResult> {
 
 // === SUB-COMMANDS ===
 
-function handleModeCommand(args: string[]): CommandResult {
+async function handleModeCommand(args: string[]): Promise<CommandResult> {
     const mode = args[0];
 
     if (!mode) {
@@ -164,6 +220,38 @@ function handleModeCommand(args: string[]): CommandResult {
         };
     }
 
+    const checkConfig = loadConfig();
+
+    // JIT VERIFICATION for PRO and ALWAYSFREE Mode
+    if (mode === 'pro' || mode === 'alwaysfree') {
+        const checkConfig = loadConfig(); // Reload to be sure
+        const key = checkConfig.apiKey;
+
+        if (!key) {
+            // If NO key, allow alwaysfree? Yes.
+            // If HAS key, verify it? Yes.
+            if (mode === 'pro') return { handled: true, error: "❌ Mode Pro nécessite une Clé API configurée." };
+        }
+
+        emitStatusToast('info', 'Vérification des droits...', 'Mode Pro');
+        try {
+            // Force verify permissions NOW
+            const check = await checkKeyPermissions(key as string);
+            if (!check.ok) {
+                saveConfig({ mode: 'manual', keyHasAccessToProfile: false });
+                return {
+                    handled: true,
+                    error: `❌ **Mode Refusé**\nVotre clé est limitée (Code ${check.status}: ${check.reason}).\nPassage en mode **manual**.`
+                };
+            }
+            // Valid -> Ensure flag is true
+            saveConfig({ keyHasAccessToProfile: true });
+        } catch (e: any) {
+            return { handled: true, error: `❌ Erreur de vérification: ${e.message}` };
+        }
+    }
+
+    // Allow switch (if alwaysfree or manual, or verified pro)
     saveConfig({ mode: mode as PollinationsConfigV5['mode'] });
     const config = loadConfig();
     if (config.gui.status !== 'none') {
@@ -292,11 +380,33 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
             // Count Paid Only models found
             const diamondCount = enterpriseModels.filter(m => m.name.includes('💎')).length;
 
+            // CHECK RESTRICTIONS: Strict Check (Usage + Profile + Balance)
+            let forcedModeMsg = "";
+            let isLimited = false;
+            let limitReason = "";
+
+            try {
+                // Strict Probe: Must be able to read ALL accounting data
+                const check = await checkKeyPermissions(key);
+                if (!check.ok) {
+                    isLimited = true;
+                    limitReason = check.reason || "Unknown";
+                }
+            } catch (e: any) { isLimited = true; limitReason = e.message; }
+
+            // If Limited -> FORCE MANUAL
+            if (isLimited) {
+                saveConfig({ apiKey: key, mode: 'manual', keyHasAccessToProfile: false });
+                forcedModeMsg = `\n⚠️ **Clé Limitée** (Echec: ${limitReason}) -> Mode **MANUEL** forcé.\n*Requis pour mode Auto: Profile, Balance & Usage.*`;
+            } else {
+                saveConfig({ apiKey: key, keyHasAccessToProfile: true }); // Let user keep current mode or default
+            }
+
             emitStatusToast('success', `Clé Valide! (${enterpriseModels.length} modèles Pro débloqués)`, 'Pollinations Config');
 
             return {
                 handled: true,
-                response: `✅ **Connexion Réussie!**\n- Clé: \`${masked}\`\n- Mode: **PRO** (Activé)\n- Modèles Débloqués: ${enterpriseModels.length} (dont ${diamondCount} 💎 Paid)`
+                response: `✅ **Connexion Réussie!**\n- Clé: \`${masked}\`\n- Modèles Débloqués: ${enterpriseModels.length} (dont ${diamondCount} 💎 Paid)${forcedModeMsg}`
             };
         } else {
             // FAILURE (Valid JSON but no Enterprise models - likely Invalid Key or Free plan only?)
@@ -445,3 +555,4 @@ export function createCommandHooks() {
         }
     };
 }
+
