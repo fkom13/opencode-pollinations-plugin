@@ -1,7 +1,7 @@
 {
     "name": "opencode-pollinations-plugin",
     "displayName": "Pollinations AI (V5.9)",
-    "version": "5.9.1",
+    "version": "6.0.0-beta.6",
     "description": "Native Pollinations.ai Provider Plugin for OpenCode",
     "publisher": "pollinations",
     "repository": {
@@ -41,6 +41,10 @@
             {
                 "command": "pollinations.usage",
                 "title": "Pollinations: Show Usage"
+            },
+            {
+                "command": "pollinations.addKey",
+                "title": "Pollinations: Add BackgroundCut Key"
             }
         ]
     },
@@ -49,10 +53,12 @@
     ],
     "dependencies": {
         "@opencode-ai/plugin": "^1.0.85",
-        "zod": "^3.22.4"
+        "qrcode": "^1.5.4",
+        "zod": "^3.25.76"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
+        "@types/qrcode": "^1.5.6",
         "typescript": "^5.0.0"
     }
 }
