@@ -1,21 +1,22 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Build output (Artifacts)
 dist/
 out/
+*.tgz
 
 # IDE/Editor
+.vscode/
 .vscode-test/
 *.vsix
 .DS_Store
+*.swp
 
-# Environment & Config
+# Environment & Config (Secrets/Local)
 .env
 .npmrc
 config.json
-
-# Plugin cache
 .pollinations/
 
 # Logs
@@ -29,5 +30,9 @@ _archs/
 .gencodedoc/
 .gencodedoc.yaml
 
-# Generated docs
+# Documentation Generation
 opencode-pollinations-plugin_tree_code.md
+
+# OS specific
+.DS_Store
+Thumbs.db
