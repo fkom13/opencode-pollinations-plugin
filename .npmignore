@@ -1,40 +1,38 @@
 # NPM Ignore
 # Files to exclude from the NPM package to keep it lightweight.
 
-# Archives & Internal/Obsolete Docs
+# Source Code (we ship compiled dist/)
+src/
+scripts/
+tests/
+tsconfig.json
+
+# Documentation (Available on GitHub, redundant in package)
+docs/
 _archs/
-docs/studies/
-docs/issues/
-docs/vision/
-# But keep docs/technical and docs/images!
-
-# Development/Analysis
-ANALYSIS_REPORT.md
+TECHNICAL_MANUAL.md
 AGENT.md
-ROADMAP.md
+CHANGELOG.md
+CONTRIBUTING.md
+# LICENSE is automatically included by npm
+# README.md is automatically included by npm
 
-# Logs & Temp files
-logs/
-*.log
-npm-debug.log*
+# Versioning & Dev Tools
 .gencodedoc/
 .gencodedoc.yaml
 .npmrc
+.git/
+.gitignore
+.github/
+
+# Logs & Temp
+logs/
+*.log
+npm-debug.log*
 opencode-pollinations-plugin_tree_code.md
-
-# Source (we ship compiled dist/)
-# We usually ship src/ for debugging, but if you want lean package exclude it.
-# Keeping src/ for now as per v5.9.
-
-# Tests
-tests/
-test/
-__tests__/
 
 # Editor Configs
 .vscode/
 .idea/
 *.swp
 .DS_Store
-.git/
-.gitignore

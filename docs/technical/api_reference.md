@@ -11,14 +11,17 @@
 |----------|------|------|
 | `image.pollinations.ai` | Free image gen (fallback) | ❌ |
 | `gen.pollinations.ai` | Paid generation (image/video/audio) | ✅ Bearer |
-| `text.pollinations.ai` | Free text/tools (déjà intégré) | ❌ |
+| `text.pollinations.ai` | Free text/tools (déjà intégré) / Fallback Free universe > Deprecated | ❌ |
 | `enter.pollinations.ai` | Plateforme gestion crédits/clés (pas de gen) | — |
 
 ### Model Discovery (dynamique — ne PAS hardcoder)
 
 ```
-GET text.pollinations.ai/models        → modèles texte
-GET image.pollinations.ai/models       → modèles image FREE
+FREE
+GET text.pollinations.ai/models        → modèles texte détaillés free universe
+GET image.pollinations.ai/models       → modèles image FREE > Down on ne s'en sert plus et ne doit plus s'en servir
+
+ENTER
 GET gen.pollinations.ai/image/models   → modèles image/video PAID et freetiers>paid
 GET gen.pollinations.ai/audio/models   → modèles audio PAID et freetiers>paid
 POST gen.pollinations.ai/v1/chat/completions  → gen audio/speech PAID et freetiers>paid

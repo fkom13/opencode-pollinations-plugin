@@ -77,7 +77,7 @@ const startProxy = (): Promise<number> => {
         // Listen on random port (0) to avoid conflicts (CLI/IDE)
         server.listen(0, '127.0.0.1', () => {
             // @ts-ignore
-            const assignedPort = server.address().port;
+            const assignedPort = (server.address() as net.AddressInfo).port;
             log(`[Proxy] Started v${require('../package.json').version} (Dynamic Port) on port ${assignedPort}`);
             resolve(assignedPort);
         });
