@@ -5,7 +5,13 @@
 _archs/
 docs/studies/
 docs/issues/
-docs/vision/ideas_archive/
+docs/vision/
+# But keep docs/technical and docs/images!
+
+# Development/Analysis
+ANALYSIS_REPORT.md
+AGENT.md
+ROADMAP.md
 
 # Logs & Temp files
 logs/
@@ -13,16 +19,12 @@ logs/
 npm-debug.log*
 .gencodedoc/
 .gencodedoc.yaml
+.npmrc
+opencode-pollinations-plugin_tree_code.md
 
-# Development Configs
-tsconfig.json
-.eslintrc.json
-.prettierrc
-jest.config.js
-scripts/
-
-# Source (Map files etc - Optional, but keeping src/ is often good for debugging)
-# We keep src/ for sourcemaps if needed, but dist/ is the main artifact.
+# Source (we ship compiled dist/)
+# We usually ship src/ for debugging, but if you want lean package exclude it.
+# Keeping src/ for now as per v5.9.
 
 # Tests
 tests/
@@ -34,3 +36,5 @@ __tests__/
 .idea/
 *.swp
 .DS_Store
+.git/
+.gitignore
