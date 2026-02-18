@@ -36,7 +36,7 @@
 
 ---
 
-## 🚀 Medium Term (v7.0) - **Pollinations Tools Ecosystem** 🎨
+## 🚀 Medium Term (v6.0) - **Pollinations Tools Ecosystem** 🎨
 
 > **Flagship Feature**: OpenCode Custom Tools powered by Pollinations APIs
 

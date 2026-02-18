@@ -1,29 +1,36 @@
-# Files to exclude from npm publish
-# (These are included in git but NOT in the npm package)
+# NPM Ignore
+# Files to exclude from the NPM package to keep it lightweight.
 
-# Development/Analysis
-ANALYSIS_REPORT.md
-AGENT.md
-ROADMAP.md
-
-# Documentation folder (TECHNICAL_MANUAL stays for reference)
-docs/
-
-# Archives and tools
+# Archives & Internal/Obsolete Docs
 _archs/
-scripts/
-logs/
+docs/studies/
+docs/issues/
+docs/vision/ideas_archive/
 
-# Config files
+# Logs & Temp files
+logs/
+*.log
+npm-debug.log*
 .gencodedoc/
 .gencodedoc.yaml
-.npmrc
-opencode-pollinations-plugin_tree_code.md
 
-# Source (we ship compiled dist/)
-src/
+# Development Configs
 tsconfig.json
+.eslintrc.json
+.prettierrc
+jest.config.js
+scripts/
 
-# Git/Dev
-.git/
-.gitignore
+# Source (Map files etc - Optional, but keeping src/ is often good for debugging)
+# We keep src/ for sourcemaps if needed, but dist/ is the main artifact.
+
+# Tests
+tests/
+test/
+__tests__/
+
+# Editor Configs
+.vscode/
+.idea/
+*.swp
+.DS_Store

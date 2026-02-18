@@ -186,6 +186,42 @@ export async function getDetailedUsage(apiKey: string): Promise<DetailedUsageRes
     }
 }
 
+// === DAILY USAGE API (Server-side aggregated, no 100-entry limit) ===
+
+export interface DailyUsageEntry {
+    date: string;       // Format "YYYY-MM-DD"
+    model: string;
+    meter_source: 'tier' | 'pack' | 'combined';
+    requests: number;
+    cost_usd: number;
+}
+
+export interface DailyUsageResponse {
+    usage: DailyUsageEntry[];
+}
+
+export async function getDailyUsage(apiKey: string): Promise<DailyUsageResponse | null> {
+    if (!apiKey || apiKey.length < 10) return null;
+
+    try {
+        logDebug("Fetching Daily Usage (aggregated)...");
+        const response = await fetch('https://gen.pollinations.ai/account/usage/daily', {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+
+        if (!response.ok) {
+            logDebug(`Daily Usage API Error: ${response.status}`);
+            return null;
+        }
+
+        const data: any = await response.json();
+        return data as DailyUsageResponse;
+    } catch (e) {
+        logDebug(`Error Daily Usage: ${e}`);
+        return null;
+    }
+}
+
 export async function getAggregatedModels(): Promise<{ object: string, data: OpenAIModel[] }> {
     const config = loadConfig();
     const [free, enter] = await Promise.all([

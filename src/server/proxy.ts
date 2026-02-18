@@ -144,10 +144,10 @@ function sanitizeToolsForBedrock(tools: any[]): any[] {
 
 function sanitizeSchemaForKimi(schema: any): any {
     if (!schema || typeof schema !== 'object') return schema;
-    
+
     // Kimi Fixes
     if (schema.title) delete schema.title;
-    
+
     // Fix empty objects "{}" which Kimi hates.
     // If it's an empty object without type, assume string or object?
     // Often happens with "additionalProperties: {}"
@@ -194,7 +194,7 @@ async function fetchWithRetry(url: string, options: any, retries: number = MAX_R
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-        
+
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
 
@@ -290,6 +290,29 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         log(`Incoming Model (OpenCode ID): ${body.model}`);
 
+        // 0. SPECIAL: connect-pollinations fallback model
+        if (body.model === 'connect-pollinations') {
+            const connectMsg = {
+                id: `chatcmpl-connect-${Date.now()}`,
+                object: 'chat.completion',
+                created: Math.floor(Date.now() / 1000),
+                model: 'connect-pollinations',
+                choices: [{
+                    index: 0,
+                    message: {
+                        role: 'assistant',
+                        content: `🔗 **Se connecter à Pollinations**\n\nAccédez à 30+ modèles IA de pointe !\n\n📍 **Étapes :**\n1. Visitez https://enter.pollinations.ai\n2. Créez un compte gratuit\n3. Copiez votre API Key\n4. Exécutez: \`/pollinations config apiKey YOUR_KEY\`\n5. Redémarrez OpenCode\n\n✅ **Bénéfices :**\n• 30+ modèles avancés (GPT-5, Claude, Gemini...)\n• Crédits gratuits selon votre tier\n• Stabilité garantie`
+                    },
+                    finish_reason: 'stop'
+                }],
+                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+            };
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(connectMsg));
+            return;
+        }
+
         // 1. STRICT ROUTING & SAFETY NET LOGIC (V5)
         let actualModel = body.model || "openai";
         let isEnterprise = false;
@@ -368,18 +391,35 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         if (config.mode === 'alwaysfree') {
             if (isEnterprise) {
-                // NEW: Paid Only Check for Always Free
+                // Paid Only Check: BLOCK (not fallback) in AlwaysFree mode
                 try {
                     const homedir = process.env.HOME || '/tmp';
                     const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
                     if (fs.existsSync(standardPaidPath)) {
                         const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
                         if (paidModels.includes(actualModel)) {
-                            log(`[SafetyNet] alwaysfree Mode: Request for Paid Only Model (${actualModel}). FALLBACK.`);
-                            actualModel = config.fallbacks.free.main.replace('free/', '');
-                            isEnterprise = false;
-                            isFallbackActive = true;
-                            fallbackReason = "Mode AlwaysFree actif: Ce modèle payant consomme du wallet. Passez en mode PRO.";
+                            log(`[AlwaysFree] BLOCKED: Paid Only Model (${actualModel}).`);
+                            emitStatusToast('warning', `🚫 Modèle payant bloqué: ${actualModel}`, 'AlwaysFree Mode');
+
+                            const blockMsg = {
+                                id: `chatcmpl-block-${Date.now()}`,
+                                object: 'chat.completion',
+                                created: Math.floor(Date.now() / 1000),
+                                model: actualModel,
+                                choices: [{
+                                    index: 0,
+                                    message: {
+                                        role: 'assistant',
+                                        content: `🚫 **Modèle payant non disponible en mode AlwaysFree**\n\nLe modèle \`${actualModel}\` consomme directement votre wallet (💎 Paid Only).\n\n**Solutions :**\n• \`/pollinations config mode pro\` — Autorise les modèles payants avec protection wallet\n• \`/pollinations config mode manual\` — Aucune restriction, contrôle total`
+                                    },
+                                    finish_reason: 'stop'
+                                }],
+                                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+                            };
+
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(blockMsg));
+                            return;
                         }
                     }
                 } catch (e) { }
@@ -486,7 +526,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 proxyBody.frequency_penalty = 1.1;
                 proxyBody.presence_penalty = 0.4;
                 proxyBody.stop = ["<|endoftext|>", "User:", "\nUser", "User :"];
-                
+
                 // KIMI FIX: Remove 'title' from schema
                 proxyBody.tools = proxyBody.tools.map((t: any) => {
                     if (t.function && t.function.parameters) {
@@ -542,6 +582,9 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                         const name = t.function?.name || t.name;
                         return isFunc && name !== 'google_search';
                     });
+
+
+
 
                     // 2. Sanitize & RESTORE GROUNDING CONFIG (Essential for Vertex Auth)
                     if (proxyBody.tools.length > 0) {
@@ -660,7 +703,11 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
 
-                    if (fetchRes.status === 402) fallbackReason = "Insufficient Funds (Upstream 402)";
+                    if (fetchRes.status === 402) {
+                        fallbackReason = "Insufficient Funds (Upstream 402)";
+                        // Force refresh quota cache so next pre-flight check is accurate
+                        try { await getQuotaStatus(true); } catch (e) { }
+                    }
                     else if (fetchRes.status === 429) fallbackReason = "Rate Limit (Upstream 429)";
                     else if (fetchRes.status === 401) fallbackReason = "Invalid API Key (Upstream 401)";
                     else fallbackReason = `Access Denied (${fetchRes.status})`;

@@ -62,6 +62,7 @@ export async function checkKeyPermissions(key: string): Promise<CheckResult> {
 
 // === CONSTANTS & PRICING ===
 const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
+    microbe: { pollen: 0.1, emoji: '🦠' },
     spore: { pollen: 1, emoji: '🦠' },
     seed: { pollen: 3, emoji: '🌱' },
     flower: { pollen: 10, emoji: '🌸' },
@@ -169,6 +170,11 @@ function calculateCurrentPeriodStats(
 
 // === COMMAND HANDLER ===
 
+let globalClient: any = null;
+export function setClientForCommands(client: any) {
+    globalClient = client;
+}
+
 export async function handleCommand(command: string): Promise<CommandResult> {
     const parts = command.trim().split(/\s+/);
 
@@ -192,6 +198,13 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             return handleConfigCommand(args);
         case 'help':
             return handleHelpCommand();
+        case 'addKey': // External trigger
+            // UI Pollution Fix: User hates appendPrompt.
+            // Just return a message telling them to use the tool.
+            return {
+                handled: true,
+                response: "💡 Pour ajouter une clé : Utilisez l'outil `rmbg_keys`\nExemple : `rmbg_keys action=add key=bkgc_...`"
+            };
         default:
             return {
                 handled: true,
@@ -512,25 +525,37 @@ function handleConfigCommand(args: string[]): CommandResult {
         return { handled: true, response: `✅ status_bar = ${enabled}` };
     }
 
+    if (key === 'cost_estimator' && value) {
+        const enabled = value === 'true';
+        const config = loadConfig();
+        saveConfig({ ...config, costEstimator: enabled });
+        return { handled: true, response: `✅ cost_estimator = ${enabled}` };
+    }
+
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator`
     };
 }
 
 function handleHelpCommand(): CommandResult {
     const help = `
-### 🌸 Pollinations Plugin - Commandes V5
+### 🌸 Pollinations Plugin - Commandes V6
 
+**Mode & Usage**
 - **\`/pollinations mode [mode]\`**: Change le mode (manual, alwaysfree, pro).
 - **\`/pollinations usage [full]\`**: Affiche le dashboard (full = détail).
-- **\`/pollinations fallback <main> [agent]\`**: Configure le Safety Net (Free).
+- **\`/pollinations fallback <main> [agent]\`**: Configure le Safety Net.
+
+**Configuration**
 - **\`/pollinations config [key] [value]\`**:
-  - \`status_gui\`: none, alert, all (Status Dashboard).
-  - \`logs_gui\`: none, error, verbose (Logs Techniques).
-  - \`threshold_tier\`: 0-100 (Alerte %).
-  - \`threshold_wallet\`: 0-100 (Safety Net %).
-  - \`status_bar\`: true/false (Widget).
+  - \`status_gui\`: none, alert, all
+  - \`logs_gui\`: none, error, verbose
+  - \`threshold_tier\` / \`threshold_wallet\`: 0-100
+  - \`status_bar\`: true/false
+  - \`cost_estimator\`: true/false (show cost in outputs)
+
+> 💡 **RMBG keys**: Use the \`rmbg_keys\` tool (works with any model).
 `.trim();
 
     return { handled: true, response: help };
@@ -541,18 +566,41 @@ function handleHelpCommand(): CommandResult {
 export function createCommandHooks() {
     return {
         'tui.command.execute': async (input: any, output: any) => {
-            const result = await handleCommand(input.command);
+            if (!input.command.startsWith('/pollinations')) {
+                return;
+            }
 
-            if (result.handled) {
-                output.handled = true;
-                if (result.response) {
-                    output.response = result.response;
+            try {
+                // Parse command
+                const rawArgs = input.command.replace('/pollinations', '').trim();
+                const result = await handleCommand(rawArgs);
+
+                if (result.handled) {
+                    if (result.error) {
+                        output.error = `❌ **Erreur:** ${result.error}`;
+                    } else if (result.response) {
+                        output.response = result.response;
+                    }
+                    // If no response and no error, assume handled silently (like appendPrompt)
                 }
-                if (result.error) {
-                    output.error = result.error;
-                }
+            } catch (err: any) {
+                output.error = `❌ **Erreur Critique:** ${err.message}`;
+            }
+        },
+
+        // Hook for UI Commands (Palette / Buttons)
+        'command.execute.before': async (input: any, output: any) => {
+            const cmd = input.command;
+            if (cmd === 'pollinations.addKey') {
+                handleCommand('addKey'); // Return help message
+            } else if (cmd === 'pollinations.usage') {
+                const res = await handleCommand('usage');
+                if (res.response) globalClient?.tui.showToast({ title: "Pollinations Usage", metadata: { type: 'info', message: "Voir logs pour usage détaillé" } });
+            } else if (cmd === 'pollinations.mode') {
+                // UI Pollution Fix: SILENCE.
+                // User explicitly requested NO messages.
             }
         }
     };
-}
 
+}

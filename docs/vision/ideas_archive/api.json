@@ -1,0 +1,4694 @@
+{
+  "openapi": "3.1.0",
+  "servers": [
+    {
+      "url": "https://gen.pollinations.ai"
+    }
+  ],
+  "info": {
+    "title": "pollinations.ai API",
+    "description": "Documentation for `gen.pollinations.ai` - the pollinations.ai API gateway.\n\n[📝 Edit docs](https://github.com/pollinations/pollinations/edit/master/enter.pollinations.ai/src/routes/docs.ts)\n\n## Quick Start\n\nGet your API key at https://enter.pollinations.ai\n\n### Image Generation\n```bash\ncurl 'https://gen.pollinations.ai/image/a%20cat?model=flux' \\\n  -H 'Authorization: Bearer YOUR_API_KEY'\n```\n\n### Text Generation\n```bash\ncurl 'https://gen.pollinations.ai/v1/chat/completions' \\\n  -H 'Authorization: Bearer YOUR_API_KEY' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"model\": \"openai\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]}'\n```\n\n### Vision (Image Input)\n```bash\ncurl 'https://gen.pollinations.ai/v1/chat/completions' \\\n  -H 'Authorization: Bearer YOUR_API_KEY' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"model\": \"openai\", \"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe this image\"}, {\"type\": \"image_url\", \"image_url\": {\"url\": \"https://example.com/image.jpg\"}}]}]}'\n```\n\n**Gemini Tools:** `gemini`, `gemini-large` have `code_execution` enabled (can generate images/plots). `gemini-search` has `google_search` enabled. Responses may include `content_blocks` with `image_url`, `text`, or `thinking` types.\n\n### Simple Text Endpoint\n```bash\ncurl 'https://gen.pollinations.ai/text/hello?key=YOUR_API_KEY'\n```\n\n### Streaming\n```bash\ncurl 'https://gen.pollinations.ai/v1/chat/completions' \\\n  -H 'Authorization: Bearer YOUR_API_KEY' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"model\": \"openai\", \"messages\": [{\"role\": \"user\", \"content\": \"Write a poem\"}], \"stream\": true}' \\\n  --no-buffer\n```\n\n### Model Discovery\n**Always check available models before testing:**\n\n- **Image models:** [/image/models](https://gen.pollinations.ai/image/models)\n- **Text models:** [/v1/models](https://gen.pollinations.ai/v1/models)\n\n## Authentication\n\n**Two key types (both consume Pollen from your balance):**\n- **Publishable Keys (`pk_`):** ⚠️ **Beta - not yet ready for production use.** For client-side apps, IP rate-limited (1 pollen per IP per hour). **Warning:** Exposing in public code will consume your Pollen if your app gets traffic.\n- **Secret Keys (`sk_`):** Server-side only, no rate limits. Keep secret - never expose publicly.\n\n**Auth methods:**\n1. Header: `Authorization: Bearer YOUR_API_KEY`\n2. Query param: `?key=YOUR_API_KEY`\n\n## Account Management\n\nCheck your balance and usage:\n\n```bash\n# Check pollen balance\ncurl 'https://gen.pollinations.ai/account/balance' \\\n  -H 'Authorization: Bearer YOUR_API_KEY'\n\n# Get profile info\ncurl 'https://gen.pollinations.ai/account/profile' \\\n  -H 'Authorization: Bearer YOUR_API_KEY'\n\n# View usage history\ncurl 'https://gen.pollinations.ai/account/usage' \\\n  -H 'Authorization: Bearer YOUR_API_KEY'\n```",
+    "version": "0.3.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key",
+        "description": "API key from enter.pollinations.ai dashboard"
+      }
+    },
+    "schemas": {
+      "CacheControl": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ephemeral"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "MessageContentPart": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "text"
+              },
+              "text": {
+                "type": "string"
+              },
+              "cache_control": {
+                "$ref": "#/components/schemas/CacheControl"
+              }
+            },
+            "required": [
+              "type",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "image_url"
+              },
+              "image_url": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "low",
+                      "high"
+                    ]
+                  },
+                  "mime_type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "image_url"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "video_url"
+              },
+              "video_url": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "mime_type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "video_url"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "input_audio"
+              },
+              "input_audio": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "wav",
+                      "mp3",
+                      "flac",
+                      "opus",
+                      "pcm16"
+                    ]
+                  }
+                },
+                "required": [
+                  "data",
+                  "format"
+                ]
+              },
+              "cache_control": {
+                "$ref": "#/components/schemas/CacheControl"
+              }
+            },
+            "required": [
+              "type",
+              "input_audio"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "file"
+              },
+              "file": {
+                "type": "object",
+                "properties": {
+                  "file_data": {
+                    "type": "string"
+                  },
+                  "file_id": {
+                    "type": "string"
+                  },
+                  "file_name": {
+                    "type": "string"
+                  },
+                  "file_url": {
+                    "type": "string"
+                  },
+                  "mime_type": {
+                    "type": "string"
+                  }
+                }
+              },
+              "cache_control": {
+                "$ref": "#/components/schemas/CacheControl"
+              }
+            },
+            "required": [
+              "type",
+              "file"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      },
+      "CreateSpeechRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "The text to generate audio for. Maximum 4096 characters.",
+            "example": "Hello, welcome to Pollinations!"
+          },
+          "voice": {
+            "default": "alloy",
+            "description": "The voice to use. Available voices: alloy, echo, fable, onyx, nova, shimmer, ash, ballad, coral, sage, verse, rachel, domi, bella, elli, charlotte, dorothy, sarah, emily, lily, matilda, adam, antoni, arnold, josh, sam, daniel, charlie, james, fin, callum, liam, george, brian, bill.",
+            "example": "rachel",
+            "type": "string",
+            "enum": [
+              "alloy",
+              "echo",
+              "fable",
+              "onyx",
+              "shimmer",
+              "ash",
+              "ballad",
+              "coral",
+              "sage",
+              "verse",
+              "rachel",
+              "domi",
+              "bella",
+              "elli",
+              "charlotte",
+              "dorothy",
+              "sarah",
+              "emily",
+              "lily",
+              "matilda",
+              "adam",
+              "antoni",
+              "arnold",
+              "josh",
+              "sam",
+              "daniel",
+              "charlie",
+              "james",
+              "fin",
+              "callum",
+              "liam",
+              "george",
+              "brian",
+              "bill"
+            ]
+          },
+          "response_format": {
+            "default": "mp3",
+            "description": "The audio format for the output.",
+            "example": "mp3",
+            "type": "string",
+            "enum": [
+              "mp3",
+              "opus",
+              "aac",
+              "flac",
+              "wav",
+              "pcm"
+            ]
+          },
+          "speed": {
+            "default": 1,
+            "description": "The speed of the generated audio. 0.25 to 4.0, default 1.0.",
+            "example": 1,
+            "type": "number",
+            "minimum": 0.25,
+            "maximum": 4
+          },
+          "duration": {
+            "description": "Music duration in seconds, 3-300 (elevenmusic only)",
+            "example": 30,
+            "type": "number",
+            "minimum": 3,
+            "maximum": 300
+          },
+          "instrumental": {
+            "description": "If true, guarantees instrumental output (elevenmusic only)",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "gen.pollinations.ai",
+      "description": "Generate text, images, and videos using AI models"
+    },
+    {
+      "name": "Bring Your Own Pollen 🌸",
+      "description": "# Bring Your Own Pollen (BYOP) 🌸\n\nUsers pay for their own AI usage. You pay $0. Ship apps without API costs.\n\n## The Flow\n\n1. User taps \"Connect with Pollinations\"\n2. They sign in → get a temp API key\n3. Their pollen, your app\n\n## Why BYOP?\n\n- **$0 costs** — 1 user or 1000, same price: free\n- **No key drama** — auth flow handles it\n- **Self-regulating** — everyone pays for their own usage\n- **Frontend only** — no backend needed\n\n![Authorize Screen](https://raw.githubusercontent.com/pollinations/pollinations/main/enter.pollinations.ai/public/authorize-screen.png)\n\n## URLs\n\nSay your app is at `https://myapp.com`\n\n**Auth link:**\n```\nhttps://enter.pollinations.ai/authorize?redirect_url=https://myapp.com\n```\n\n**With preselected options:**\n```\nhttps://enter.pollinations.ai/authorize?redirect_url=https://myapp.com&permissions=profile,balance&models=flux,openai&expiry=7&budget=10\n```\n\n| Param | Description | Example |\n|-------|-------------|---------|\n| `models` | Allowed models (comma-separated) | `flux,openai,gptimage` |\n| `budget` | Pollen budget limit | `10` |\n| `expiry` | Key expiry in days (default: 30) | `7` |\n| `permissions` | Account permissions | `profile,balance,usage` |\n\n**Redirect back:**\n```\nhttps://myapp.com#api_key=sk_abc123xyz\n```\n\n> Key is in the `#` fragment — never hits server logs 🔒\n\n## Code\n\n```javascript\n// 1. Send user to auth\nwindow.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(location.href)}`;\n\n// 2. Grab key from URL after redirect\nconst apiKey = new URLSearchParams(location.hash.slice(1)).get('api_key');\n\n// 3. Use their pollen\nfetch('https://gen.pollinations.ai/v1/chat/completions', {\n  method: 'POST',\n  headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ model: 'openai', messages: [{ role: 'user', content: 'yo' }] })\n});\n```\n\nKeys expire in 30 days · revoke anytime from dashboard\n\n---\n\n[📝 Edit this doc](https://github.com/pollinations/pollinations/edit/main/BRING_YOUR_OWN_POLLEN.md) · *h/t [Puter.js](https://docs.puter.com/user-pays-model/) for pioneering this*"
+    }
+  ],
+  "paths": {
+    "/account/profile": {
+      "get": {
+        "operationId": "getAccountProfile",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get user profile info (name, email, GitHub username, tier, createdAt, nextResetAt). Requires `account:profile` permission for API keys.",
+        "responses": {
+          "200": {
+            "description": "User profile with name, email, githubUsername, tier, createdAt, nextResetAt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "User's display name"
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "email",
+                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "User's email address"
+                    },
+                    "githubUsername": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "GitHub username if linked"
+                    },
+                    "image": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Profile picture URL (e.g. GitHub avatar)"
+                    },
+                    "tier": {
+                      "type": "string",
+                      "enum": [
+                        "anonymous",
+                        "microbe",
+                        "spore",
+                        "seed",
+                        "flower",
+                        "nectar",
+                        "router"
+                      ],
+                      "description": "User's current tier level"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "description": "Account creation timestamp (ISO 8601)"
+                    },
+                    "nextResetAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Next daily pollen reset timestamp (ISO 8601)"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "email",
+                    "githubUsername",
+                    "image",
+                    "tier",
+                    "createdAt",
+                    "nextResetAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied - API key missing `account:profile` permission"
+          }
+        }
+      }
+    },
+    "/account/balance": {
+      "get": {
+        "operationId": "getAccountBalance",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get pollen balance. Returns the key's remaining budget if set, otherwise the user's total balance. Requires `account:balance` permission for API keys.",
+        "responses": {
+          "200": {
+            "description": "Balance (remaining pollen)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balance": {
+                      "type": "number",
+                      "description": "Remaining pollen balance (combines tier, pack, and crypto balances)"
+                    }
+                  },
+                  "required": [
+                    "balance"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied - API key missing `account:balance` permission"
+          }
+        }
+      }
+    },
+    "/account/usage": {
+      "get": {
+        "operationId": "getAccountUsage",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get request history and spending data. Supports JSON and CSV formats. Requires `account:usage` permission for API keys.",
+        "responses": {
+          "200": {
+            "description": "Usage records with timestamp, model, tokens, cost_usd, etc.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string",
+                            "description": "Request timestamp (YYYY-MM-DD HH:mm:ss format)"
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "Request type (e.g., 'generate.image', 'generate.text')"
+                          },
+                          "model": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Model used for generation"
+                          },
+                          "api_key": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "API key identifier used (masked)"
+                          },
+                          "api_key_type": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Type of API key ('secret', 'publishable')"
+                          },
+                          "meter_source": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Billing source ('tier', 'pack', 'crypto')"
+                          },
+                          "input_text_tokens": {
+                            "type": "number",
+                            "description": "Number of input text tokens"
+                          },
+                          "input_cached_tokens": {
+                            "type": "number",
+                            "description": "Number of cached input tokens"
+                          },
+                          "input_audio_tokens": {
+                            "type": "number",
+                            "description": "Number of input audio tokens"
+                          },
+                          "input_image_tokens": {
+                            "type": "number",
+                            "description": "Number of input image tokens"
+                          },
+                          "output_text_tokens": {
+                            "type": "number",
+                            "description": "Number of output text tokens"
+                          },
+                          "output_reasoning_tokens": {
+                            "type": "number",
+                            "description": "Number of reasoning tokens (for models with chain-of-thought)"
+                          },
+                          "output_audio_tokens": {
+                            "type": "number",
+                            "description": "Number of output audio tokens"
+                          },
+                          "output_image_tokens": {
+                            "type": "number",
+                            "description": "Number of output image tokens (1 per image)"
+                          },
+                          "cost_usd": {
+                            "type": "number",
+                            "description": "Cost in USD for this request"
+                          },
+                          "response_time_ms": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Response time in milliseconds"
+                          }
+                        },
+                        "required": [
+                          "timestamp",
+                          "type",
+                          "model",
+                          "api_key",
+                          "api_key_type",
+                          "meter_source",
+                          "input_text_tokens",
+                          "input_cached_tokens",
+                          "input_audio_tokens",
+                          "input_image_tokens",
+                          "output_text_tokens",
+                          "output_reasoning_tokens",
+                          "output_audio_tokens",
+                          "output_image_tokens",
+                          "cost_usd",
+                          "response_time_ms"
+                        ]
+                      },
+                      "description": "Array of usage records"
+                    },
+                    "count": {
+                      "type": "number",
+                      "description": "Number of records returned"
+                    }
+                  },
+                  "required": [
+                    "usage",
+                    "count"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied - API key missing `account:usage` permission"
+          }
+        },
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "default": "json",
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "type": "number",
+              "minimum": 1,
+              "maximum": 50000
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/account/usage/daily": {
+      "get": {
+        "operationId": "getAccountUsageDaily",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get daily aggregated usage data (last 90 days). Supports JSON and CSV formats. Requires `account:usage` permission for API keys. Results are cached for 1 hour.",
+        "responses": {
+          "200": {
+            "description": "Daily usage records aggregated by date/model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usage": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "description": "Date (YYYY-MM-DD format)"
+                          },
+                          "model": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Model used"
+                          },
+                          "meter_source": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Billing source ('tier', 'pack', 'crypto')"
+                          },
+                          "requests": {
+                            "type": "number",
+                            "description": "Number of requests"
+                          },
+                          "cost_usd": {
+                            "type": "number",
+                            "description": "Total cost in USD"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "model",
+                          "meter_source",
+                          "requests",
+                          "cost_usd"
+                        ]
+                      },
+                      "description": "Array of daily usage records"
+                    },
+                    "count": {
+                      "type": "number",
+                      "description": "Number of records returned"
+                    }
+                  },
+                  "required": [
+                    "usage",
+                    "count"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied - API key missing `account:usage` permission"
+          }
+        },
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "default": "json",
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/account/key": {
+      "get": {
+        "operationId": "getAccountKey",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get API key status and information. Returns key validity, type, expiry, permissions, and remaining budget. This endpoint allows validating keys without making expensive generation requests. Requires API key authentication.",
+        "responses": {
+          "200": {
+            "description": "API key status and information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": {
+                      "type": "boolean",
+                      "description": "Whether the API key is valid and active"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "publishable",
+                        "secret"
+                      ],
+                      "description": "Type of API key"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Display name of the API key"
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Expiry timestamp in ISO 8601 format, null if never expires"
+                    },
+                    "expiresIn": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Seconds until expiry, null if never expires"
+                    },
+                    "permissions": {
+                      "type": "object",
+                      "properties": {
+                        "models": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "List of allowed model IDs, null = all models allowed"
+                        },
+                        "account": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "List of account permissions, null = no account access"
+                        }
+                      },
+                      "required": [
+                        "models",
+                        "account"
+                      ],
+                      "description": "API key permissions"
+                    },
+                    "pollenBudget": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Remaining pollen budget for this key, null = unlimited (uses user balance)"
+                    },
+                    "rateLimitEnabled": {
+                      "type": "boolean",
+                      "description": "Whether rate limiting is enabled for this key"
+                    }
+                  },
+                  "required": [
+                    "valid",
+                    "type",
+                    "name",
+                    "expiresAt",
+                    "expiresIn",
+                    "permissions",
+                    "pollenBudget",
+                    "rateLimitEnabled"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key"
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "operationId": "getGenerateV1Models",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get available text models (OpenAI-compatible). If an API key with model restrictions is provided, only allowed models are returned.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "const": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "object": {
+                            "type": "string",
+                            "const": "model"
+                          },
+                          "created": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "object",
+                          "created"
+                        ],
+                        "description": "OpenAI-compatible model object"
+                      }
+                    }
+                  },
+                  "required": [
+                    "object",
+                    "data"
+                  ],
+                  "description": "OpenAI-compatible list of available models."
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/image/models": {
+      "get": {
+        "operationId": "getGenerateImageModels",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get a list of available image generation models with pricing, capabilities, and metadata. If an API key with model restrictions is provided, only allowed models are returned.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {},
+                  "description": "List of models with pricing and metadata"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/text/models": {
+      "get": {
+        "operationId": "getGenerateTextModels",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get a list of available text generation models with pricing, capabilities, and metadata. If an API key with model restrictions is provided, only allowed models are returned.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {},
+                  "description": "List of models with pricing and metadata"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/audio/models": {
+      "get": {
+        "operationId": "getGenerateAudioModels",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Get a list of available audio models with pricing, capabilities, and metadata. If an API key with model restrictions is provided, only allowed models are returned.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {},
+                  "description": "List of models with pricing and metadata"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "operationId": "postGenerateV1ChatCompletions",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "OpenAI-compatible chat completions endpoint.\n\n**Legacy endpoint:** `/openai` (deprecated, use `/v1/chat/completions` instead)\n\n**Authentication (Secret Keys Only):**\n\nInclude your API key in the `Authorization` header as a Bearer token:\n\n`Authorization: Bearer YOUR_API_KEY`\n\nAPI keys can be created from your dashboard at enter.pollinations.ai.\nBoth key types consume Pollen. Secret keys have no rate limits.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "choices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "finish_reason": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "message": {
+                            "type": "object",
+                            "properties": {
+                              "content": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "tool_calls": {
+                                "anyOf": [
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "const": "function"
+                                        },
+                                        "function": {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string"
+                                            },
+                                            "arguments": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "name",
+                                            "arguments"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "type",
+                                        "function"
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "role": {
+                                "type": "string",
+                                "const": "assistant"
+                              },
+                              "function_call": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "arguments": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "arguments",
+                                      "name"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "content_blocks": {
+                                "anyOf": [
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "const": "text"
+                                            },
+                                            "text": {
+                                              "type": "string"
+                                            },
+                                            "cache_control": {
+                                              "$ref": "#/components/schemas/CacheControl"
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "text"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "const": "image_url"
+                                            },
+                                            "image_url": {
+                                              "type": "object",
+                                              "properties": {
+                                                "url": {
+                                                  "type": "string"
+                                                },
+                                                "detail": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "auto",
+                                                    "low",
+                                                    "high"
+                                                  ]
+                                                },
+                                                "mime_type": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "url"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "image_url"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "const": "thinking"
+                                            },
+                                            "thinking": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "thinking"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "const": "redacted_thinking"
+                                            },
+                                            "data": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "data"
+                                          ]
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "type"
+                                          ],
+                                          "additionalProperties": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "audio": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "transcript": {
+                                        "type": "string"
+                                      },
+                                      "data": {
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "expires_at": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      }
+                                    },
+                                    "required": [
+                                      "transcript",
+                                      "data"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "reasoning_content": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "role"
+                            ]
+                          },
+                          "logprobs": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "content": {
+                                        "anyOf": [
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "token": {
+                                                  "type": "string"
+                                                },
+                                                "logprob": {
+                                                  "type": "number"
+                                                },
+                                                "bytes": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "array",
+                                                      "items": {
+                                                        "type": "integer",
+                                                        "minimum": -9007199254740991,
+                                                        "maximum": 9007199254740991
+                                                      }
+                                                    },
+                                                    {
+                                                      "type": "null"
+                                                    }
+                                                  ]
+                                                },
+                                                "top_logprobs": {
+                                                  "type": "array",
+                                                  "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                      "token": {
+                                                        "type": "string"
+                                                      },
+                                                      "logprob": {
+                                                        "type": "number"
+                                                      },
+                                                      "bytes": {
+                                                        "anyOf": [
+                                                          {
+                                                            "type": "array",
+                                                            "items": {
+                                                              "type": "integer",
+                                                              "minimum": -9007199254740991,
+                                                              "maximum": 9007199254740991
+                                                            }
+                                                          },
+                                                          {
+                                                            "type": "null"
+                                                          }
+                                                        ]
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "token",
+                                                      "logprob",
+                                                      "bytes"
+                                                    ]
+                                                  }
+                                                }
+                                              },
+                                              "required": [
+                                                "token",
+                                                "logprob",
+                                                "bytes",
+                                                "top_logprobs"
+                                              ]
+                                            }
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "content"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "content_filter_results": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/components/schemas/ContentFilterResult"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "prompt_filter_results": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "prompt_index": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "content_filter_results": {
+                                "$ref": "#/components/schemas/ContentFilterResult"
+                              }
+                            },
+                            "required": [
+                              "prompt_index"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "created": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "model": {
+                      "type": "string"
+                    },
+                    "system_fingerprint": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "object": {
+                      "type": "string",
+                      "const": "chat.completion"
+                    },
+                    "usage": {
+                      "$ref": "#/components/schemas/CompletionUsage"
+                    },
+                    "user_tier": {
+                      "type": "string",
+                      "enum": [
+                        "anonymous",
+                        "seed",
+                        "flower",
+                        "nectar"
+                      ]
+                    },
+                    "citations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "choices",
+                    "created",
+                    "model",
+                    "object",
+                    "usage"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something was wrong with the input data, check the details for more info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 400
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "BAD_REQUEST"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Something was wrong with the input data, check the details for more info."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ValidationErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 401
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "UNAUTHORIZED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient pollen balance or API key budget exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 402
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "PAYMENT_REQUIRED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Insufficient pollen balance or API key budget exhausted."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied! You don't have the required permissions for this resource or model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 403
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "FORBIDDEN"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Access denied! You don't have the required permissions for this resource or model."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/MessageContentPart"
+                                  }
+                                }
+                              ]
+                            },
+                            "role": {
+                              "type": "string",
+                              "const": "system"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "cache_control": {
+                              "$ref": "#/components/schemas/CacheControl"
+                            }
+                          },
+                          "required": [
+                            "content",
+                            "role"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/MessageContentPart"
+                                  }
+                                }
+                              ]
+                            },
+                            "role": {
+                              "type": "string",
+                              "const": "developer"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "cache_control": {
+                              "$ref": "#/components/schemas/CacheControl"
+                            }
+                          },
+                          "required": [
+                            "content",
+                            "role"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "minItems": 1,
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/components/schemas/MessageContentPart"
+                                  }
+                                }
+                              ]
+                            },
+                            "role": {
+                              "type": "string",
+                              "const": "user"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "content",
+                            "role"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/MessageContentPart"
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "role": {
+                              "type": "string",
+                              "const": "assistant"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "tool_calls": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "const": "function"
+                                  },
+                                  "function": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "arguments": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "arguments"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "type",
+                                  "function"
+                                ]
+                              }
+                            },
+                            "function_call": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "arguments": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "arguments",
+                                    "name"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "cache_control": {
+                              "$ref": "#/components/schemas/CacheControl"
+                            }
+                          },
+                          "required": [
+                            "role"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "role": {
+                              "type": "string",
+                              "const": "tool"
+                            },
+                            "content": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "minItems": 1,
+                                      "type": "array",
+                                      "items": {
+                                        "$ref": "#/components/schemas/MessageContentPart"
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "tool_call_id": {
+                              "type": "string"
+                            },
+                            "cache_control": {
+                              "$ref": "#/components/schemas/CacheControl"
+                            }
+                          },
+                          "required": [
+                            "role",
+                            "content",
+                            "tool_call_id"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "role": {
+                              "type": "string",
+                              "const": "function"
+                            },
+                            "content": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "role",
+                            "content",
+                            "name"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "model": {
+                    "default": "openai",
+                    "description": "AI model for text generation. See /v1/models for full list.",
+                    "type": "string"
+                  },
+                  "modalities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "audio"
+                      ]
+                    }
+                  },
+                  "audio": {
+                    "type": "object",
+                    "properties": {
+                      "voice": {
+                        "type": "string",
+                        "enum": [
+                          "alloy",
+                          "echo",
+                          "fable",
+                          "onyx",
+                          "shimmer",
+                          "coral",
+                          "verse",
+                          "ballad",
+                          "ash",
+                          "sage",
+                          "amuch",
+                          "dan"
+                        ]
+                      },
+                      "format": {
+                        "type": "string",
+                        "enum": [
+                          "wav",
+                          "mp3",
+                          "flac",
+                          "opus",
+                          "pcm16"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "voice",
+                      "format"
+                    ]
+                  },
+                  "frequency_penalty": {
+                    "default": 0,
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -2,
+                        "maximum": 2
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "repetition_penalty": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "logit_bias": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "logprobs": {
+                    "default": false,
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "top_logprobs": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "max_tokens": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "presence_penalty": {
+                    "default": 0,
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": -2,
+                        "maximum": 2
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "response_format": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "text"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "json_schema"
+                          },
+                          "json_schema": {
+                            "type": "object",
+                            "properties": {
+                              "description": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "schema": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              "strict": {
+                                "default": false,
+                                "anyOf": [
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "schema"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "json_schema"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "json_object"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ]
+                      }
+                    ]
+                  },
+                  "seed": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -1,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "stop": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      {
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "stream": {
+                    "default": false,
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "stream_options": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "include_usage": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "thinking": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "default": "disabled",
+                            "type": "string",
+                            "enum": [
+                              "enabled",
+                              "disabled"
+                            ]
+                          },
+                          "budget_tokens": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "reasoning_effort": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "minimal",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh"
+                    ]
+                  },
+                  "thinking_budget": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "temperature": {
+                    "default": 1,
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "top_p": {
+                    "default": 1,
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "function"
+                            },
+                            "function": {
+                              "type": "object",
+                              "properties": {
+                                "description": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "parameters": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                "strict": {
+                                  "default": false,
+                                  "anyOf": [
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "function"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "code_execution",
+                                "google_search",
+                                "google_maps",
+                                "url_context",
+                                "computer_use",
+                                "file_search"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "tool_choice": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "auto",
+                          "required"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "function"
+                          },
+                          "function": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "function"
+                        ]
+                      }
+                    ]
+                  },
+                  "parallel_tool_calls": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "user": {
+                    "type": "string"
+                  },
+                  "function_call": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "auto"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ]
+                      }
+                    ]
+                  },
+                  "functions": {
+                    "minItems": 1,
+                    "maxItems": 128,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "messages"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/text/{prompt}": {
+      "get": {
+        "operationId": "getGenerateTextByPrompt",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Generates text from text prompts.\n\n**Authentication:**\n\nInclude your API key either:\n- In the `Authorization` header as a Bearer token: `Authorization: Bearer YOUR_API_KEY`\n- As a query parameter: `?key=YOUR_API_KEY`\n\nAPI keys can be created from your dashboard at enter.pollinations.ai.",
+        "responses": {
+          "200": {
+            "description": "Generated text response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something was wrong with the input data, check the details for more info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 400
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "BAD_REQUEST"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Something was wrong with the input data, check the details for more info."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ValidationErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 401
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "UNAUTHORIZED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient pollen balance or API key budget exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 402
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "PAYMENT_REQUIRED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Insufficient pollen balance or API key budget exhausted."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied! You don't have the required permissions for this resource or model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 403
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "FORBIDDEN"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Access denied! You don't have the required permissions for this resource or model."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prompt",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "Write a haiku about coding"
+            },
+            "required": true,
+            "description": "Text prompt for generation"
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "schema": {
+              "default": "openai",
+              "type": "string",
+              "enum": [
+                "openai",
+                "openai-fast",
+                "openai-large",
+                "qwen-coder",
+                "mistral",
+                "openai-audio",
+                "gemini",
+                "gemini-fast",
+                "deepseek",
+                "grok",
+                "gemini-search",
+                "chickytutor",
+                "midijourney",
+                "claude-fast",
+                "claude",
+                "claude-large",
+                "claude-legacy",
+                "perplexity-fast",
+                "perplexity-reasoning",
+                "kimi",
+                "gemini-large",
+                "gemini-legacy",
+                "nova-fast",
+                "glm",
+                "minimax",
+                "qwen-safety",
+                "qwen-character"
+              ]
+            },
+            "description": "Text model to use for generation"
+          },
+          {
+            "in": "query",
+            "name": "seed",
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 9007199254740991
+            },
+            "description": "Random seed for reproducible results. Use -1 for random."
+          },
+          {
+            "in": "query",
+            "name": "system",
+            "schema": {
+              "type": "string"
+            },
+            "description": "System prompt to set context/behavior for the model"
+          },
+          {
+            "in": "query",
+            "name": "json",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": "Return response in JSON format"
+          },
+          {
+            "in": "query",
+            "name": "temperature",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Controls creativity (0.0=strict, 2.0=creative)"
+          },
+          {
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": "Stream response in real-time chunks"
+          }
+        ]
+      }
+    },
+    "/image/{prompt}": {
+      "get": {
+        "operationId": "getGenerateImageByPrompt",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Generate an image or video from a text prompt.\n\n**Image Models:** `flux` (default), `turbo`, `gptimage`, `kontext`, `seedream`, `nanobanana`, `nanobanana-pro`\n\n**Video Models:** `veo`, `seedance`\n- `veo`: Text-to-video only (4-8 seconds)\n- `seedance`: Text-to-video and image-to-video (2-10 seconds)\n\n**Authentication:**\n\nInclude your API key either:\n- In the `Authorization` header as a Bearer token: `Authorization: Bearer YOUR_API_KEY`\n- As a query parameter: `?key=YOUR_API_KEY`\n\nAPI keys can be created from your dashboard at enter.pollinations.ai.",
+        "responses": {
+          "200": {
+            "description": "Success - Returns the generated image or video",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/mp4": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something was wrong with the input data, check the details for more info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 400
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "BAD_REQUEST"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Something was wrong with the input data, check the details for more info."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ValidationErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 401
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "UNAUTHORIZED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient pollen balance or API key budget exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 402
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "PAYMENT_REQUIRED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Insufficient pollen balance or API key budget exhausted."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied! You don't have the required permissions for this resource or model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 403
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "FORBIDDEN"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Access denied! You don't have the required permissions for this resource or model."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prompt",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "a beautiful sunset over mountains"
+            },
+            "required": true,
+            "description": "Text description of the image or video to generate"
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "schema": {
+              "default": "zimage",
+              "type": "string",
+              "enum": [
+                "kontext",
+                "nanobanana",
+                "nanobanana-pro",
+                "seedream",
+                "seedream-pro",
+                "gptimage",
+                "gptimage-large",
+                "flux",
+                "zimage",
+                "veo",
+                "seedance",
+                "seedance-pro",
+                "wan",
+                "klein",
+                "klein-large",
+                "imagen-4",
+                "grok-video",
+                "ltx-2"
+              ]
+            },
+            "description": "AI model. Image: flux, zimage, turbo, gptimage, kontext, seedream, seedream-pro, nanobanana. Video: veo, seedance, seedance-pro"
+          },
+          {
+            "in": "query",
+            "name": "width",
+            "schema": {
+              "default": 1024,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "description": "Image width in pixels"
+          },
+          {
+            "in": "query",
+            "name": "height",
+            "schema": {
+              "default": 1024,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "description": "Image height in pixels"
+          },
+          {
+            "in": "query",
+            "name": "seed",
+            "schema": {
+              "default": 0,
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 2147483647
+            },
+            "description": "Random seed for reproducible results. Use -1 for random."
+          },
+          {
+            "in": "query",
+            "name": "enhance",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": "Let AI improve your prompt for better results"
+          },
+          {
+            "in": "query",
+            "name": "negative_prompt",
+            "schema": {
+              "default": "worst quality, blurry",
+              "type": "string"
+            },
+            "description": "What to avoid in the generated image"
+          },
+          {
+            "in": "query",
+            "name": "safe",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": "Enable safety content filters"
+          },
+          {
+            "in": "query",
+            "name": "quality",
+            "schema": {
+              "default": "medium",
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "hd"
+              ]
+            },
+            "description": "Image quality level (gptimage only)"
+          },
+          {
+            "in": "query",
+            "name": "image",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Reference image URL(s). Comma/pipe separated for multiple. For veo: image[0]=first frame, image[1]=last frame (interpolation)"
+          },
+          {
+            "in": "query",
+            "name": "transparent",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": "Generate with transparent background (gptimage only)"
+          },
+          {
+            "in": "query",
+            "name": "duration",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "description": "Video duration in seconds (video models only). veo: 4, 6, or 8. seedance: 2-10"
+          },
+          {
+            "in": "query",
+            "name": "aspectRatio",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Video aspect ratio: 16:9 or 9:16 (veo, seedance)"
+          },
+          {
+            "in": "query",
+            "name": "audio",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "description": "Enable audio generation for video (veo only)"
+          }
+        ]
+      }
+    },
+    "/audio/{text}": {
+      "get": {
+        "operationId": "getGenerateAudioByText",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Generate audio from text — speech (TTS) or music.\n\n**Models:** Use `model` query param to select:\n- TTS (default): `elevenlabs`, `tts-1`, etc.\n- Music: `elevenmusic` (or `music`)\n\n**TTS Voices:** alloy, echo, fable, onyx, nova, shimmer, ash, ballad, coral, sage, verse, rachel, domi, bella, elli, charlotte, dorothy, sarah, emily, lily, matilda, adam, antoni, arnold, josh, sam, daniel, charlie, james, fin, callum, liam, george, brian, bill\n\n**Output Formats (TTS only):** mp3, opus, aac, flac, wav, pcm\n\n**Music options:** `duration` in seconds (3-300), `instrumental=true`\n\n**Authentication:**\n\nInclude your API key either:\n- In the `Authorization` header as a Bearer token: `Authorization: Bearer YOUR_API_KEY`\n- As a query parameter: `?key=YOUR_API_KEY`\n\nAPI keys can be created from your dashboard at enter.pollinations.ai.",
+        "responses": {
+          "200": {
+            "description": "Success - Returns audio data",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something was wrong with the input data, check the details for more info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 400
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "BAD_REQUEST"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Something was wrong with the input data, check the details for more info."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ValidationErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 401
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "UNAUTHORIZED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient pollen balance or API key budget exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 402
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "PAYMENT_REQUIRED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Insufficient pollen balance or API key budget exhausted."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied! You don't have the required permissions for this resource or model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 403
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "FORBIDDEN"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Access denied! You don't have the required permissions for this resource or model."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "text",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "Hello, welcome to Pollinations!"
+            },
+            "required": true,
+            "description": "Text to convert to speech, or a music description when model=elevenmusic"
+          },
+          {
+            "in": "query",
+            "name": "voice",
+            "schema": {
+              "default": "alloy",
+              "example": "nova",
+              "type": "string",
+              "enum": [
+                "alloy",
+                "echo",
+                "fable",
+                "onyx",
+                "shimmer",
+                "ash",
+                "ballad",
+                "coral",
+                "sage",
+                "verse",
+                "rachel",
+                "domi",
+                "bella",
+                "elli",
+                "charlotte",
+                "dorothy",
+                "sarah",
+                "emily",
+                "lily",
+                "matilda",
+                "adam",
+                "antoni",
+                "arnold",
+                "josh",
+                "sam",
+                "daniel",
+                "charlie",
+                "james",
+                "fin",
+                "callum",
+                "liam",
+                "george",
+                "brian",
+                "bill"
+              ]
+            },
+            "description": "Voice to use for speech generation (TTS only)"
+          },
+          {
+            "in": "query",
+            "name": "response_format",
+            "schema": {
+              "default": "mp3",
+              "example": "mp3",
+              "type": "string",
+              "enum": [
+                "mp3",
+                "opus",
+                "aac",
+                "flac",
+                "wav",
+                "pcm"
+              ]
+            },
+            "description": "Audio output format (TTS only)"
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "schema": {
+              "example": "tts-1",
+              "type": "string"
+            },
+            "description": "Audio model: TTS (default) or elevenmusic for music generation"
+          },
+          {
+            "in": "query",
+            "name": "duration",
+            "schema": {
+              "example": "30",
+              "type": "string"
+            },
+            "description": "Music duration in seconds, 3-300 (elevenmusic only)"
+          },
+          {
+            "in": "query",
+            "name": "instrumental",
+            "schema": {
+              "example": "false",
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "If true, guarantees instrumental output (elevenmusic only)"
+          },
+          {
+            "in": "query",
+            "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "description": "API key (alternative to Authorization header)"
+          }
+        ]
+      }
+    },
+    "/v1/audio/speech": {
+      "post": {
+        "operationId": "postGenerateV1AudioSpeech",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Generate audio from text — speech (TTS) or music.\n\nThis endpoint is OpenAI TTS API compatible.\nSet `model` to `elevenmusic` (or alias `music`) to generate music instead of speech.\n\n**TTS Voices:** alloy, echo, fable, onyx, nova, shimmer, ash, ballad, coral, sage, verse, rachel, domi, bella, elli, charlotte, dorothy, sarah, emily, lily, matilda, adam, antoni, arnold, josh, sam, daniel, charlie, james, fin, callum, liam, george, brian, bill\n\n**Output Formats (TTS only):** mp3, opus, aac, flac, wav, pcm",
+        "responses": {
+          "200": {
+            "description": "Success - Returns audio data",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/opus": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/aac": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/flac": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something was wrong with the input data, check the details for more info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 400
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "BAD_REQUEST"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Something was wrong with the input data, check the details for more info."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ValidationErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 401
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "UNAUTHORIZED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSpeechRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/audio/transcriptions": {
+      "post": {
+        "operationId": "postGenerateV1AudioTranscriptions",
+        "tags": [
+          "gen.pollinations.ai"
+        ],
+        "description": "Transcribe audio to text using Whisper or ElevenLabs Scribe.\n\nThis endpoint is OpenAI Whisper API compatible.\n\n**Supported formats:** mp3, mp4, mpeg, mpga, m4a, wav, webm\n\n**Models:** `whisper-large-v3` (default), `whisper-1`, `scribe`",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The audio file to transcribe. Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm."
+                  },
+                  "model": {
+                    "type": "string",
+                    "default": "whisper-large-v3",
+                    "description": "The model to use. Options: `whisper-large-v3`, `whisper-1`, `scribe`."
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Language of the audio in ISO-639-1 format (e.g. `en`, `fr`). Improves accuracy."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "Optional text to guide the model's style or continue a previous segment."
+                  },
+                  "response_format": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "text",
+                      "srt",
+                      "verbose_json",
+                      "vtt"
+                    ],
+                    "default": "json",
+                    "description": "The format of the transcript output."
+                  },
+                  "temperature": {
+                    "type": "number",
+                    "description": "Sampling temperature between 0 and 1. Lower is more deterministic."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success - Returns transcription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Something was wrong with the input data, check the details for more info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 400
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "BAD_REQUEST"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Something was wrong with the input data, check the details for more info."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ValidationErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 401
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "UNAUTHORIZED"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Authentication required. Please provide an API key via Authorization header (Bearer token) or ?key= query parameter."
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Oh snap, something went wrong on our end. We're on it!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "number",
+                      "const": 500
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "const": "INTERNAL_ERROR"
+                        },
+                        "message": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "Oh snap, something went wrong on our end. We're on it!"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "$ref": "#/components/schemas/ErrorDetails"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "cause": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "timestamp",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

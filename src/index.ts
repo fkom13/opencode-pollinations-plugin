@@ -6,9 +6,10 @@ import { execSync } from 'child_process';
 import { generatePollinationsConfig } from './server/generate-config.js';
 import { loadConfig } from './server/config.js';
 import { handleChatCompletion } from './server/proxy.js';
-import { createToastHooks, setGlobalClient } from './server/toast.js';
+import { createToastHooks, createToolHooks, setGlobalClient } from './server/toast.js';
 import { createStatusHooks } from './server/status.js';
-import { createCommandHooks } from './server/commands.js';
+import { createCommandHooks, setClientForCommands } from './server/commands.js';
+import { createToolRegistry } from './tools/index.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
@@ -91,7 +92,9 @@ const startProxy = (): Promise<number> => {
 // === PLUGIN EXPORT ===
 
 export const PollinationsPlugin: Plugin = async (ctx) => {
-    log(`Plugin Initializing v${require('../package.json').version}...`);
+    const v = require('../package.json').version;
+    log(`Plugin Initializing v${v}...`);
+    console.log(`🚀 POLLINATIONS PLUGIN v${v} LOADED 🚀`);
 
     // START PROXY
     const port = await startProxy();
@@ -99,10 +102,16 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
 
 
     setGlobalClient(ctx.client);
+    setClientForCommands(ctx.client);
     const toastHooks = createToastHooks(ctx.client);
     const commandHooks = createCommandHooks();
 
+    // Build tool registry (conditional on API key presence)
+    const toolRegistry = createToolRegistry();
+    log(`[Tools] ${Object.keys(toolRegistry).length} tools registered`);
+
     return {
+        tool: toolRegistry,
         async config(config) {
             log("[Hook] config() called");
 
@@ -129,6 +138,7 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
             log(`[Hook] Registered ${Object.keys(modelsObj).length} models.`);
         },
         ...toastHooks,
+        ...createToolHooks(ctx.client),
         ...createStatusHooks(ctx.client),
         ...commandHooks
     };
