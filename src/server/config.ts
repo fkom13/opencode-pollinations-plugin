@@ -35,7 +35,10 @@ export interface PollinationsConfigV5 {
     };
 
     enablePaidTools: boolean;
+    costThreshold: number; // Default 0.15 🌻
+    costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
     statusBar: boolean;
+    costEstimator: boolean; // Show cost estimates in tool outputs (default: true)
 }
 
 // LOAD PACKAGE VERSION
@@ -58,8 +61,11 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
         enter: { agent: 'free/openai-fast' }
     },
     enablePaidTools: false,
+    costThreshold: 0.15, // Default 0.15 🌻
+    costConfirmationRequired: true, // Ask confirmation when cost exceeds threshold
     keyHasAccessToProfile: true, // Default true for legacy keys
-    statusBar: true
+    statusBar: true,
+    costEstimator: true, // Show cost estimates by default
 };
 
 function logConfig(msg: string) {

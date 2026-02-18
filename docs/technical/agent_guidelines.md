@@ -10,15 +10,17 @@
     - *Exemple* : Si le modèle Pro échoue, on fallback sur le Free (Transparent Fallback).
 - **Transparence** : L'utilisateur doit savoir ce qui se passe (Toasts, Logs, Status Bar).
 
+- **Zéro Regressions**
+
 ## 2. Workflow de Release (Beta -> Stable)
 
 Nous suivons un cycle strict pour garantir la stabilité.
 
-### Phase 1 : Beta Dev Channel (`beta.x`)
+### Phase 1 : Beta Dev Channel (`beta.x`) (sauf si dev mode manuel)
 1.  **Modifications** : Codez vos fixes.
 2.  **Bump Version** : `npm version 5.x.x-beta.x` (Incrémental).
 3.  **Config Locale** : Mettez à jour `~/.config/opencode/opencode.json` pour pointer sur la nouvelle beta.
-4.  **Publish** : `npm publish --tag zobi` (Tag "zobi" pour éviter de polluer `latest`).
+4.  **Publish** : `npm publish --tag beta ou autre` (Tag "autre ou beta" pour éviter de polluer `latest`).
     > **⚠️ CRITIQUE** : Toujours vérifier que le code a bien été appliqué (relire le fichier avec `view_file` ou `cat`) avant de publier. Les outils d'édition IA échouent souvent silencieusement sur les gros fichiers.
 5.  **Test Utilisateur** : Demander à l'utilisateur de tester via `clean cache` + `restart`.
 
@@ -28,8 +30,8 @@ Nous suivons un cycle strict pour garantir la stabilité.
     - *Note* : Le `TECHNICAL_MANUAL.md` est la source de vérité pour l'architecture.
 3.  **Bump Version** : `npm version 5.x.x` (Retrait du suffixe beta).
 4.  **Publish** : `npm publish --tag latest`.
-5.  **Snapshot** : Créer un snapshot Gencodedoc (`v5.x.x`).
-6.  **Git** : Commit + Push sur `beta/dev`.
+5.  **Snapshot** : Créer un snapshot Gencodedoc (`vX.x.x`). (mcp gencodedoc connecté)
+6.  **Git** : Commit + Push sur `beta/dev`. (mcp github_fkom13 conecté)
 
 ## 3. Subtilités Techniques & Pièges
 
@@ -55,7 +57,7 @@ La configuration est éclatée et hiérarchisée :
     - *Pourquoi ?* Pour permettre à d'autres outils (CLI Pollinations, Web UI) de mettre à jour la clé partagée.
 2. **Priorité 2 (Fallback)** : `opencode.json` (Configuration statique OpenCode).
 
-### D. Modèles "Paid Only" (`pollinations-paid-models.json`)
+### D. Modèles "Paid Only" (`pollinations-paid-models.json`) dynamyque via endpoint model entre enrichi
 - Liste dynamique récupérée par `generate-config.ts`.
 - Stockée dans `~/.pollinations/pollinations-paid-models.json`.
 - Le Proxy vérifie cette liste pour le mode `alwaysfree`. Si un modèle est dedans, il est bloqué (sauf si mode Pro/Manuel).
@@ -66,4 +68,57 @@ La configuration est éclatée et hiérarchisée :
 - **Gencodedoc** : Utiliser avant toute refonte majeure pour sécuriser l'état.
 
 ---
-*Ce document doit rester dans le repo pour guider les futurs développeurs.*
+
+**Dev Mode Manuel : Activé 🚧**
+
+Config : opencode.json pointe maintenant vers : "/home/fkomp/Bureau/oracle/opencode-pollinations-plugin" (Chemin local direct).
+Version : Bumpée à 6.0.0-dev.1.
+Build : Compilation lancée.
+Rappel de ta procédure :
+
+On modifie le code.
+Je fais un Bump Version (dev.2, dev.3...).
+Je lance npm run build.
+Tu reload.
+Je suis prêt pour tes instructions de dev. (La dev.1 est prête, tu peux reload pour vérifier).
+
+# Documpentation importantes
+
+## Doc pollinations_free
+- /home/fkomp/Bureau/oracle/Documentations/API - Severals documentations for multiples api usages/pollinations/pollination_free_legacy_ex/pollinations_APIDOCS.md
+
+## Doc pollinations_enter et regles simplifiées: 
+- /home/fkomp/Bureau/oracle/Documentations/API - Severals documentations for multiples api usages/pollinations/pollinations_enter_beta/PollinationEnterDocSimplifie.md
+
+## Doc api pollinations_enter :
+- /home/fkomp/Bureau/oracle/Documentations/API - Severals documentations for multiples api usages/pollinations/pollinations_enter_beta/PolinationsGenBeta_api.json
+
+## Doc complete et clone local d'opencode:
+
+### doc:
+- https://opencode.ai/docs/ (en ligne)
+- /home/fkomp/Bureau/oracle/Documentations/opencode.ai/OpenCode-Documentation-Complète.md ( retravaillée par ia& - peut etre incomplete)
+- via mcp notbooklm : account Etudes , notebook: OPENCODE Documentations complete ( agent spécialiste utiliser les tools du mcp notebooklm conecté à l'ide )
+
+### clone:
+- /home/fkomp/Bureau/oracle/utilitaires/_Repo_Clonned/opencode
+
+-------------------------------------------------
+-------------------------------------------------
+
+# objectifs actuels
+
+lire les md et les docs pour comprendre le projet et ses subtilités techniques.
+
+confronter ROADMAP.md et vision_v5_9_to_v6.md
+
+analyser les differences et les incoherences.
+
+revoir le code source du projet.
+
+
+suivre les instructions du Guide_v6_agent.md
+
+rechercher dans les documentations opencode et des deux pollinations pour comprendre le Guide_v6_agent.md et les objectifs.
+
+*Ce document doit rester dans le repo pour guider les futurs développeurs. et etre mis à jour en consequence*

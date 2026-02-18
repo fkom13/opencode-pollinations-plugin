@@ -106,11 +106,30 @@ function logToastToFile(toast: ToastMessage) {
 }
 
 
+
 export function createToastHooks(client: any) {
     return {
         'session.idle': async ({ event }: any) => {
             // Deprecated: We use immediate dispatch now. 
             // Kept for backward compat if needed or legacy queued items.
+        }
+    };
+}
+
+// 3. CANAL TOOLS (Natif)
+export function createToolHooks(client: any) {
+    return {
+        'tool.execute.after': async (input: any, output: any) => {
+            // Check for metadata in the output
+            if (output.metadata && output.metadata.message) {
+                const meta = output.metadata;
+                const type = meta.type || 'info';
+                // If title is not in metadata, try to use the one from output or default
+                const title = meta.title || output.title || 'Pollinations Tool';
+
+                // Emit the toast
+                emitStatusToast(type, meta.message, title);
+            }
         }
     };
 }

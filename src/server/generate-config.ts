@@ -112,24 +112,27 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
         const list = Array.isArray(freeList) ? freeList : (freeList.data || []);
 
         list.forEach((m: any) => {
-            const mapped = mapModel(m, 'free/', '[Free] ');
+            const mapped = mapModel(m, 'free/', '');
             modelsOutput.push(mapped);
         });
         log(`Fetched ${modelsOutput.length} Free models.`);
     } catch (e) {
         log(`Error fetching Free models: ${e}`);
         // Fallback Robust (Offline support)
-        modelsOutput.push({ id: "free/mistral", name: "[Free] Mistral Nemo (Fallback)", object: "model", variants: {} });
-        modelsOutput.push({ id: "free/openai", name: "[Free] OpenAI (Fallback)", object: "model", variants: {} });
-        modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/mistral", name: "Mistral Nemo (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/openai", name: "OpenAI (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/gemini", name: "Gemini Flash (Fallback)", object: "model", variants: {} });
     }
 
-    // 1.5 FORCE ENSURE CRITICAL MODELS
-    // Sometimes the API list changes or is cached weirdly. We force vital models.
-    const hasGemini = modelsOutput.find(m => m.id === 'free/gemini');
-    if (!hasGemini) {
-        log(`[ConfigGen] Force-injecting free/gemini.`);
-        modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Force)", object: "model", variants: {} });
+    // 1.5 FALLBACK: Si aucun modèle, ajouter le modèle de connexion
+    if (modelsOutput.length === 0) {
+        log(`[ConfigGen] No models available. Adding connect-pollinations fallback.`);
+        modelsOutput.unshift({
+            id: 'connect-pollinations',
+            name: '⚡ Pollinations',
+            object: 'model',
+            variants: {}
+        });
     }
 
     // ALIAS Removed for Clean Config
@@ -150,7 +153,7 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
                 if (m.tools === false) return;
-                const mapped = mapModel(m, 'enter/', '[Enter] ');
+                const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {
                     paidModels.push(mapped.id.replace('enter/', '')); // Store bare ID "gemini-large"
@@ -174,10 +177,10 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
             if (forceStrict) throw e;
 
             // Fallback Robust for Enterprise (User has Key but discovery failed)
-            modelsOutput.push({ id: "enter/gpt-4o", name: "[Enter] GPT-4o (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/gpt-4o", name: "GPT-4o (Fallback)", object: "model", variants: {} });
             // ...
-            modelsOutput.push({ id: "enter/claude-3-5-sonnet", name: "[Enter] Claude 3.5 Sonnet (Fallback)", object: "model", variants: {} });
-            modelsOutput.push({ id: "enter/deepseek-reasoner", name: "[Enter] DeepSeek R1 (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/claude-3-5-sonnet", name: "Claude 3.5 Sonnet (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/deepseek-reasoner", name: "DeepSeek R1 (Fallback)", object: "model", variants: {} });
         }
     }
 
@@ -231,14 +234,21 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         baseName = baseName.split(' - ')[0].trim();
     }
 
-    let namePrefixFinal = namePrefix;
+    // Gérer les icônes pour paid_only et modèles FREE
+    let paidPrefix = '';
+    let freeSuffix = '';
+
     if (raw.paid_only) {
-        namePrefixFinal = namePrefix.replace('[Enter]', '[💎 Paid]');
+        paidPrefix = '💎 '; // Icône diamant devant les modèles payants
+    }
+
+    if (prefix === 'free/') {
+        freeSuffix = ' (free)'; // Suffixe pour l'univers FREE
     }
 
     // Get capability icons from API metadata
     const capabilityIcons = getCapabilityIcons(raw);
-    const finalName = `${namePrefixFinal}${baseName}${capabilityIcons}`;
+    const finalName = `${paidPrefix}${baseName}${capabilityIcons}${freeSuffix}`;
 
     const modelObj: OpenCodeModel = {
         id: fullId,
@@ -274,12 +284,12 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         // Also keep variant just in case
         modelObj.variants.bedrock_safe = { options: { maxTokens: 8000 } };
     }
-    
+
     // BEDROCK/ENTERPRISE LIMITS (Chickytutor only)
     if (rawId.includes('chickytutor')) {
         modelObj.limit = {
             output: 8192,
-            context: 128000 
+            context: 128000
         };
     }
 
