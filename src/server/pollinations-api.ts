@@ -1,6 +1,8 @@
 
 import { loadConfig } from './config.js';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 // Internal Types
 interface OpenAIModel {
@@ -16,12 +18,7 @@ interface OpenAIModel {
     modalities?: { input: string[], output: string[] };
 }
 
-// Debug Helper
-function logDebug(msg: string) {
-    try {
-        fs.appendFileSync('/tmp/pollinations-api-debug.log', `[${new Date().toISOString()}] ${msg}\n`);
-    } catch (e) { }
-}
+import { logApi as logDebug } from './logger.js';
 
 const HEADERS = {
     'User-Agent': 'curl/8.5.0',

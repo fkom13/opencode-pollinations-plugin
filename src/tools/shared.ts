@@ -34,9 +34,14 @@ export function resolveOutputDir(subdir: string, customPath?: string): string {
     if (customPath) {
         // If customPath is absolute, use it directly
         // If relative, resolve from cwd
-        dir = path.isAbsolute(customPath)
-            ? customPath
-            : path.resolve(process.cwd(), customPath);
+        // Handle tilde ~ manual expansion for cross-platform support
+        if (customPath.startsWith('~')) {
+            dir = path.join(os.homedir(), customPath.slice(1));
+        } else {
+            dir = path.isAbsolute(customPath)
+                ? customPath
+                : path.resolve(process.cwd(), customPath);
+        }
     } else {
         dir = path.join(DEFAULT_BASE, subdir);
     }

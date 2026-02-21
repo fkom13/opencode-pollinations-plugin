@@ -49,7 +49,9 @@ Then in OpenCode:
 ```
 Select **pollinations** → Enter your API key from [enter.pollinations.ai](https://enter.pollinations.ai), or leave blank to use the free tier.
 
-Select any `pollinations/*` model and start chatting. **No key required to get started.**
+Select any `pollinations/*` text model and start chatting. **No key required for text.**
+
+> ⚠️ **Note:** Image generation (`gen_image`) requires a Pollinations API Key. Text models remain free.
 
 > ⚠️ After connecting a new key, restart OpenCode once for the model list to update.
 
@@ -98,13 +100,14 @@ These tools call the Pollinations APIs directly, enabling the AI to generate med
 
 | Tool | Description |
 |------|-------------|
-| `gen_image` | Generate images from a text prompt (Flux, SDXL, etc.) |
+| `gen_image` | Generate images from a text prompt (Flux, SDXL, etc.) **[Requires Key]** |
 | `gen_audio` | Generate speech or sound effects |
 | `gen_music` | Generate music from a description |
 | `gen_video` | Generate short video clips |
 | `transcribe_audio` | Transcribe an audio file to text |
 | `deepsearch` | Multi-step AI-powered research |
 | `search_crawl_scrape` | Web search with full page scraping |
+| `beta_discovery` | Probe undocumented model parameters (400 validation extraction) |
 
 ### 🖌️ Design Tools
 

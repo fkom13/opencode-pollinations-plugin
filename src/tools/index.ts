@@ -20,20 +20,21 @@ import { extractAudioTool } from './power/extract_audio.js';
 import { rmbgKeysTool } from './power/rmbg_keys.js';
 
 // === ENTER TOOLS (Require API key) ===
-import { genImageTool } from './pollinations/gen_image.js';
-import { genVideoTool } from './pollinations/gen_video.js';
-import { genAudioTool } from './pollinations/gen_audio.js';
-import { transcribeAudioTool } from './pollinations/transcribe_audio.js';
-import { genMusicTool } from './pollinations/gen_music.js';
-import { deepsearchTool } from './pollinations/deepsearch.js';
-import { searchCrawlScrapeTool } from './pollinations/search_crawl_scrape.js';
+import { polliGenImageTool } from './pollinations/gen_image.js';
+import { polliGenVideoTool } from './pollinations/gen_video.js';
+import { polliGenAudioTool } from './pollinations/gen_audio.js';
+import { polliSttTool } from './pollinations/transcribe_audio.js';
+import { polliGenMusicTool } from './pollinations/gen_music.js';
+import { polliWebSearchTool } from './pollinations/polli_web_search.js';
+import { polliBetaDiscoveryTool } from './pollinations/beta_discovery.js';
+import { polliGenConfirmTool } from './pollinations/polli_gen_confirm.js';
+import { polliStatusTool } from './pollinations/polli_status.js';
 
 import * as fs from 'fs';
 
-const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
-function log(msg: string) {
-    try { fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] [Tools] ${msg}\n`); } catch { }
-}
+import * as os from 'os';
+import * as path from 'path';
+import { log } from '../server/logger.js';
 
 /**
  * Detect if a valid API key is present
@@ -68,21 +69,31 @@ export function createToolRegistry(): Record<string, any> {
 
     log(`Free tools injected: ${Object.keys(tools).length}`);
 
-    // === ENTER UNIVERSE: Only with valid API key (+7 tools) ===
+    // === ENTER UNIVERSE: Only with valid API key (+6 tools) ===
     if (keyPresent) {
         // Pollinations media tools
-        tools['gen_image'] = genImageTool;
-        tools['gen_video'] = genVideoTool;
-        tools['gen_audio'] = genAudioTool;
-        tools['transcribe_audio'] = transcribeAudioTool;
-        tools['gen_music'] = genMusicTool;
+        tools['polli_gen_image'] = polliGenImageTool;
+        tools['polli_gen_video'] = polliGenVideoTool;
+        tools['polli_gen_audio'] = polliGenAudioTool;
+        tools['polli_stt'] = polliSttTool;
+        tools['polli_gen_music'] = polliGenMusicTool;
 
-        // Search tools
-        tools['deepsearch'] = deepsearchTool;
-        tools['search_crawl_scrape'] = searchCrawlScrapeTool;
+        // Unified search tool
+        tools['polli_web_search'] = polliWebSearchTool;
+
+        // Cost Guard Confirmation tool
+        tools['polli_gen_confirm'] = polliGenConfirmTool;
+
+        // Model API discovery & diagnostics
+        tools['polli_beta_discovery'] = polliBetaDiscoveryTool;
+
+        // Plugin Status / Info / Pricing helper map
+        tools['polli_status'] = polliStatusTool;
 
         log(`Enter tools injected (key detected). Total: ${Object.keys(tools).length}`);
     } else {
+        // En mode gratuit, on ajoute quand meme polli_status mais restraint (il dira manque une clé pour full profile etc)
+        tools['polli_status'] = polliStatusTool;
         log(`Enter tools SKIPPED (no key). Total: ${Object.keys(tools).length}`);
     }
 
@@ -90,12 +101,14 @@ export function createToolRegistry(): Record<string, any> {
 }
 
 // Re-export for convenience
-export { 
-    genImageTool,
-    genVideoTool, 
-    genAudioTool,
-    transcribeAudioTool,
-    genMusicTool,
-    deepsearchTool,
-    searchCrawlScrapeTool,
+export {
+    polliGenImageTool,
+    polliGenVideoTool,
+    polliGenAudioTool,
+    polliSttTool,
+    polliGenMusicTool,
+    polliWebSearchTool,
+    polliBetaDiscoveryTool,
+    polliGenConfirmTool,
+    polliStatusTool
 };

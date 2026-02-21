@@ -1,8 +1,8 @@
 /**
  * Shared utilities for Pollinations API tools
  * 
- * Updated: 2026-02-12 - Verified API Reference
- * Tests: 18/18 passed
+ * Updated: 2026-02-18 - Sprint 2: Dynamic ModelRegistry integration
+ * Hardcoded model lists replaced by ModelRegistry lookups with static fallback.
  */
 
 import * as https from 'https';
@@ -10,6 +10,8 @@ import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import { loadConfig } from '../../server/config.js';
+import { ModelRegistry } from '../../server/models/index.js';
+import type { PollinationsModel } from '../../server/models/types.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ export interface CostTracking {
     imageTokens?: number;
     videoSeconds?: number;
     videoTokens?: number;
+    costUsd?: number;
     modelUsed?: string;
     requestId?: string;
 }
@@ -69,23 +72,163 @@ export function hasApiKey(): boolean {
     return !!(key && key.length > 5 && key !== 'dummy');
 }
 
-// ─── Verified Model Data (2026-02-12) ─────────────────────────────────────
+// ─── Model Data (Dynamic via ModelRegistry) ───────────────────────────────
 
 /**
- * FREE Image Models (image.pollinations.ai/models)
- * WARNING: flux removed from free, turbo broken (shows notice)
+ * FREE Image Models (DEPRECATED - image.pollinations.ai is dead)
  */
-export const FREE_IMAGE_MODELS = {
-    sana: { desc: 'Default free model', fileSize: '~60KB', reliable: true },
-    zimage: { desc: 'Alias sana/turbo low qual', fileSize: '~35KB', reliable: true },
-    turbo: { desc: 'DEPRECATED - shows notice', fileSize: '~4.1MB', reliable: false },
+export const FREE_IMAGE_MODELS = {};
+
+/**
+ * Dynamic Paid Image Models accessor.
+ * Returns data from ModelRegistry if ready, otherwise falls back to static data.
+ * 
+ * BACKWARD COMPATIBLE: Same shape as the old hardcoded PAID_IMAGE_MODELS
+ */
+export function getPaidImageModels(): Record<string, {
+    desc: string;
+    cost: string;
+    t2i: boolean;
+    i2i: boolean;
+    params: string[];
+    notes?: string;
+}> {
+    if (ModelRegistry.isReady()) {
+        const models = ModelRegistry.list('image');
+        const result: Record<string, any> = {};
+        for (const m of models) {
+            const costStr = formatPricingForDisplay(m);
+            result[m.name] = {
+                desc: m.description,
+                cost: costStr,
+                t2i: true, // All image models support T2I
+                i2i: m.supportsI2X,
+                params: m.supportsI2X
+                    ? ['width', 'height', 'image']
+                    : ['width', 'height'],
+                notes: m.paid_only ? 'Paid Only' : undefined,
+            };
+        }
+        return result;
+    }
+    return _STATIC_PAID_IMAGE_MODELS;
+}
+
+/**
+ * Dynamic Video Models accessor.
+ * BACKWARD COMPATIBLE: Same shape as old VIDEO_MODELS
+ */
+export function getVideoModels(): Record<string, {
+    desc: string;
+    cost: string;
+    t2v: boolean;
+    i2v: boolean;
+    audio: boolean;
+    duration: [number, number];
+    aspectRatios: string[];
+    costHeader: string;
+    genTime: string;
+}> {
+    if (ModelRegistry.isReady()) {
+        const models = ModelRegistry.list('video');
+        const result: Record<string, any> = {};
+        for (const m of models) {
+            const costStr = formatPricingForDisplay(m);
+            result[m.name] = {
+                desc: m.description,
+                cost: costStr,
+                t2v: !_STATIC_I2V_ONLY.has(m.name), // wan is I2V only
+                i2v: m.supportsI2X,
+                audio: !_STATIC_NO_AUDIO.has(m.name),
+                duration: m.durationRange || [1, 10],
+                aspectRatios: m.aspectRatios || ['16:9'],
+                costHeader: m.costHeader || 'x-usage-completion-video-seconds',
+                genTime: m.genTimeEstimate || '~30s',
+            };
+        }
+        return result;
+    }
+    return _STATIC_VIDEO_MODELS;
+}
+
+/**
+ * Dynamic Audio Models accessor.
+ * BACKWARD COMPATIBLE: Same shape as old AUDIO_MODELS
+ */
+export function getAudioModels(): Record<string, {
+    desc: string;
+    type: 'tts' | 'stt' | 'both';
+    endpoint: string;
+    params: string[];
+    voices?: string[];
+    notes?: string;
+}> {
+    if (ModelRegistry.isReady()) {
+        const models = ModelRegistry.list('audio');
+        const result: Record<string, any> = {};
+        for (const m of models) {
+            const audioType = detectAudioType(m);
+            result[m.name] = {
+                desc: m.description,
+                type: audioType,
+                endpoint: _STATIC_AUDIO_ENDPOINTS[m.name] || (audioType === 'stt' ? '/v1/audio/transcriptions' : `/audio/{text}`),
+                params: audioType === 'stt' ? ['file'] : ['voice', 'format'],
+                voices: m.voices,
+                notes: m.paid_only ? 'Paid Only' : undefined,
+            };
+        }
+        return result;
+    }
+    return _STATIC_AUDIO_MODELS;
+}
+
+/**
+ * Music Model accessor (backward compatible)
+ */
+export function getMusicModel(): Record<string, {
+    desc: string;
+    endpoint: string;
+    params: string[];
+    duration: [number, number];
+}> {
+    // Check registry for elevenmusic
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('audio', 'elevenmusic');
+        if (m) {
+            return {
+                'elevenmusic': {
+                    desc: m.description,
+                    endpoint: '/audio/{text}',
+                    params: ['duration', 'instrumental'],
+                    duration: [3, 300],
+                }
+            };
+        }
+    }
+    return _STATIC_MUSIC_MODEL;
+}
+
+// ─── Backward Compatibility ──────────────────────────────────────────────
+// OLD const exports removed (caused TDZ error at module load).
+// Consumers must use the function forms:
+//   getPaidImageModels(), getVideoModels(), getAudioModels(), getMusicModel()
+// For direct model lookup: use ModelRegistry.getByNameOrAlias()
+
+// ─── Private Static Fallback Data ─────────────────────────────────────────
+// Used ONLY when ModelRegistry is not ready (startup race, offline).
+
+const _STATIC_I2V_ONLY = new Set<string>(); // Models that are I2V only (no T2V)
+const _STATIC_NO_AUDIO = new Set(['seedance', 'seedance-pro']); // Video models without audio
+
+const _STATIC_AUDIO_ENDPOINTS: Record<string, string> = {
+    'openai-audio': '/v1/chat/completions',
+    'elevenlabs': '/audio/{text}',
+    'whisper': '/v1/audio/transcriptions',
+    'scribe': '/v1/audio/transcriptions',
+    'elevenmusic': '/audio/{text}',
 };
 
-/**
- * Paid Image Models (gen.pollinations.ai)
- * I2I = Image-to-Image support
- */
-export const PAID_IMAGE_MODELS: Record<string, {
+const _STATIC_PAID_IMAGE_MODELS: Record<string, {
     desc: string;
     cost: string;
     t2i: boolean;
@@ -94,6 +237,7 @@ export const PAID_IMAGE_MODELS: Record<string, {
     notes?: string;
 }> = {
     'flux': { desc: 'Flux Schnell', cost: '0.0002 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
+    'sana': { desc: 'Sana (Efficient)', cost: '0.0002 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
     'zimage': { desc: 'Z-Image Turbo (6B Flux 2x)', cost: '0.0002 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
     'imagen-4': { desc: 'Imagen 4 (alpha)', cost: '0.0025 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
     'klein': { desc: 'FLUX.2 Klein 4B', cost: '0.008 🌻', t2i: true, i2i: true, params: ['width', 'height', 'image'] },
@@ -107,94 +251,74 @@ export const PAID_IMAGE_MODELS: Record<string, {
     'nanobanana-pro': { desc: 'NanoBanana Pro (Gemini 3 Pro)', cost: 'tokens', t2i: true, i2i: true, params: ['width', 'height', 'image'], notes: 'Thinking Model' },
 };
 
-/**
- * Video Models (gen.pollinations.ai)
- * T2V = Text-to-Video, I2V = Image-to-Video
- */
-export const VIDEO_MODELS: Record<string, {
+const _STATIC_VIDEO_MODELS: Record<string, {
     desc: string;
     cost: string;
     t2v: boolean;
     i2v: boolean;
     audio: boolean;
-    duration: [number, number]; // [min, max]
+    duration: [number, number];
     aspectRatios: string[];
     costHeader: string;
     genTime: string;
 }> = {
-    'grok-video': { 
-        desc: 'Grok Video (alpha)', 
-        cost: '0.0025/sec', 
-        t2v: true, 
-        i2v: false, 
-        audio: true, 
-        duration: [1, 15], 
+    'grok-video': {
+        desc: 'Grok Video (alpha)',
+        cost: '0.0025/sec',
+        t2v: true, i2v: false, audio: true,
+        duration: [1, 15],
         aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
         costHeader: 'x-usage-completion-video-seconds',
         genTime: '~10s'
     },
-    'ltx-2': { 
-        desc: 'LTX-2 (Lightricks)', 
-        cost: '0.01/sec', 
-        t2v: true, 
-        i2v: false, 
-        audio: true, 
-        duration: [5, 20], 
+    'ltx-2': {
+        desc: 'LTX-2 (Lightricks)',
+        cost: '0.01/sec',
+        t2v: true, i2v: false, audio: true,
+        duration: [5, 20],
         aspectRatios: ['16:9'],
         costHeader: 'x-usage-completion-video-seconds',
         genTime: '~35s'
     },
-    'wan': { 
-        desc: 'Wan 2.6 (Alibaba)', 
-        cost: '0.025/sec', 
-        t2v: false, // I2V ONLY!
-        i2v: true, 
-        audio: true, 
-        duration: [5, 15], 
+    'wan': {
+        desc: 'Wan 2.6 (Alibaba)',
+        cost: '0.025/sec',
+        t2v: false, i2v: true, audio: true,
+        duration: [5, 15],
         aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
         costHeader: 'x-usage-completion-video-seconds',
         genTime: '~30s'
     },
-    'veo': { 
-        desc: 'Veo 3.1 Fast (Google)', 
-        cost: '0.15/sec 💎', 
-        t2v: true, 
-        i2v: true, 
-        audio: true, 
-        duration: [4, 8], // 4, 6, or 8 seconds
+    'veo': {
+        desc: 'Veo 3.1 Fast (Google)',
+        cost: '0.15/sec 💎',
+        t2v: true, i2v: true, audio: true,
+        duration: [4, 8],
         aspectRatios: ['16:9', '9:16', '1:1'],
         costHeader: 'x-usage-completion-video-seconds',
         genTime: '~45-68s',
     },
-    'seedance': { 
-        desc: 'Seedance Lite (BytePlus)', 
-        cost: 'tokens', 
-        t2v: true, 
-        i2v: true, 
-        audio: false, 
-        duration: [4, 12], 
+    'seedance': {
+        desc: 'Seedance Lite (BytePlus)',
+        cost: 'tokens',
+        t2v: true, i2v: true, audio: false,
+        duration: [4, 12],
         aspectRatios: ['16:9', '9:16', '1:1'],
         costHeader: 'x-usage-completion-video-tokens',
         genTime: '~30s'
     },
-    'seedance-pro': { 
-        desc: 'Seedance Pro-Fast (BytePlus)', 
-        cost: 'tokens', 
-        t2v: true, 
-        i2v: true, 
-        audio: false, 
-        duration: [4, 12], 
+    'seedance-pro': {
+        desc: 'Seedance Pro-Fast (BytePlus)',
+        cost: 'tokens',
+        t2v: true, i2v: true, audio: false,
+        duration: [4, 12],
         aspectRatios: ['16:9', '9:16', '1:1'],
         costHeader: 'x-usage-completion-video-tokens',
         genTime: '~30s'
     },
 };
 
-/**
- * Audio Models
- * TTS = Text-to-Speech, STT = Speech-to-Text
- */
-export const AUDIO_MODELS: Record<string, {
+const _STATIC_AUDIO_MODELS: Record<string, {
     desc: string;
     type: 'tts' | 'stt' | 'both';
     endpoint: string;
@@ -202,46 +326,78 @@ export const AUDIO_MODELS: Record<string, {
     voices?: string[];
     notes?: string;
 }> = {
-    'openai-audio': { 
-        desc: 'GPT-4o Audio Preview', 
-        type: 'both', 
+    'openai-audio': {
+        desc: 'GPT-4o Audio Preview',
+        type: 'both',
         endpoint: '/v1/chat/completions',
         params: ['voice', 'format'],
         voices: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'],
         notes: 'DEFAULT - least expensive'
     },
-    'elevenlabs': { 
-        desc: 'ElevenLabs v3', 
-        type: 'tts', 
+    'elevenlabs': {
+        desc: 'ElevenLabs v3',
+        type: 'tts',
         endpoint: '/audio/{text}',
         params: ['voice', 'response_format'],
         voices: ['rachel', 'domi', 'bella', 'elli', 'charlotte', 'dorothy', 'sarah', 'emily', 'lily', 'matilda', 'adam', 'antoni', 'arnold', 'josh', 'sam', 'daniel', 'charlie', 'james', 'fin', 'callum', 'liam', 'george', 'brian', 'bill', 'ash', 'ballad', 'coral', 'sage', 'verse'],
     },
-    'whisper': { 
-        desc: 'OpenAI Whisper v3', 
-        type: 'stt', 
+    'whisper': {
+        desc: 'OpenAI Whisper v3',
+        type: 'stt',
         endpoint: '/v1/audio/transcriptions',
         params: ['file'],
         notes: 'POST ONLY (multipart)'
     },
 };
 
-/**
- * Music Model (separate tool)
- */
-export const MUSIC_MODEL = {
+const _STATIC_MUSIC_MODEL = {
     'elevenmusic': {
         desc: 'ElevenLabs Music',
         endpoint: '/audio/{text}',
         params: ['duration', 'instrumental'],
-        duration: [3, 300], // 3-300 seconds
+        duration: [3, 300] as [number, number],
     }
 };
+
+// ─── Private Helpers ─────────────────────────────────────────────────────
+
+function formatPricingForDisplay(m: PollinationsModel): string {
+    const p = m.pricing;
+    if (p.completionImageTokens) {
+        return p.completionImageTokens < 0.001
+            ? 'tokens'
+            : `${p.completionImageTokens} 🌻${m.paid_only ? ' 💎' : ''}`;
+    }
+    if (p.completionVideoSeconds) {
+        return `${p.completionVideoSeconds}/sec${m.paid_only ? ' 💎' : ''}`;
+    }
+    if (p.completionVideoTokens) {
+        return 'tokens';
+    }
+    if (p.completionAudioTokens) {
+        return `${p.completionAudioTokens} 🌻/tok`;
+    }
+    if (p.completionAudioSeconds) {
+        return `${p.completionAudioSeconds}/sec`;
+    }
+    if (p.promptAudioSeconds) {
+        return `${p.promptAudioSeconds}/sec`;
+    }
+    return 'tokens';
+}
+
+function detectAudioType(m: PollinationsModel): 'tts' | 'stt' | 'both' {
+    const hasAudioInput = m.input_modalities.includes('audio');
+    const hasAudioOutput = m.output_modalities.includes('audio');
+    if (hasAudioInput && hasAudioOutput) return 'both';
+    if (hasAudioInput) return 'stt';
+    return 'tts';
+}
 
 // ─── HTTP Helpers ─────────────────────────────────────────────────────────
 
 export function httpsGet(
-    url: string, 
+    url: string,
     headers: Record<string, string> = {}
 ): Promise<{ data: Buffer; headers: Record<string, string> }> {
     return new Promise((resolve, reject) => {
@@ -267,9 +423,9 @@ export function httpsGet(
             res.on('data', (chunk) => chunks.push(chunk));
             res.on('end', () => {
                 if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve({ 
-                        data: Buffer.concat(chunks), 
-                        headers: res.headers as Record<string, string> 
+                    resolve({
+                        data: Buffer.concat(chunks),
+                        headers: res.headers as Record<string, string>
                     });
                 } else {
                     reject(new Error(`HTTP ${res.statusCode}`));
@@ -312,9 +468,9 @@ export function httpsPost(
             res.on('data', (chunk) => chunks.push(chunk));
             res.on('end', () => {
                 if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve({ 
-                        data: Buffer.concat(chunks), 
-                        headers: res.headers as Record<string, string> 
+                    resolve({
+                        data: Buffer.concat(chunks),
+                        headers: res.headers as Record<string, string>
                     });
                 } else {
                     const errorBody = Buffer.concat(chunks).toString();
@@ -344,7 +500,7 @@ export function httpsPostMultipart(
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(url);
         const boundary = `----FormBoundary${Date.now()}`;
-        
+
         const parts: Buffer[] = [];
         for (const [key, value] of Object.entries(fields)) {
             parts.push(Buffer.from(`--${boundary}\r\n`));
@@ -360,7 +516,7 @@ export function httpsPostMultipart(
             }
         }
         parts.push(Buffer.from(`--${boundary}--\r\n`));
-        
+
         const bodyData = Buffer.concat(parts);
 
         const options = {
@@ -380,9 +536,9 @@ export function httpsPostMultipart(
             res.on('data', (chunk) => chunks.push(chunk));
             res.on('end', () => {
                 if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                    resolve({ 
-                        data: Buffer.concat(chunks), 
-                        headers: res.headers as Record<string, string> 
+                    resolve({
+                        data: Buffer.concat(chunks),
+                        headers: res.headers as Record<string, string>
                     });
                 } else {
                     const errorBody = Buffer.concat(chunks).toString();
@@ -401,45 +557,39 @@ export function httpsPostMultipart(
     });
 }
 
-// ─── Model Discovery ─────────────────────────────────────────────────────
+// ─── Model Discovery (delegated to ModelRegistry) ─────────────────────────
 
-const MODEL_CACHE: Record<string, ModelInfo[]> = {
-    image: [],
-    audio: [],
-    text: [],
-};
-let CACHE_TIME = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
+/**
+ * @deprecated Use ModelRegistry.list() directly
+ */
 export async function fetchModels(type: 'image' | 'audio' | 'text'): Promise<ModelInfo[]> {
-    const now = Date.now();
-    if (MODEL_CACHE[type].length > 0 && now - CACHE_TIME < CACHE_TTL) {
-        return MODEL_CACHE[type];
-    }
-
-    const apiKey = getApiKey();
-    const headers: Record<string, string> = {};
-    if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-
-    try {
-        const { data } = await httpsGet(
-            `https://${API_BASE}/${type}/models`,
-            headers
-        );
-        MODEL_CACHE[type] = JSON.parse(data.toString());
-        CACHE_TIME = now;
-        return MODEL_CACHE[type];
-    } catch (err) {
-        console.error(`Failed to fetch ${type} models:`, err);
-        return [];
-    }
+    ModelRegistry.ensureFresh();
+    const models = ModelRegistry.list(type as any);
+    return models.map(m => ({
+        name: m.name,
+        pricing: m.pricing,
+        paid_only: m.paid_only,
+        input_modalities: m.input_modalities,
+        output_modalities: m.output_modalities,
+        description: m.description,
+    }));
 }
 
+/**
+ * @deprecated Use ModelRegistry.get() directly
+ */
 export async function getModelInfo(type: 'image' | 'audio' | 'text', name: string): Promise<ModelInfo | undefined> {
-    const models = await fetchModels(type);
-    return models.find(m => m.name === name);
+    ModelRegistry.ensureFresh();
+    const m = ModelRegistry.getByNameOrAlias(type as any, name);
+    if (!m) return undefined;
+    return {
+        name: m.name,
+        pricing: m.pricing,
+        paid_only: m.paid_only,
+        input_modalities: m.input_modalities,
+        output_modalities: m.output_modalities,
+        description: m.description,
+    };
 }
 
 // ─── Cost Estimation & Tracking ───────────────────────────────────────────
@@ -449,14 +599,17 @@ export async function getModelInfo(type: 'image' | 'audio' | 'text', name: strin
  */
 export function extractCostFromHeaders(headers: Record<string, string>): CostTracking {
     return {
-        imageTokens: headers['x-usage-completion-image-tokens'] 
-            ? parseFloat(headers['x-usage-completion-image-tokens']) 
+        imageTokens: headers['x-usage-completion-image-tokens']
+            ? parseFloat(headers['x-usage-completion-image-tokens'])
             : undefined,
-        videoSeconds: headers['x-usage-completion-video-seconds'] 
-            ? parseFloat(headers['x-usage-completion-video-seconds']) 
+        videoSeconds: headers['x-usage-completion-video-seconds']
+            ? parseFloat(headers['x-usage-completion-video-seconds'])
             : undefined,
-        videoTokens: headers['x-usage-completion-video-tokens'] 
-            ? parseFloat(headers['x-usage-completion-video-tokens']) 
+        videoTokens: headers['x-usage-completion-video-tokens']
+            ? parseFloat(headers['x-usage-completion-video-tokens'])
+            : undefined,
+        costUsd: headers['x-usage-cost-usd']
+            ? parseFloat(headers['x-usage-cost-usd'])
             : undefined,
         modelUsed: headers['x-model-used'],
         requestId: headers['x-request-id'],
@@ -472,35 +625,68 @@ export function isCostEstimatorEnabled(): boolean {
 }
 
 export function estimateImageCost(model: string): number {
-    const info = PAID_IMAGE_MODELS[model];
+    // Try ModelRegistry first
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('image', model);
+        if (m && m.pricing.completionImageTokens) {
+            return m.pricing.completionImageTokens;
+        }
+    }
+    // Fallback to static
+    const info = _STATIC_PAID_IMAGE_MODELS[model];
     if (!info) return 0.0002;
     const costMatch = info.cost.match(/[\d.]+/);
     return costMatch ? parseFloat(costMatch[0]) : 0.0002;
 }
 
 export function estimateVideoCost(model: string, duration: number): number {
-    const info = VIDEO_MODELS[model];
-    if (!info) return duration * 0.01;
-    
-    if (info.costHeader === 'x-usage-completion-video-tokens') {
-        // Token-based: 108900 tokens for 5s video
-        const tokensPerSecond = 21780;
-        return (duration * tokensPerSecond) * 0.00001; // Approximate
+    // Try ModelRegistry first
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('video', model);
+        if (m) {
+            if (m.pricing.completionVideoSeconds) {
+                return duration * m.pricing.completionVideoSeconds;
+            }
+            if (m.pricing.completionVideoTokens) {
+                const tokensPerSecond = 21780;
+                return (duration * tokensPerSecond) * m.pricing.completionVideoTokens;
+            }
+        }
     }
-    
-    // Second-based
+    // Fallback to static
+    const info = _STATIC_VIDEO_MODELS[model];
+    if (!info) return duration * 0.01;
+
+    if (info.costHeader === 'x-usage-completion-video-tokens') {
+        const tokensPerSecond = 21780;
+        return (duration * tokensPerSecond) * 0.00001;
+    }
+
     const costMatch = info.cost.match(/[\d.]+/);
     const perSecond = costMatch ? parseFloat(costMatch[0]) : 0.01;
     return duration * perSecond;
 }
 
 export function estimateTtsCost(textLength: number): number {
-    // Approximate: 1 char ≈ 1 token
+    // Try ModelRegistry first
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('audio', 'elevenlabs');
+        if (m && m.pricing.completionAudioTokens) {
+            return (textLength / 1000) * m.pricing.completionAudioTokens;
+        }
+    }
     return (textLength / 1000) * 0.00018;
 }
 
 export function estimateMusicCost(duration: number): number {
-    return duration * 0.005; // ~0.005/sec
+    // Try ModelRegistry first
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('audio', 'elevenmusic');
+        if (m && m.pricing.completionAudioSeconds) {
+            return duration * m.pricing.completionAudioSeconds;
+        }
+    }
+    return duration * 0.005;
 }
 
 // ─── File Utils ──────────────────────────────────────────────────────────
@@ -534,13 +720,17 @@ export function formatFileSize(bytes: number): string {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-// ─── Validation Helpers ──────────────────────────────────────────────────
+// ─── Validation Helpers (Dynamic via ModelRegistry) ──────────────────────
 
 /**
  * Check if model supports Image-to-Image
  */
 export function supportsI2I(model: string): boolean {
-    const info = PAID_IMAGE_MODELS[model];
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('image', model);
+        return m?.supportsI2X === true;
+    }
+    const info = _STATIC_PAID_IMAGE_MODELS[model];
     return info?.i2i === true;
 }
 
@@ -548,7 +738,11 @@ export function supportsI2I(model: string): boolean {
  * Check if video model supports Image-to-Video
  */
 export function supportsI2V(model: string): boolean {
-    const info = VIDEO_MODELS[model];
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('video', model);
+        return m?.supportsI2X === true;
+    }
+    const info = _STATIC_VIDEO_MODELS[model];
     return info?.i2v === true;
 }
 
@@ -556,7 +750,13 @@ export function supportsI2V(model: string): boolean {
  * Check if video model requires Image-to-Video (no T2V)
  */
 export function requiresI2V(model: string): boolean {
-    const info = VIDEO_MODELS[model];
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('video', model);
+        if (m) {
+            return _STATIC_I2V_ONLY.has(m.name); // Only wan is I2V-only for now
+        }
+    }
+    const info = _STATIC_VIDEO_MODELS[model];
     return info?.t2v === false && info?.i2v === true;
 }
 
@@ -564,7 +764,11 @@ export function requiresI2V(model: string): boolean {
  * Validate aspect ratio for video model
  */
 export function validateAspectRatio(model: string, ratio: string): boolean {
-    const info = VIDEO_MODELS[model];
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('video', model);
+        return m?.aspectRatios?.includes(ratio) ?? false;
+    }
+    const info = _STATIC_VIDEO_MODELS[model];
     return info?.aspectRatios.includes(ratio) ?? false;
 }
 
@@ -572,6 +776,10 @@ export function validateAspectRatio(model: string, ratio: string): boolean {
  * Get valid duration range for video model
  */
 export function getDurationRange(model: string): [number, number] {
-    const info = VIDEO_MODELS[model];
+    if (ModelRegistry.isReady()) {
+        const m = ModelRegistry.getByNameOrAlias('video', model);
+        return (m?.durationRange as [number, number]) ?? [1, 10];
+    }
+    const info = _STATIC_VIDEO_MODELS[model];
     return info?.duration ?? [1, 10];
 }

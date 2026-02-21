@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https'; // Use Native HTTPS
 import * as crypto from 'crypto';
-import { loadConfig } from './config.js';
+import { loadConfig, getConfigDir } from './config.js';
 
 // === INTERFACES ===
 
@@ -78,17 +78,15 @@ const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
 };
 
 // === LOGGING ===
+import { logApi } from './logger.js';
 function logQuota(msg: string) {
-    try {
-        fs.appendFileSync('/tmp/pollinations_quota_debug.log', `[${new Date().toISOString()}] ${msg}\n`);
-    } catch (e) { }
+    logApi(`[QUOTA] ${msg}`);
 }
 
 // === HISTORY MANAGER (JSON) ===
 
 function getHistoryFilePath(): string {
-    const homedir = process.env.HOME || '/tmp';
-    const historyDir = path.join(homedir, '.pollinations');
+    const historyDir = getConfigDir();
     if (!fs.existsSync(historyDir)) {
         try { fs.mkdirSync(historyDir, { recursive: true }); } catch (e) { }
     }

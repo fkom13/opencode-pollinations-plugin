@@ -31,8 +31,11 @@ import {
     requiresI2V,
     validateAspectRatio,
     getDurationRange,
-    VIDEO_MODELS,
+    getVideoModels,
 } from './shared.js';
+import { loadConfig } from '../../server/config.js';
+import { checkCostControl } from './cost-guard.js';
+import { emitStatusToast } from '../../server/toast.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -42,22 +45,21 @@ const DEFAULT_ASPECT_RATIO = '16:9';
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
-export const genVideoTool: ToolDefinition = tool({
+export const polliGenVideoTool: ToolDefinition = tool({
     description: `Generate a video from a text prompt or image using Pollinations AI.
 
 **🎬 Available Models:**
 
 | Model | T2V | I2V | Audio | Duration | Aspect Ratios | Cost | Gen Time |
 |-------|-----|-----|-------|----------|---------------|------|----------|
-| grok-video | ✅ | ❌ | ✅ | 1-15s | 16:9, 9:16, 1:1, 4:3 | 0.0025/s | ~10s |
-| ltx-2 | ✅ | ❌ | ✅ | 5-20s | 16:9 | 0.01/s | ~35s |
-| wan | ❌ | ✅ | ✅ | 5-15s | 16:9, 9:16, 1:1, 4:3 | 0.025/s | ~30s |
+| grok-video | ✅ | ❌ | ✅ | 1-15s | 16:9, 9:16, 1:1, 4:3 | 0.0025/s 💎 | ~10s |
+| ltx-2 | ✅ | ❌ | ✅ | 5-20s | 16:9 | 0.01/s 💎 | ~35s |
+| wan | ✅ | ✅ | ✅ | 5-15s | 16:9, 9:16, 1:1, 4:3 | 0.025/s 💎 | ~30s |
 | veo | ✅ | ✅ | ✅ | 4-8s | 16:9, 9:16, 1:1 | 0.15/s 💎 | ~45-68s |
 | seedance | ✅ | ✅ | ❌ | 4-12s | 16:9, 9:16, 1:1 | tokens | ~30s |
-| seedance-pro | ✅ | ✅ | ❌ | 4-12s | 16:9, 9:16, 1:1 | tokens | ~30s |
+| seedance-pro | ✅ | ✅ | ❌ | 4-12s | 16:9, 9:16, 1:1 | tokens 💎 | ~30s |
 
 **⚠️ Important Notes:**
-- \`wan\` = I2V **ONLY** (Text-to-Video NOT supported!)
 - \`veo\` interpolation: Use \`reference_image=url1,url2\` for transitions
 - \`ltx-2\` may return 520 intermittently (retry OK)
 - \`grok-video\` includes audio generation
@@ -87,52 +89,65 @@ export const genVideoTool: ToolDefinition = tool({
 
         const model = args.model || CHEAPEST_MODEL;
         const aspectRatio = args.aspect_ratio || DEFAULT_ASPECT_RATIO;
-        
-        // Get model config
-        const modelConfig = VIDEO_MODELS[model];
-        if (!modelConfig) {
-            return `❌ Modèle inconnu: ${model}
-💡 Modèles disponibles: ${Object.keys(VIDEO_MODELS).join(', ')}`;
+
+        // Get model config from dynamic registry
+        const videoModels = getVideoModels();
+        const modelConfig = videoModels[model];
+        const isBetaModel = !modelConfig;
+
+        if (isBetaModel) {
+            emitStatusToast('warning', `Modèle "${model}" non référencé — mode (beta)`, '🎬 gen_video');
         }
-        
-        // Validate duration
-        const [minDuration, maxDuration] = getDurationRange(model);
+
+        // Validate duration (for known models; beta models use defaults)
+        const [minDuration, maxDuration] = isBetaModel ? [1, 20] : getDurationRange(model);
         const duration = args.duration || Math.min(DEFAULT_DURATION, maxDuration);
-        
+
         if (duration < minDuration || duration > maxDuration) {
             return `❌ Durée invalide pour ${model}: ${duration}s
 💡 Durée supportée: ${minDuration}-${maxDuration}s`;
         }
-        
-        // Validate aspect ratio
-        if (!validateAspectRatio(model, aspectRatio)) {
+
+        // Validate aspect ratio (for known models; beta models accept any)
+        if (!isBetaModel && !validateAspectRatio(model, aspectRatio)) {
             return `❌ Aspect ratio non supporté par ${model}: ${aspectRatio}
-💡 Ratios supportés: ${modelConfig.aspectRatios.join(', ')}`;
+💡 Ratios supportés: ${modelConfig!.aspectRatios.join(', ')}`;
         }
-        
+
         // Check I2V requirements
-        const requiresReferenceImage = requiresI2V(model);
-        const supportsReferenceImage = supportsI2V(model);
-        
+        const requiresReferenceImage = !isBetaModel && requiresI2V(model);
+        const supportsReferenceImage = isBetaModel || supportsI2V(model);
+
         if (requiresReferenceImage && !args.reference_image) {
             return `❌ Le modèle "${model}" nécessite une image de départ (I2V ONLY).
 💡 Ajoutez --reference_image <url>
 💡 Pour du T2V, utilisez: grok-video, ltx-2, veo, seedance`;
         }
-        
+
         if (args.reference_image && !supportsReferenceImage) {
             return `⚠️ Le modèle "${model}" ne supporte pas l'I2V.
-💡 Modèles I2V: ${Object.entries(VIDEO_MODELS)
-    .filter(([, info]) => info.i2v)
-    .map(([name]) => name)
-    .join(', ')}`;
+💡 Modèles I2V: ${Object.entries(videoModels)
+                    .filter(([, info]) => info.i2v)
+                    .map(([name]) => name)
+                    .join(', ')}`;
         }
-        
+
         // Estimate cost
         const estimatedCost = estimateVideoCost(model, duration);
 
+        // Cost Guard check V2
+        const costCheck = checkCostControl('polli_gen_video', args, model, estimatedCost, 'video');
+        if (!costCheck.allowed) {
+            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+        }
+
+        // Emit start toast
+        const config = loadConfig();
+        const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
+        emitStatusToast('info', `Génération vidéo: ${model} (${duration}s)${argsStr}`, '🎬 polli_gen_video');
+
         // Metadata
-        context.metadata({ title: `🎬 Video: ${model} (${duration}s)` });
+        context.metadata({ title: `🎬 Video: ${model}${isBetaModel ? ' (beta)' : ''} (${duration}s)` });
 
         try {
             // Build URL
@@ -141,10 +156,10 @@ export const genVideoTool: ToolDefinition = tool({
                 nologo: 'true',
                 private: 'true',
             });
-            
+
             // Duration parameter
             params.set('duration', String(duration));
-            
+
             // Aspect ratio - convert to width/height for API
             const aspectToSize: Record<string, { w: number; h: number }> = {
                 '16:9': { w: 1920, h: 1080 },
@@ -155,14 +170,14 @@ export const genVideoTool: ToolDefinition = tool({
             const size = aspectToSize[aspectRatio] || aspectToSize['16:9'];
             params.set('width', String(size.w));
             params.set('height', String(size.h));
-            
+
             // I2V: reference image(s)
             if (args.reference_image) {
                 // Veo interpolation: comma-separated URLs
                 // Other I2V models: single URL
                 params.set('image', args.reference_image);
             }
-            
+
             // Seed for reproducibility
             if (args.seed !== undefined) {
                 params.set('seed', String(args.seed));
@@ -181,10 +196,21 @@ export const genVideoTool: ToolDefinition = tool({
             const responseHeaders = result.headers;
 
             // Save video
-            const outputDir = args.save_to || getDefaultOutputDir('videos');
+            let outputDir = getDefaultOutputDir('videos');
+            let filename = args.filename;
+
+            if (args.save_to) {
+                if (args.save_to.match(/\.(mp4|webm|mov|avi)$/i)) {
+                    outputDir = path.dirname(args.save_to);
+                    filename = path.basename(args.save_to);
+                } else {
+                    outputDir = args.save_to;
+                }
+            }
+
             ensureDir(outputDir);
 
-            const filename = args.filename || generateFilename('video', model, 'mp4');
+            filename = filename || generateFilename('video', model, 'mp4');
             const filePath = path.join(outputDir, filename.endsWith('.mp4') ? filename : `${filename}.mp4`);
 
             fs.writeFileSync(filePath, videoData);
@@ -193,63 +219,82 @@ export const genVideoTool: ToolDefinition = tool({
             // Extract actual cost from headers
             let actualCost = estimatedCost;
             const costTracking = extractCostFromHeaders(responseHeaders);
-            
-            if (isCostEstimatorEnabled()) {
+
+            if (costTracking.costUsd !== undefined) {
+                actualCost = costTracking.costUsd;
+            } else if (isCostEstimatorEnabled()) {
                 if (costTracking.videoSeconds) {
-                    // Calculate from actual seconds
-                    const costMatch = modelConfig.cost.match(/[\d.]+/);
-                    if (costMatch && modelConfig.costHeader === 'x-usage-completion-video-seconds') {
+                    // Try to extract base cost from static cache for fallback calculation
+                    const costMatch = modelConfig?.cost?.match(/[\d.]+/);
+                    if (costMatch && modelConfig?.costHeader === 'x-usage-completion-video-seconds') {
                         actualCost = costTracking.videoSeconds * parseFloat(costMatch[0]);
                     }
                 } else if (costTracking.videoTokens) {
-                    // Token-based cost (seedance models)
+                    // Token-based fallback (seedance models)
                     actualCost = costTracking.videoTokens * 0.00001; // Approximate
                 }
             }
 
             // Build result
-            const lines: string[] = [
-                `🎬 Vidéo Générée`,
-                `━━━━━━━━━━━━━━━━━━`,
-                `Prompt: ${args.prompt.substring(0, 80)}${args.prompt.length > 80 ? '...' : ''}`,
-                `Modèle: ${model}${modelConfig.cost.includes('💎') ? ' 💎' : ''}`,
-                `Durée: ~${duration}s`,
-                `Aspect: ${aspectRatio}`,
-            ];
-            
+            const lines: string[] = [];
+
+            // Inject costWarning at top if present
+            if (costCheck.message && !costCheck.allowed) { // Assuming costWarning should come from costCheck if not allowed
+                lines.push(costCheck.message);
+                lines.push('');
+            }
+
+            lines.push(`🎬 Vidéo Générée`);
+            lines.push(`━━━━━━━━━━━━━━━━━━`);
+            lines.push(`Prompt: ${args.prompt.substring(0, 80)}${args.prompt.length > 80 ? '...' : ''}`);
+            lines.push(`Modèle: ${model}${isBetaModel ? ' (beta)' : ''}${modelConfig?.cost?.includes('💎') ? ' 💎' : ''}`);
+            lines.push(`Durée: ~${duration}s`);
+            lines.push(`Aspect: ${aspectRatio}`);
+
             // Add I2V info if used
             if (args.reference_image) {
                 const isInterpolation = model === 'veo' && args.reference_image.includes(',');
                 lines.push(`I2V Mode: ${isInterpolation ? 'Interpolation (multi-image)' : 'Single image'}`);
                 lines.push(`Source: ${args.reference_image.substring(0, 50)}...`);
             }
-            
-            // Audio info
-            if (modelConfig.audio) {
+
+            // Audio info (known models only)
+            if (modelConfig?.audio) {
                 lines.push(`Audio: ✅ Généré automatiquement`);
-            } else {
+            } else if (!isBetaModel) {
                 lines.push(`Audio: ❌ Non supporté par ce modèle`);
             }
-            
+
             lines.push(`Fichier: ${filePath}`);
             lines.push(`Taille: ${formatFileSize(fileSize)}`);
-            lines.push(`Coût estimé: ${formatCost(actualCost)}`);
-            
+
+            // Cost info
+            if (isCostEstimatorEnabled()) {
+                lines.push(`Coût: ${formatCost(actualCost)}`);
+            }
+
             if (responseHeaders['x-model-used']) {
                 lines.push(`Modèle utilisé: ${responseHeaders['x-model-used']}`);
             }
             if (responseHeaders['x-request-id']) {
                 lines.push(`Request ID: ${responseHeaders['x-request-id']}`);
             }
-            
-            // Gen time estimate
-            lines.push(`⏱️ Temps de génération: ${modelConfig.genTime}`);
+
+            // Gen time estimate (known models only)
+            if (modelConfig?.genTime) {
+                lines.push(`⏱️ Temps de génération: ${modelConfig.genTime}`);
+            }
+
+            // Emit success toast
+            emitStatusToast('success', `Vidéo générée ✓ (${model}, ${duration}s)`, '🎬 gen_video');
 
             return lines.join('\n');
 
         } catch (err: any) {
+            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🎬 gen_video');
+
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits insuffisants.
+                return `❌ Crédits pollen insuffisants.
 💡 Essayez \`grok-video\` (le moins cher: 0.0025/sec)`;
             }
             if (err.message?.includes('400')) {

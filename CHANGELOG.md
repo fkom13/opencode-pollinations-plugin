@@ -5,9 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
-## [6.1.0-beta] — 2026-02-18
+## [6.1.0-beta.18] — 2026-02-20
 
-### 🚀 Major — Tools System (15+ Agent Tools)
+### 🐛 Fixed — UX Cleanups
+- Removed experimental TUI prompt injection (`client.tui.appendPrompt`) which caused display issues without returning visible tool feedback in the OpenCode chat.
+- Restored text-only guidance for `polli_gen_confirm` tool to ensure the agent asks the user directly for validation.
+
+---
+
+## [6.1.0-beta] — 2026-02-18
 
 This release transforms the plugin from a smart proxy into a full multimodal agent toolkit. OpenCode's agent mode now has native access to Pollinations APIs and media processing tools.
 

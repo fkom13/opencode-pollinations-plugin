@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as https from 'https';
 import * as http from 'http';
 import { resolveOutputDir, formatFileSize, safeName, formatTimestamp, TOOL_DIRS } from '../shared.js';
+import { hasSystemFFmpeg, getFFmpegInstallInstructions, runFFmpeg, runFFprobe } from '../ffmpeg.js';
 
 // ─── Video metadata extraction via ffprobe ──────────────────────────────────
 
@@ -26,11 +27,14 @@ interface VideoMetadata {
 
 function extractMetadata(videoPath: string): VideoMetadata | null {
     try {
-        const { execSync } = require('child_process');
-
         // Use ffprobe JSON output for reliable parsing
-        const probeCmd = `ffprobe -v quiet -print_format json -show_format -show_streams "${videoPath}"`;
-        const raw = execSync(probeCmd, { timeout: 15000, encoding: 'utf-8' });
+        const raw = runFFprobe([
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_format',
+            '-show_streams',
+            videoPath
+        ]);
         const data = JSON.parse(raw);
 
         const videoStream = data.streams?.find((s: any) => s.codec_type === 'video');
@@ -111,16 +115,6 @@ function downloadVideo(url: string): Promise<string> {
     });
 }
 
-// ─── FFmpeg availability ────────────────────────────────────────────────────
-
-function hasSystemFFmpeg(): boolean {
-    try {
-        const { execSync } = require('child_process');
-        execSync('ffmpeg -version', { stdio: 'ignore' });
-        return true;
-    } catch { return false; }
-}
-
 // ─── Frame extraction ───────────────────────────────────────────────────────
 
 function extractWithSystemFFmpeg(
@@ -129,23 +123,32 @@ function extractWithSystemFFmpeg(
     baseName: string,
     options: { at_time?: string; start?: string; end?: string; fps?: number }
 ): string[] {
-    const { execSync } = require('child_process');
     const outputs: string[] = [];
 
-    let cmd = `ffmpeg -y -i "${videoPath}"`;
-
     if (options.at_time) {
+        // Single Frame Extraction
         const singleOutput = path.join(outputDir, `${baseName}_at_${options.at_time.replace(/:/g, '-')}.png`);
-        cmd += ` -ss ${options.at_time} -frames:v 1 "${singleOutput}"`;
-        execSync(cmd, { stdio: 'ignore', timeout: 60000 });
+
+        runFFmpeg([
+            '-y', '-i', videoPath,
+            '-ss', options.at_time,
+            '-frames:v', '1',
+            singleOutput
+        ], { timeout: 60000 });
+
         if (fs.existsSync(singleOutput)) outputs.push(singleOutput);
     } else {
-        if (options.start) cmd += ` -ss ${options.start}`;
-        if (options.end) cmd += ` -to ${options.end}`;
+        // Range Extraction
         const fps = options.fps || 1;
         const outputPattern = path.join(outputDir, `${baseName}_%03d.png`);
-        cmd += ` -vf "fps=${fps}" "${outputPattern}"`;
-        execSync(cmd, { stdio: 'ignore', timeout: 120000 });
+
+        const args = ['-y', '-i', videoPath];
+        if (options.start) args.push('-ss', options.start);
+        if (options.end) args.push('-to', options.end);
+
+        args.push('-vf', `fps=${fps}`, outputPattern);
+
+        runFFmpeg(args, { timeout: 120000 });
 
         fs.readdirSync(outputDir)
             .filter(f => f.startsWith(baseName) && f.endsWith('.png'))
@@ -184,9 +187,7 @@ Free to use — no API key needed.`,
                 `❌ FFmpeg non trouvé!`,
                 ``,
                 `Cet outil nécessite ffmpeg. Installez-le :`,
-                `  • Linux: sudo apt install ffmpeg`,
-                `  • macOS: brew install ffmpeg`,
-                `  • Windows: choco install ffmpeg`,
+                getFFmpegInstallInstructions().split('\n').map(l => `  • ${l}`).join('\n')
             ].join('\n');
         }
 

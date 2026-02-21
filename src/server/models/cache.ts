@@ -1,0 +1,180 @@
+/**
+ * ModelRegistry — Singleton cache for Pollinations models
+ * 
+ * Central access point for all model metadata. Backed by the fetcher
+ * with a configurable TTL. Falls back to static data if fetch fails.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { log } from '../logger.js';
+import { loadConfig, getConfigDir } from '../config.js';
+import { fetchAllModels } from './fetcher.js';
+import type { PollinationsModel, ModelCategory, ModelRegistryInterface } from './types.js';
+
+// ─── Static Fallback Data ────────────────────────────────────────────────
+// Minimal fallback used ONLY when API is unreachable at startup.
+// Keeps the plugin functional offline.
+
+const STATIC_FALLBACK: PollinationsModel[] = [
+    // Image — most common
+    { name: 'flux', description: 'Flux Schnell', category: 'image', aliases: [], pricing: { currency: 'pollen', completionImageTokens: 0.0002 }, paid_only: false, supportsI2X: false, outputType: 'image', input_modalities: ['text'], output_modalities: ['image'], costHeader: 'x-usage-completion-image-tokens' },
+    { name: 'zimage', description: 'Z-Image Turbo', category: 'image', aliases: [], pricing: { currency: 'pollen', completionImageTokens: 0.0002 }, paid_only: false, supportsI2X: false, outputType: 'image', input_modalities: ['text'], output_modalities: ['image'], costHeader: 'x-usage-completion-image-tokens' },
+    { name: 'klein', description: 'FLUX.2 Klein 4B', category: 'image', aliases: [], pricing: { currency: 'pollen', completionImageTokens: 0.008 }, paid_only: false, supportsI2X: true, outputType: 'image', input_modalities: ['text', 'image'], output_modalities: ['image'], costHeader: 'x-usage-completion-image-tokens' },
+    { name: 'kontext', description: 'FLUX.1 Kontext', category: 'image', aliases: [], pricing: { currency: 'pollen', completionImageTokens: 0.04 }, paid_only: true, supportsI2X: true, outputType: 'image', input_modalities: ['text', 'image'], output_modalities: ['image'], costHeader: 'x-usage-completion-image-tokens' },
+    // Video — essential
+    { name: 'grok-video', description: 'Grok Video', category: 'video', aliases: [], pricing: { currency: 'pollen', completionVideoSeconds: 0.0025 }, paid_only: false, supportsI2X: true, outputType: 'video', input_modalities: ['text', 'image'], output_modalities: ['video'], durationRange: [1, 15], aspectRatios: ['16:9', '9:16', '1:1', '4:3'], costHeader: 'x-usage-completion-video-seconds', genTimeEstimate: '~10s' },
+    { name: 'veo', description: 'Veo 3.1 Fast', category: 'video', aliases: [], pricing: { currency: 'pollen', completionVideoSeconds: 0.15 }, paid_only: true, supportsI2X: true, outputType: 'video', input_modalities: ['text', 'image'], output_modalities: ['video'], durationRange: [4, 8], aspectRatios: ['16:9', '9:16', '1:1'], costHeader: 'x-usage-completion-video-seconds', genTimeEstimate: '~45-68s' },
+    // Audio — essential
+    { name: 'elevenlabs', description: 'ElevenLabs v3 TTS', category: 'audio', aliases: [], pricing: { currency: 'pollen', completionAudioTokens: 0.00018 }, paid_only: false, supportsI2X: false, outputType: 'audio', input_modalities: ['text'], output_modalities: ['audio'] },
+    { name: 'whisper', description: 'Whisper v3 STT', category: 'audio', aliases: [], pricing: { currency: 'pollen', promptAudioSeconds: 0.0000445 }, paid_only: false, supportsI2X: false, outputType: 'audio', input_modalities: ['audio'], output_modalities: ['text'] },
+];
+
+const DEFAULT_TTL = 60 * 60 * 1000; // 1 hour
+
+function getCacheFilePath(): string {
+    const dir = getConfigDir();
+    if (!fs.existsSync(dir)) {
+        try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { }
+    }
+    return path.join(dir, 'pollinations_models_cache.json');
+}
+
+interface CacheData {
+    timestamp: number;
+    models: PollinationsModel[];
+}
+
+function loadCacheFromDisk(): CacheData | null {
+    try {
+        const filePath = getCacheFilePath();
+        if (fs.existsSync(filePath)) {
+            const content = fs.readFileSync(filePath, 'utf-8');
+            return JSON.parse(content) as CacheData;
+        }
+    } catch (e) {
+        log(`[ModelRegistry] Failed to load cache from disk: ${e}`);
+    }
+    return null;
+}
+
+function saveCacheToDisk(models: PollinationsModel[], timestamp: number): void {
+    try {
+        const filePath = getCacheFilePath();
+        const data: CacheData = { timestamp, models };
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+        log(`[ModelRegistry] Failed to save cache to disk: ${e}`);
+    }
+}
+
+// ─── Registry Implementation ─────────────────────────────────────────────
+
+class ModelRegistryImpl implements ModelRegistryInterface {
+    private models: PollinationsModel[] = [];
+    private lastRefresh: number = 0;
+    private ttl: number = DEFAULT_TTL;
+    private ready: boolean = false;
+    private refreshing: boolean = false;
+
+    constructor() {
+        const diskCache = loadCacheFromDisk();
+        if (diskCache && (Date.now() - diskCache.timestamp) < this.ttl) {
+            this.models = diskCache.models;
+            this.lastRefresh = diskCache.timestamp;
+            this.ready = true;
+            log(`[ModelRegistry] Loaded ${this.models.length} models from disk cache.`);
+        }
+    }
+
+    /** Get a single model by category and name */
+    get(category: ModelCategory, name: string): PollinationsModel | undefined {
+        return this.models.find(m => m.category === category && m.name === name);
+    }
+
+    /** Also search by alias */
+    getByNameOrAlias(category: ModelCategory, name: string): PollinationsModel | undefined {
+        return this.models.find(m =>
+            m.category === category && (m.name === name || m.aliases.includes(name))
+        );
+    }
+
+    /** List all models in a category */
+    list(category: ModelCategory): PollinationsModel[] {
+        return this.models.filter(m => m.category === category);
+    }
+
+    /** Check if registry has been populated */
+    isReady(): boolean {
+        return this.ready;
+    }
+
+    /** Check if cache is stale */
+    isStale(): boolean {
+        return Date.now() - this.lastRefresh > this.ttl;
+    }
+
+    /** Force refresh from API */
+    async refresh(apiKey?: string): Promise<void> {
+        if (this.refreshing) return; // Prevent concurrent refreshes
+        this.refreshing = true;
+
+        try {
+            const key = apiKey || loadConfig().apiKey;
+            const fetched = await fetchAllModels(key);
+
+            if (fetched.length > 0) {
+                this.models = fetched;
+                this.lastRefresh = Date.now();
+                this.ready = true;
+                saveCacheToDisk(this.models, this.lastRefresh);
+                log(`[ModelRegistry] Refreshed: ${this.models.length} models cached to disk.`);
+            } else {
+                // API returned empty — keep existing data or use fallback
+                if (!this.ready) {
+                    this.models = [...STATIC_FALLBACK];
+                    this.ready = true;
+                    log(`[ModelRegistry] API empty. Using static fallback (${STATIC_FALLBACK.length} models).`);
+                } else {
+                    log(`[ModelRegistry] API returned empty, keeping existing ${this.models.length} models.`);
+                }
+            }
+        } catch (e) {
+            if (!this.ready) {
+                this.models = [...STATIC_FALLBACK];
+                this.ready = true;
+                log(`[ModelRegistry] Fetch failed, using static fallback: ${e}`);
+            } else {
+                log(`[ModelRegistry] Refresh failed, keeping cache: ${e}`);
+            }
+        } finally {
+            this.refreshing = false;
+        }
+    }
+
+    /** Get all models across all categories */
+    all(): PollinationsModel[] {
+        return [...this.models];
+    }
+
+    /** Auto-refresh if stale (non-blocking) */
+    ensureFresh(): void {
+        if (this.isStale()) {
+            this.refresh().catch(() => { }); // Fire-and-forget
+        }
+    }
+
+    /** Get count per category (for logging) */
+    stats(): Record<ModelCategory, number> {
+        return {
+            image: this.list('image').length,
+            video: this.list('video').length,
+            audio: this.list('audio').length,
+            text: this.list('text').length,
+        };
+    }
+}
+
+// ─── Singleton Export ────────────────────────────────────────────────────
+
+export const ModelRegistry = new ModelRegistryImpl();

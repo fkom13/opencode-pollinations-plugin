@@ -4,21 +4,15 @@ import * as path from 'path';
 import { loadConfig, saveConfig } from './config.js';
 import { handleCommand } from './commands.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
+import { buildConnectResponse } from './connect-response.js';
+
+import { log } from './logger.js';
+import { getConfigDir } from './config.js';
 
 // --- PERSISTENCE: SIGNATURE MAP (Multi-Round Support) ---
-const SIG_FILE = path.join(process.env.HOME || '/tmp', '.config/opencode/pollinations-signature.json');
+const SIG_FILE = path.join(getConfigDir(), 'pollinations-signature.json');
 let signatureMap: Record<string, string> = {};
 let lastSignature: string | null = null; // V1 Fallback Global
-
-function log(msg: string) {
-    try {
-        const ts = new Date().toISOString();
-        if (!fs.existsSync('/tmp/opencode_pollinations_debug.log')) {
-            fs.writeFileSync('/tmp/opencode_pollinations_debug.log', '');
-        }
-        fs.appendFileSync('/tmp/opencode_pollinations_debug.log', `[Proxy] ${ts} ${msg}\n`);
-    } catch (e) { }
-}
 
 try {
     if (fs.existsSync(SIG_FILE)) {
@@ -290,26 +284,61 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         log(`Incoming Model (OpenCode ID): ${body.model}`);
 
-        // 0. SPECIAL: connect-pollinations fallback model
-        if (body.model === 'connect-pollinations') {
-            const connectMsg = {
-                id: `chatcmpl-connect-${Date.now()}`,
-                object: 'chat.completion',
+        // 0. TEST 4: Virtual Model Handler for Commands
+        if (body.model === 'pollinations/pollimock-handler' || body.model === 'pollimock-handler') {
+            const mockContent = "🚀 **[TEST 4] Modèle Virtuel de Commande !**\n\nCe texte n'a jamais quitté ton ordinateur. La commande `/pollimock` a demandé à OpenCode de se brancher temporairement sur le modèle virtuel `pollimock-handler`.\nLe proxy a intercepté cet appel et répondu instantanément.\n\n✅ L'historique affiche bien le message du Chat, **mais la requête LLM est totalement court-circuitée**.\nC'est la méthode ultime pour créer des vues de configuration via commandes (`/pollinations-config` par ex) sans polluer le crédit ou les LLM tiers !";
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive'
+            });
+            const chunk = JSON.stringify({
+                id: 'mock-' + Date.now(),
+                object: 'chat.completion.chunk',
                 created: Math.floor(Date.now() / 1000),
-                model: 'connect-pollinations',
+                model: body.model,
+                choices: [{ index: 0, delta: { role: 'assistant', content: mockContent }, finish_reason: null }]
+            });
+            res.write(`data: ${chunk}\n\n`);
+            const chunkEnd = JSON.stringify({
+                id: 'mock-' + Date.now(),
+                object: 'chat.completion.chunk',
+                created: Math.floor(Date.now() / 1000),
+                model: body.model,
+                choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
+            });
+            res.write(`data: ${chunkEnd}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return;
+        }
+
+        // 0. SPECIAL: pollinations/connect (Guide & Status)
+        const CONNECT_MODEL_IDS = ['pollinations/connect', 'free/pollinations/connect', 'enter/pollinations/connect', 'connect-pollinations'];
+        if (CONNECT_MODEL_IDS.includes(body.model)) {
+            const guideContent = await buildConnectResponse(config);
+
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive'
+            });
+
+            const chunk = JSON.stringify({
+                id: 'connect-' + Date.now(),
+                object: 'chat.completion.chunk',
+                created: Math.floor(Date.now() / 1000),
+                model: 'pollinations/connect',
                 choices: [{
                     index: 0,
-                    message: {
-                        role: 'assistant',
-                        content: `🔗 **Se connecter à Pollinations**\n\nAccédez à 30+ modèles IA de pointe !\n\n📍 **Étapes :**\n1. Visitez https://enter.pollinations.ai\n2. Créez un compte gratuit\n3. Copiez votre API Key\n4. Exécutez: \`/pollinations config apiKey YOUR_KEY\`\n5. Redémarrez OpenCode\n\n✅ **Bénéfices :**\n• 30+ modèles avancés (GPT-5, Claude, Gemini...)\n• Crédits gratuits selon votre tier\n• Stabilité garantie`
-                    },
-                    finish_reason: 'stop'
-                }],
-                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-            };
+                    delta: { role: 'assistant', content: guideContent },
+                    finish_reason: 'stop' // Instant finish
+                }]
+            });
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(connectMsg));
+            res.write(`data: ${chunk}\n\n`);
+            res.write(`data: [DONE]\n\n`);
+            res.end();
             return;
         }
 

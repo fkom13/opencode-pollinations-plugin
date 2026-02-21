@@ -9,9 +9,9 @@
 
 | Endpoint | Rôle | Auth |
 |----------|------|------|
-| `image.pollinations.ai` | Free image gen (fallback) | ❌ |
+| `image.pollinations.ai` | Free image gen (fallback) | ❌ | ***>>> ABANDONNE <<<***
 | `gen.pollinations.ai` | Paid generation (image/video/audio) | ✅ Bearer |
-| `text.pollinations.ai` | Free text/tools (déjà intégré) / Fallback Free universe > Deprecated | ❌ |
+| `text.pollinations.ai` | Free text/tools (déjà intégré) / Fallback Free universe > Deprecated mais maintenu | ❌ |
 | `enter.pollinations.ai` | Plateforme gestion crédits/clés (pas de gen) | — |
 
 ### Model Discovery (dynamique — ne PAS hardcoder)
@@ -45,17 +45,17 @@ Les tools fetch ces endpoints au runtime. Les params communs sont appliqués par
 
 ---
 
-## Image Models
+## Image Models (résultats des paramettres cachés obtenus par reverse du playground)
 
-### Free (image.pollinations.ai) — Fallback gen_image no auth nologo=true
+### Free (image.pollinations.ai) — Fallback gen_image no auth nologo=true ***>>> ABANDONNE <<<***
 
-| Priorité | Model | Notes |
+| Priorité | Model | Notes |***>>> ABANDONNE <<<***
 |----------|-------|-------|
 | 🥇 Défaut | `sana` | Compressed mais fiable |
 | 🥈 2e | `zimage` | Alias low qual |
 | 🥉 3e | `turbo` | ⚠️ EN PANNE — affiche notice au lieu de générer |
 
-> `gen_image` = seul tool exposé en free et en mode alwaysfree (freetiers quand on a enté une clef) Sert aussi de fallback mode.
+> `gen_image` = seul tool exposé en free à été abandonné ***>>> ABANDONNE <<<***
 
 ### Paid (gen.pollinations.ai)
 
