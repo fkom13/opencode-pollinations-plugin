@@ -358,16 +358,7 @@ _À renseigner en début de session._
 ```
 - [
 
-/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/docs/issues/ToDo_FixOrEvolution/SPEC_AGENT_CONNECT_MODEL.md 
-
-/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/docs/issues/ToDo_FixOrEvolution/SPEC_AGENT_HOMEDIR_CONFIG.md
-
-/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/docs/issues/ToDo_FixOrEvolution/SPEC_AGENT_FILESYSTEM_MULTIOS.md
-
-/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/docs/issues/ToDo_FixOrEvolution/SPEC_AGENT_FFMPEG_MULTIOS.md
-
-/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/docs/issues/ToDo_FixOrEvolution/SPEC_AGENT_LOGGING_MULTIOS.md
-
+/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/CONSEIL_ORDRE_EXECUTION.md
 
 ] ...
 ```

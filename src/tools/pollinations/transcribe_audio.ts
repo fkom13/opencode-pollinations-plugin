@@ -3,15 +3,11 @@
  * 
  * Updated: 2026-02-12 - Verified API Reference
  * 
- * Two STT options:
- * 1. openai-audio (DEFAULT): GPT-4o Audio Preview - uses /v1/chat/completions with modalities
- *    - Least expensive option
- *    - Can handle both audio input and output
+ * 1. whisper-large-v3 (DEFAULT): High accuracy Whisper model
+ * 2. whisper-1: Standard Whisper model
+ * 3. scribe: ElevenLabs Scribe v2
  * 
- * 2. whisper: OpenAI Whisper v3 - uses /v1/audio/transcriptions
- *    - POST ONLY with multipart/form-data
- *    - Specialized for transcription
- *    - Higher accuracy for long audio
+ * All models use /v1/audio/transcriptions (POST multipart)
  */
 
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
@@ -23,32 +19,32 @@ import {
     httpsPostMultipart,
     ensureDir,
     formatFileSize,
-    AUDIO_MODELS,
+    getAudioModels,
 } from './shared.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'openai-audio';
-const SUPPORTED_FORMATS = ['mp3', 'wav', 'm4a', 'webm', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg'];
+const DEFAULT_MODEL = 'whisper-large-v3';
+const SUPPORTED_FORMATS = ['mp3', 'wav', 'm4a', 'webm', 'mp4', 'mpeg', 'mpga', 'ogg'];
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
-export const transcribeAudioTool: ToolDefinition = tool({
+export const polliSttTool: ToolDefinition = tool({
     description: `Transcribe audio to text using Pollinations AI.
 
 **🎙️ Models:**
 
-| Model | Endpoint | Best For | Notes |
-|-------|----------|----------|-------|
-| openai-audio | /v1/chat/completions | Short-medium audio | **DEFAULT** - lowest cost |
-| whisper | /v1/audio/transcriptions | Long audio, high accuracy | POST multipart only |
+| Model | Supplier | Notes |
+|-------|----------|-------|
+| whisper-large-v3 | OpenAI | **DEFAULT** - High accuracy, long audio |
+| whisper-1 | OpenAI | Standard accuracy |
+| scribe | ElevenLabs | Scribe v2 model |
 
 **📁 Supported Formats:**
-mp3, wav, m4a, webm, mp4, mpeg, mpga, oga, ogg
+mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
 
 **💡 Tips:**
-- Use \`openai-audio\` for cost-effective transcription
-- Use \`whisper\` for highest accuracy on long recordings
+- Use \`whisper-large-v3\` for the highest accuracy on long recordings
 - Supports both local files and URLs
 
 **📋 Output:**
@@ -71,31 +67,32 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, oga, ogg
         }
 
         const model = args.model || DEFAULT_MODEL;
-        
+
         // Validate model
-        const modelInfo = AUDIO_MODELS[model];
+        const audioModels = getAudioModels();
+        const modelInfo = audioModels[model];
         if (!modelInfo || (modelInfo.type !== 'stt' && modelInfo.type !== 'both')) {
             return `❌ Modèle STT inconnu: ${model}
-💡 Modèles STT disponibles: ${Object.entries(AUDIO_MODELS)
-    .filter(([, info]) => info.type === 'stt' || info.type === 'both')
-    .map(([name]) => name)
-    .join(', ')}`;
+💡 Modèles STT disponibles: ${Object.entries(audioModels)
+                    .filter(([, info]) => info.type === 'stt' || info.type === 'both')
+                    .map(([name]) => name)
+                    .join(', ')}`;
         }
 
         // Check file
         let audioPath = args.file;
         let audioBuffer: Buffer;
         let fileName = 'audio.mp3';
-        
+
         if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
             // Download from URL
             context.metadata({ title: `🎙️ STT: Downloading...` });
-            
+
             try {
                 const https = await import('https');
                 const http = await import('http');
                 const protocol = audioPath.startsWith('https') ? https : http;
-                
+
                 audioBuffer = await new Promise<Buffer>((resolve, reject) => {
                     const chunks: Buffer[] = [];
                     protocol.get(audioPath, (res) => {
@@ -117,7 +114,7 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, oga, ogg
                         res.on('error', reject);
                     }).on('error', reject);
                 });
-                
+
                 // Extract filename from URL
                 try {
                     const urlPath = new URL(audioPath).pathname;
@@ -125,102 +122,58 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, oga, ogg
                 } catch {
                     fileName = 'audio.mp3';
                 }
-                
+
             } catch (err: any) {
                 return `❌ Impossible de télécharger l'audio: ${err.message}`;
             }
-            
+
         } else {
             // Local file
             if (!fs.existsSync(audioPath)) {
                 return `❌ Fichier non trouvé: ${audioPath}`;
             }
-            
+
             // Check format
             const ext = path.extname(audioPath).toLowerCase().replace('.', '');
             if (!SUPPORTED_FORMATS.includes(ext)) {
                 return `⚠️ Format non supporté: .${ext}
 💡 Formats supportés: ${SUPPORTED_FORMATS.join(', ')}`;
             }
-            
+
             audioBuffer = fs.readFileSync(audioPath);
             fileName = path.basename(audioPath);
         }
 
         const fileSize = audioBuffer.length;
-        
+
         // Metadata
         context.metadata({ title: `🎙️ STT: ${model} (${formatFileSize(fileSize)})` });
 
         try {
             let transcript = '';
             let detectedLanguage = '';
-            
-            if (model === 'openai-audio') {
-                // === OpenAI Audio: Use modalities endpoint ===
-                // Convert audio to base64
-                const base64Audio = audioBuffer.toString('base64');
-                const mimeType = fileName.endsWith('.mp3') ? 'audio/mpeg' : 
-                                fileName.endsWith('.wav') ? 'audio/wav' : 
-                                'audio/mp4';
-                
-                const response = await httpsPost(
-                    'https://gen.pollinations.ai/v1/chat/completions',
-                    {
-                        model: 'openai-audio',
-                        modalities: ['text', 'audio'],
-                        messages: [
-                            {
-                                role: 'user',
-                                content: [
-                                    {
-                                        type: 'text',
-                                        text: args.language 
-                                            ? `Transcribe this audio to text. Language: ${args.language}` 
-                                            : 'Transcribe this audio to text.'
-                                    },
-                                    {
-                                        type: 'input_audio',
-                                        input_audio: {
-                                            data: base64Audio,
-                                            format: fileName.endsWith('.mp3') ? 'mp3' : 'wav'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'Authorization': `Bearer ${apiKey}`,
-                    }
-                );
-                
-                const data = JSON.parse(response.data.toString());
-                transcript = data.choices?.[0]?.message?.content || '';
-                
-            } else if (model === 'whisper') {
-                // === Whisper: Use multipart endpoint ===
-                const fields: Record<string, string | Buffer> = {
-                    file: audioBuffer,
-                    model: 'whisper',
-                };
-                
-                if (args.language) {
-                    fields.language = args.language;
-                }
-                
-                const response = await httpsPostMultipart(
-                    'https://gen.pollinations.ai/v1/audio/transcriptions',
-                    fields,
-                    {
-                        'Authorization': `Bearer ${apiKey}`,
-                    }
-                );
-                
-                const data = JSON.parse(response.data.toString());
-                transcript = data.text || '';
-                detectedLanguage = data.language || '';
+
+            // === All STT models use multipart endpoint ===
+            const fields: Record<string, string | Buffer> = {
+                file: audioBuffer,
+                model: model,
+            };
+
+            if (args.language) {
+                fields.language = args.language;
             }
+
+            const response = await httpsPostMultipart(
+                'https://gen.pollinations.ai/v1/audio/transcriptions',
+                fields,
+                {
+                    'Authorization': `Bearer ${apiKey}`,
+                }
+            );
+
+            const data = JSON.parse(response.data.toString());
+            transcript = data.text || '';
+            detectedLanguage = data.language || '';
 
             if (!transcript) {
                 return `❌ Aucune transcription générée.
@@ -235,29 +188,29 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, oga, ogg
                 `Taille: ${formatFileSize(fileSize)}`,
                 `Modèle: ${model}`,
             ];
-            
+
             if (detectedLanguage) {
                 lines.push(`Langue détectée: ${detectedLanguage}`);
             }
             if (args.language) {
                 lines.push(`Langue demandée: ${args.language}`);
             }
-            
+
             lines.push(``);
             lines.push(`📝 **Transcription:**`);
             lines.push(``);
             lines.push(transcript);
-            
+
             // Save transcript if requested
             if (args.save_transcript) {
-                const outputDir = process.env.HOME 
+                const outputDir = process.env.HOME
                     ? path.join(process.env.HOME, 'Downloads', 'pollinations', 'transcripts')
                     : '/tmp';
                 ensureDir(outputDir);
-                
+
                 const baseName = path.basename(fileName, path.extname(fileName));
                 const outputPath = path.join(outputDir, `${baseName}_transcript.txt`);
-                
+
                 fs.writeFileSync(outputPath, transcript);
                 lines.push(``);
                 lines.push(`💾 Transcription sauvegardée: ${outputPath}`);

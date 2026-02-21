@@ -29,8 +29,11 @@ import {
     estimateTtsCost,
     extractCostFromHeaders,
     isCostEstimatorEnabled,
-    AUDIO_MODELS,
+    getAudioModels,
 } from './shared.js';
+import { loadConfig } from '../../server/config.js';
+import { checkCostControl } from './cost-guard.js';
+import { emitStatusToast } from '../../server/toast.js';
 
 // ─── TTS Configuration ────────────────────────────────────────────────────
 
@@ -49,7 +52,7 @@ const DEFAULT_FORMAT = 'mp3';
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
-export const genAudioTool: ToolDefinition = tool({
+export const polliGenAudioTool: ToolDefinition = tool({
     description: `Convert text to speech using Pollinations AI.
 
 **🔊 Models:**
@@ -96,11 +99,13 @@ export const genAudioTool: ToolDefinition = tool({
         const voice = args.voice || DEFAULT_VOICE;
         const format = args.format || DEFAULT_FORMAT;
 
-        // Validate model
-        const modelInfo = AUDIO_MODELS[model];
-        if (!modelInfo) {
-            return `❌ Modèle inconnu: ${model}
-💡 Modèles disponibles: ${Object.keys(AUDIO_MODELS).filter(m => AUDIO_MODELS[m].type === 'tts' || AUDIO_MODELS[m].type === 'both').join(', ')}`;
+        // Validate model (unknown models accepted as beta)
+        const audioModels = getAudioModels();
+        const modelInfo = audioModels[model];
+        const isBetaModel = !modelInfo;
+
+        if (isBetaModel) {
+            emitStatusToast('warning', `Modèle "${model}" non référencé — mode (beta)`, '🔊 gen_audio');
         }
 
         // Validate voice for selected model
@@ -108,7 +113,7 @@ export const genAudioTool: ToolDefinition = tool({
             return `⚠️ Voix "${voice}" non supportée par openai-audio.
 💡 Voix OpenAI: ${OPENAI_VOICES.join(', ')}`;
         }
-        
+
         if (model === 'elevenlabs' && !ELEVENLABS_VOICES.includes(voice)) {
             return `⚠️ Voix "${voice}" non reconnue pour elevenlabs.
 💡 Voix ElevenLabs populaires: rachel, domi, bella, adam, josh...
@@ -118,8 +123,19 @@ export const genAudioTool: ToolDefinition = tool({
         // Estimate cost
         const estimatedCost = estimateTtsCost(text.length);
 
+        // Cost Guard check V2
+        const costCheck = checkCostControl('polli_gen_audio', args, model, estimatedCost, 'audio');
+        if (!costCheck.allowed) {
+            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+        }
+
+        // Emit start toast
+        const config = loadConfig();
+        const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
+        emitStatusToast('info', `Génération audio: ${model} (${text.length} chars)${argsStr}`, '🔊 polli_gen_audio');
+
         // Metadata
-        context.metadata({ title: `🔊 TTS: ${voice} (${text.length} chars)` });
+        context.metadata({ title: `🔊 TTS: ${voice}${isBetaModel ? ' (beta)' : ''} (${text.length} chars)` });
 
         try {
             let audioData: Buffer;
@@ -149,24 +165,24 @@ export const genAudioTool: ToolDefinition = tool({
                         'Authorization': `Bearer ${apiKey}`,
                     }
                 );
-                
+
                 const data = JSON.parse(response.data.toString());
-                
+
                 // Extract audio from response
                 const audioBase64 = data.choices?.[0]?.message?.audio?.data;
                 if (!audioBase64) {
                     throw new Error('No audio data in response');
                 }
-                
+
                 audioData = Buffer.from(audioBase64, 'base64');
                 responseHeaders = response.headers;
-                
+
             } else if (model === 'elevenlabs') {
                 // === ElevenLabs: Use audio endpoint ===
                 // GET/POST /audio/{text}
                 const promptEncoded = encodeURIComponent(text);
                 const url = `https://gen.pollinations.ai/audio/${promptEncoded}?model=elevenlabs&voice=${voice}`;
-                
+
                 // For elevenlabs, we might need a different approach
                 // Let's use POST with JSON body
                 const response = await httpsPost(
@@ -180,14 +196,14 @@ export const genAudioTool: ToolDefinition = tool({
                         'Authorization': `Bearer ${apiKey}`,
                     }
                 );
-                
+
                 // Check if response is JSON (error) or binary (audio)
                 const contentType = response.headers['content-type'] || '';
                 if (contentType.includes('application/json')) {
                     const data = JSON.parse(response.data.toString());
                     throw new Error(data.error?.message || 'Unknown error');
                 }
-                
+
                 audioData = response.data;
                 responseHeaders = response.headers;
             } else {
@@ -203,16 +219,27 @@ export const genAudioTool: ToolDefinition = tool({
                         'Authorization': `Bearer ${apiKey}`,
                     }
                 );
-                
+
                 audioData = response.data;
                 responseHeaders = response.headers;
             }
 
             // Save audio
-            const outputDir = args.save_to || getDefaultOutputDir('audio');
+            let outputDir = getDefaultOutputDir('audio');
+            let filename = args.filename;
+
+            if (args.save_to) {
+                if (args.save_to.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+                    outputDir = path.dirname(args.save_to);
+                    filename = path.basename(args.save_to);
+                } else {
+                    outputDir = args.save_to;
+                }
+            }
+
             ensureDir(outputDir);
 
-            const filename = args.filename || generateFilename('tts', `${model}_${voice}`, actualFormat);
+            filename = filename || generateFilename('tts', `${model}_${voice}`, actualFormat);
             const filePath = path.join(outputDir, filename.endsWith(`.${actualFormat}`) ? filename : `${filename}.${actualFormat}`);
 
             fs.writeFileSync(filePath, audioData);
@@ -221,33 +248,50 @@ export const genAudioTool: ToolDefinition = tool({
             // Estimate duration (approx 15 chars per second for speech)
             const estimatedDuration = Math.ceil(text.length / 15);
 
+            let actualCost = estimatedCost;
+            if (responseHeaders) {
+                const costTracking = extractCostFromHeaders(responseHeaders);
+                if (costTracking.costUsd !== undefined) actualCost = costTracking.costUsd;
+            }
+
             // Build result
-            const lines: string[] = [
-                `🔊 Audio Généré (TTS)`,
-                `━━━━━━━━━━━━━━━━━━`,
-                `Texte: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`,
-                `Modèle: ${model}${model === 'openai-audio' ? ' (recommandé)' : ''}`,
-                `Voix: ${voice}`,
-                `Format: ${actualFormat}`,
-                `Durée estimée: ~${estimatedDuration}s`,
-                `Fichier: ${filePath}`,
-                `Taille: ${formatFileSize(fileSize)}`,
-            ];
-            
+            const lines: string[] = [];
+
+            // Inject costWarning at top if present
+            if (costCheck.message && !costCheck.allowed) {
+                lines.push(costCheck.message);
+                lines.push('');
+            }
+
+            lines.push(`🔊 Audio Généré (TTS)`);
+            lines.push(`━━━━━━━━━━━━━━━━━━`);
+            lines.push(`Texte: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
+            lines.push(`Modèle: ${model}${isBetaModel ? ' (beta)' : model === 'openai-audio' ? ' (recommandé)' : ''}`);
+            lines.push(`Voix: ${voice}`);
+            lines.push(`Format: ${actualFormat}`);
+            lines.push(`Durée estimée: ~${estimatedDuration}s`);
+            lines.push(`Fichier: ${filePath}`);
+            lines.push(`Taille: ${formatFileSize(fileSize)}`);
+
             // Cost info
             if (isCostEstimatorEnabled()) {
-                lines.push(`Coût estimé: ${formatCost(estimatedCost)}`);
+                lines.push(`Coût: ${formatCost(actualCost)}`);
             }
-            
+
             if (responseHeaders['x-request-id']) {
                 lines.push(`Request ID: ${responseHeaders['x-request-id']}`);
             }
 
+            // Emit success toast
+            emitStatusToast('success', `Audio généré ✓ (${model}, ${voice})`, '🔊 gen_audio');
+
             return lines.join('\n');
 
         } catch (err: any) {
+            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🔊 gen_audio');
+
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits insuffisants.`;
+                return `❌ Crédits pollen insuffisants.`;
             }
             if (err.message?.includes('401') || err.message?.includes('403')) {
                 return `❌ Clé API invalide ou non autorisée.`;

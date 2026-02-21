@@ -4,7 +4,7 @@ import * as http from 'http';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { generatePollinationsConfig } from './server/generate-config.js';
-import { loadConfig } from './server/config.js';
+import { loadConfig, migrateLegacyConfig } from './server/config.js';
 import { handleChatCompletion } from './server/proxy.js';
 import { createToastHooks, createToolHooks, setGlobalClient } from './server/toast.js';
 import { createStatusHooks } from './server/status.js';
@@ -13,15 +13,12 @@ import { createToolRegistry } from './tools/index.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-const LOG_FILE = '/tmp/opencode_pollinations_v4.log';
+import * as os from 'os';
+import * as path from 'path';
+import { log } from './server/logger.js';
+import { ModelRegistry } from './server/models/index.js';
 
-function log(msg: string) {
-    try {
-        fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`);
-    } catch (e) { }
-}
-
-// Port killing removed: Using dynamic ports.
+const sessionModels = new Map<string, string>();
 
 const startProxy = (): Promise<number> => {
     return new Promise((resolve) => {
@@ -94,12 +91,21 @@ const startProxy = (): Promise<number> => {
 export const PollinationsPlugin: Plugin = async (ctx) => {
     const v = require('../package.json').version;
     log(`Plugin Initializing v${v}...`);
+    log(`[ENV] Keys: ${Object.keys(process.env).filter(k => k.includes('OPENCODE') || k.includes('APP') || k.includes('DATA')).join(', ')}`);
     console.log(`🚀 POLLINATIONS PLUGIN v${v} LOADED 🚀`);
+
+    // MIGRATE CONFIG
+    migrateLegacyConfig();
 
     // START PROXY
     const port = await startProxy();
     const localBaseUrl = `http://127.0.0.1:${port}/v1`;
 
+    // INIT MODEL REGISTRY (non-blocking, fire-and-forget)
+    ModelRegistry.refresh().then(() => {
+        const stats = ModelRegistry.stats();
+        log(`[ModelRegistry] Ready: ${stats.image} image, ${stats.video} video, ${stats.audio} audio, ${stats.text} text`);
+    }).catch(e => log(`[ModelRegistry] Init failed (will use fallback): ${e}`));
 
     setGlobalClient(ctx.client);
     setClientForCommands(ctx.client);
@@ -111,6 +117,23 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     log(`[Tools] ${Object.keys(toolRegistry).length} tools registered`);
 
     return {
+        "chat.message": async (input: any) => {
+            const m = input.model;
+            if (m) {
+                if (m.modelID && !m.modelID.includes('pollimock-handler')) {
+                    sessionModels.set(input.sessionID, `${m.providerID}/${m.modelID}`);
+                    log(`[Hook] Saved active model ${m.providerID}/${m.modelID} for session ${input.sessionID}`);
+                } else if (m.modelID && m.modelID.includes('pollimock-handler')) {
+                    const prev = sessionModels.get(input.sessionID);
+                    if (prev) {
+                        log(`[Hook] Virtual model triggered. Reverting to ${prev} in 500ms...`);
+                        setTimeout(() => {
+                            ctx.client.tui.executeCommand({ body: { command: `/model ${prev}` } }).catch(console.error);
+                        }, 500);
+                    }
+                }
+            }
+        },
         tool: toolRegistry,
         async config(config) {
             log("[Hook] config() called");
@@ -128,6 +151,14 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
 
             // Dynamic Provider Name
             const version = require('../package.json').version;
+
+            // Inject Virtual Handler Model
+            modelsObj['pollimock-handler'] = {
+                id: 'pollimock-handler',
+                name: 'Command Handler (Virtual)',
+                options: { hidden: true } // Try to hide from UI if OpenCode supports it
+            };
+
             config.provider['pollinations'] = {
                 id: 'pollinations',
                 name: `Pollinations AI (v${version})`,

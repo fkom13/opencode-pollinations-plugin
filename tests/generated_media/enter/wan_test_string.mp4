@@ -1,0 +1,1 @@
+{"success":false,"error":{"message":"Query parameter validation failed","code":"BAD_REQUEST","timestamp":"2026-02-20T06:12:18.149Z","details":{"name":"ValidationError","formErrors":[],"fieldErrors":{"image":["Invalid image URL. Put image= param last in your URL, or URL-encode it."]}}},"status":400}

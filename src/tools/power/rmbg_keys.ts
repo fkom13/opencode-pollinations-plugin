@@ -4,10 +4,9 @@ import * as path from 'path';
 
 // ─── Shared Logic (Duplicated from rmbg to avoid circular deps if not using shared.ts for this) ──
 
-const KEYS_FILE = path.join(
-    process.env.HOME || process.env.USERPROFILE || '/tmp',
-    '.pollinations', 'backgroundcut_keys.json'
-);
+import { CONFIG_DIR } from '../../server/config.js';
+
+const KEYS_FILE = path.join(CONFIG_DIR, 'backgroundcut_keys.json');
 
 interface KeyStore {
     keys: string[];

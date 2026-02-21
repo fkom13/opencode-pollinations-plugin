@@ -495,7 +495,7 @@ Located in `src/tools/pollinations/`.
 
 | Tool File | Tool Name | Description |
 |-----------|-----------|-------------|
-| `gen_image.ts` | `gen_image` | Generate images from a text prompt via Pollinations image API |
+| `gen_image.ts` | `gen_image` | Generate images via Pollinations API **(API Key Required)** |
 | `gen_audio.ts` | `gen_audio` | Generate speech or sound effects |
 | `gen_music.ts` | `gen_music` | Generate music from a text description |
 | `gen_video.ts` | `gen_video` | Generate short video clips |

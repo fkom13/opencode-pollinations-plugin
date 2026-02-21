@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as https from 'https';
 import * as http from 'http';
 import { resolveOutputDir, formatFileSize, safeName, formatTimestamp, TOOL_DIRS } from '../shared.js';
+import { hasSystemFFmpeg, getFFmpegInstallInstructions, runFFmpeg, runFFprobe } from '../ffmpeg.js';
 
 // ─── Download helper ────────────────────────────────────────────────────────
 
@@ -29,15 +30,6 @@ function downloadFile(url: string): Promise<string> {
         req.on('error', reject);
         req.setTimeout(120000, () => { req.destroy(); reject(new Error('Timeout (120s)')); });
     });
-}
-
-// ─── FFmpeg check ───────────────────────────────────────────────────────────
-
-function hasSystemFFmpeg(): boolean {
-    try {
-        require('child_process').execSync('ffmpeg -version', { stdio: 'ignore' });
-        return true;
-    } catch { return false; }
 }
 
 // ─── Tool Definition ────────────────────────────────────────────────────────
@@ -69,9 +61,7 @@ Free to use — no API key needed.`,
                 `❌ FFmpeg non trouvé!`,
                 ``,
                 `Cet outil nécessite ffmpeg :`,
-                `  • Linux: sudo apt install ffmpeg`,
-                `  • macOS: brew install ffmpeg`,
-                `  • Windows: choco install ffmpeg`,
+                getFFmpegInstallInstructions().split('\n').map(l => `  • ${l}`).join('\n')
             ].join('\n');
         }
 
@@ -96,11 +86,15 @@ Free to use — no API key needed.`,
 
         // Check if video has audio
         try {
-            const { execSync } = require('child_process');
-            const probe = execSync(
-                `ffprobe -v quiet -select_streams a -show_entries stream=codec_type -of csv=p=0 "${videoPath}"`,
-                { timeout: 10000, encoding: 'utf-8' }
-            ).trim();
+            // Using runFFprobe helper
+            const probe = runFFprobe([
+                '-v', 'quiet',
+                '-select_streams', 'a',
+                '-show_entries', 'stream=codec_type',
+                '-of', 'csv=p=0',
+                videoPath
+            ], { timeout: 10000 }).trim();
+
             if (!probe) {
                 if (isRemote) try { fs.unlinkSync(videoPath); } catch { }
                 return `❌ Aucune piste audio détectée dans cette vidéo.`;
@@ -116,25 +110,25 @@ Free to use — no API key needed.`,
 
         try {
             context.metadata({ title: `🎵 Extraction audio...` });
-            const { execSync } = require('child_process');
 
-            // Build ffmpeg command
-            let cmd = `ffmpeg -y -i "${videoPath}" -vn`;
+            // Build ffmpeg args
+            const ffmpegArgs = ['-y', '-i', videoPath, '-vn'];
 
             // Time range
-            if (args.start) cmd += ` -ss ${args.start}`;
-            if (args.end) cmd += ` -to ${args.end}`;
+            if (args.start) ffmpegArgs.push('-ss', args.start);
+            if (args.end) ffmpegArgs.push('-to', args.end);
 
             // Format-specific encoding
             switch (outputFormat) {
-                case 'mp3': cmd += ` -acodec libmp3lame -q:a 2`; break;
-                case 'wav': cmd += ` -acodec pcm_s16le`; break;
-                case 'aac': cmd += ` -acodec aac -b:a 192k`; break;
-                case 'flac': cmd += ` -acodec flac`; break;
+                case 'mp3': ffmpegArgs.push('-acodec', 'libmp3lame', '-q:a', '2'); break;
+                case 'wav': ffmpegArgs.push('-acodec', 'pcm_s16le'); break;
+                case 'aac': ffmpegArgs.push('-acodec', 'aac', '-b:a', '192k'); break;
+                case 'flac': ffmpegArgs.push('-acodec', 'flac'); break;
             }
 
-            cmd += ` "${outputFile}"`;
-            execSync(cmd, { stdio: 'ignore', timeout: 120000 });
+            ffmpegArgs.push(outputFile);
+
+            runFFmpeg(ffmpegArgs, { timeout: 120000 });
 
             // Cleanup
             if (isRemote && fs.existsSync(videoPath)) {
@@ -150,10 +144,13 @@ Free to use — no API key needed.`,
             // Get audio duration
             let durationStr = 'N/A';
             try {
-                const durRaw = execSync(
-                    `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${outputFile}"`,
-                    { timeout: 5000, encoding: 'utf-8' }
-                ).trim();
+                const durRaw = runFFprobe([
+                    '-v', 'quiet',
+                    '-show_entries', 'format=duration',
+                    '-of', 'csv=p=0',
+                    outputFile
+                ], { timeout: 5000 }).trim();
+
                 const dur = parseFloat(durRaw);
                 if (!isNaN(dur)) durationStr = formatTimestamp(dur);
             } catch { }

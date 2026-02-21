@@ -4,6 +4,8 @@ import { getQuotaStatus, QuotaStatus } from './quota.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
 import { getDetailedUsage, DetailedUsageEntry } from './pollinations-api.js';
 import { generatePollinationsConfig } from './generate-config.js';
+import { ModelRegistry } from './models/index.js';
+import type { PollinationsModel, ModelCategory } from './models/types.js';
 
 // --- HELPER: STRICT PERMISSION CHECK ---
 interface CheckResult { ok: boolean; status?: number | string; reason?: string; }
@@ -198,6 +200,12 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             return handleConfigCommand(args);
         case 'help':
             return handleHelpCommand();
+        case 'models':
+            return handleModelsCommand(args);
+        case 'pricing':
+            return await handlePricingCommand();
+        case 'infos':
+            return await handleInfosCommand();
         case 'addKey': // External trigger
             // UI Pollution Fix: User hates appendPrompt.
             // Just return a message telling them to use the tool.
@@ -277,7 +285,7 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
     };
 }
 
-async function handleUsageCommand(args: string[]): Promise<CommandResult> {
+export async function handleUsageCommand(args: string[]): Promise<CommandResult> {
     const isFull = args[0] === 'full';
 
     try {
@@ -464,9 +472,17 @@ function handleConfigCommand(args: string[]): CommandResult {
 
     if (!key) {
         const config = loadConfig();
+        // Mask API key for security (R6)
+        const safeConfig = { ...config };
+        if (safeConfig.apiKey) {
+            const k = safeConfig.apiKey;
+            safeConfig.apiKey = k.length > 8
+                ? `${k.substring(0, 5)}****${k.substring(k.length - 4)}`
+                : '****';
+        }
         return {
             handled: true,
-            response: JSON.stringify(config, null, 2)
+            response: JSON.stringify(safeConfig, null, 2)
         };
     }
 
@@ -532,9 +548,30 @@ function handleConfigCommand(args: string[]): CommandResult {
         return { handled: true, response: `✅ cost_estimator = ${enabled}` };
     }
 
+    if (key === 'enablePaidTools' && value) {
+        const enabled = value === 'true';
+        saveConfig({ enablePaidTools: enabled });
+        return { handled: true, response: `✅ enablePaidTools = ${enabled}${!enabled ? ' (wallet protection active)' : ''}` };
+    }
+
+    if (key === 'costThreshold' && value) {
+        const threshold = parseFloat(value);
+        if (isNaN(threshold) || threshold < 0) {
+            return { handled: true, error: 'Valeur numérique positive requise (en pollen). Ex: 0.15' };
+        }
+        saveConfig({ costThreshold: threshold });
+        return { handled: true, response: `✅ costThreshold = ${threshold} 🌻` };
+    }
+
+    if (key === 'costConfirmation' && value) {
+        const enabled = value === 'true';
+        saveConfig({ costConfirmationRequired: enabled });
+        return { handled: true, response: `✅ costConfirmationRequired = ${enabled}` };
+    }
+
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmation`
     };
 }
 
@@ -549,16 +586,221 @@ function handleHelpCommand(): CommandResult {
 
 **Configuration**
 - **\`/pollinations config [key] [value]\`**:
-  - \`status_gui\`: none, alert, all
+   - \`status_gui\`: none, alert, all
   - \`logs_gui\`: none, error, verbose
   - \`threshold_tier\` / \`threshold_wallet\`: 0-100
   - \`status_bar\`: true/false
   - \`cost_estimator\`: true/false (show cost in outputs)
+  - \`enablePaidTools\`: true/false (wallet protection)
+  - \`costThreshold\`: seuil en pollen (défaut: 0.15)
+  - \`costConfirmation\`: true/false (confirmation coût)
+
+**Modèles & Pricing**
+- **\`/pollinations models [type]\`**: Liste des modèles (type: image, video, audio, text)
+- **\`/pollinations pricing\`**: Tableau de pricing détaillé
+- **\`/pollinations infos\`**: Explications sur les Tiers et le Pollen
 
 > 💡 **RMBG keys**: Use the \`rmbg_keys\` tool (works with any model).
 `.trim();
 
     return { handled: true, response: help };
+}
+
+// === MODELS & PRICING COMMANDS ===
+
+function parseNameDesc(m: PollinationsModel): { nom: string, desc: string } {
+    const fullDesc = m.description || m.name;
+    const parts = fullDesc.split(" - ");
+    if (parts.length > 1) {
+        return { nom: parts[0].trim(), desc: parts.slice(1).join(" - ").trim() };
+    }
+    return { nom: fullDesc, desc: "" };
+}
+
+export function handleModelsCommand(args: string[]): CommandResult {
+    const filter = args[0] as ModelCategory | undefined; // optional: image, video, audio, text
+
+    if (!ModelRegistry.isReady()) {
+        return {
+            handled: true,
+            response: '⏳ Le registre des modèles est en cours de chargement. Réessayez dans quelques secondes.'
+        };
+    }
+
+    const categories: { cat: ModelCategory; emoji: string; label: string }[] = [
+        { cat: 'image', emoji: '🎨', label: 'Image' },
+        { cat: 'video', emoji: '🎬', label: 'Video' },
+        { cat: 'audio', emoji: '🔊', label: 'Audio' },
+        { cat: 'text', emoji: '📝', label: 'Text' },
+    ];
+
+    const sections: string[] = ['## 📋 Modèles Pollinations Enter\n'];
+
+    for (const { cat, emoji, label } of categories) {
+        if (filter && filter !== cat) continue;
+
+        const models = ModelRegistry.list(cat);
+        if (models.length === 0) continue;
+
+        const sorted = [...models].sort((a, b) => a.name.localeCompare(b.name));
+
+        sections.push(`### ${emoji} ${label} (${models.length} modèles)\n`);
+        sections.push('| Nom | ID | Description | Capabilities | Input | Output |');
+        sections.push('|-----|----|-------------|--------------|-------|--------|');
+
+        for (const m of sorted) {
+            const { nom, desc } = parseNameDesc(m);
+            const badges = buildBadges(m);
+            const input = buildInputIcons(m);
+            const output = buildOutputCost(m);
+            sections.push(`| ${nom} | \`${m.name}\` | ${desc.substring(0, 40)} | ${badges} | ${input} | ${output} |`);
+        }
+        sections.push('');
+    }
+
+    sections.push('> **Capabilities** : 👁️ vision · 🧠 reasoning · 🎙️ audio in · 🔍 search · 🔊 audio out · 💻 code exec');
+    sections.push('> **Other** : 💎 PAID ONLY (Wallet direct) · 📏 Contexte API max');
+
+    return { handled: true, response: sections.join('\n') };
+}
+
+export async function handlePricingCommand(): Promise<CommandResult> {
+    try {
+        const cp = require('child_process');
+        const path = require('path');
+        // Pointeur __dirname -> dist/server. Donc on cible scripts/pollinations_pricing.js
+        const scriptPath = path.join(__dirname, 'scripts', 'pollinations_pricing.js');
+
+        // Exécution locale via Node (sécurisé pour le bundle prod, pas de npx tsx)
+        const output = cp.execSync(`node "${scriptPath}"`, { encoding: 'utf-8', stdio: 'pipe' });
+
+        return { handled: true, response: output };
+    } catch (e: any) {
+        return { handled: true, error: `Erreur lors de la récupération des prix: ${e.message}` };
+    }
+}
+
+// ─── Formatting Helpers for Models/Pricing ────────────────────────────────
+
+function buildBadges(m: PollinationsModel): string {
+    const f: string[] = [];
+    if (m.paid_only) f.push('💎');
+
+    const allFlags = [...(m.input_modalities || []), ...(m.output_modalities || []), m.name];
+    if (m.supportsI2X) allFlags.push("👁️");
+    const str = allFlags.join(" ").toLowerCase();
+
+    if (str.includes("image") || str.includes("👁️")) f.push("👁️");
+    if (m.reasoning || str.includes("reasoning")) f.push("🧠");
+    if (str.includes("audio") || str.includes("whisper") || str.includes("scribe") || str.includes("🎙️")) f.push("🎙️");
+    if (str.includes("search") || str.includes("sonar") || str.includes("gemini")) f.push("🔍");
+    if (m.output_modalities.includes("audio") || (m.voices && m.voices.length > 0) || str.includes("tts") || str.includes("music")) f.push("🔊");
+    if (str.includes("coder") || str.includes("code") || str.includes("gemini")) f.push("💻");
+
+    return f.filter((v, i, a) => a.indexOf(v) === i).join(" ");
+}
+
+function buildInputIcons(m: PollinationsModel): string {
+    const icons: string[] = [];
+    if (m.input_modalities.includes('text')) icons.push('📝');
+    if (m.input_modalities.includes('image')) icons.push('🖼️');
+    if (m.input_modalities.includes('audio')) icons.push('🎤');
+    return icons.join('') || '📝';
+}
+
+function buildOutputCost(m: PollinationsModel): string {
+    const p = m.pricing;
+    if (p.completionImageTokens) {
+        return p.completionImageTokens < 0.0001
+            ? `~tokens`
+            : `${p.completionImageTokens} 🌻/img`;
+    }
+    if (p.completionVideoSeconds) return `${p.completionVideoSeconds} 🌻/s`;
+    if (p.completionVideoTokens) return `~tokens/s`;
+    if (p.completionAudioTokens) return `${p.completionAudioTokens} 🌻/tok`;
+    if (p.completionAudioSeconds) return `${p.completionAudioSeconds} 🌻/s`;
+    if (p.promptAudioSeconds) return `${p.promptAudioSeconds} 🌻/s`;
+    if (p.completionTextTokens) return `${p.completionTextTokens} 🌻/tok`;
+    return '~tokens';
+}
+
+export async function handleInfosCommand(): Promise<CommandResult> {
+    const config = loadConfig();
+    let name = "Developer";
+    let tier = "anonymous";
+
+    if (config.apiKey) {
+        try {
+            const res = await fetch('https://gen.pollinations.ai/account/profile', {
+                headers: { 'Authorization': `Bearer ${config.apiKey}` }
+            });
+            if (res.ok) {
+                const data: any = await res.json();
+                if (data.name) name = data.name;
+                tier = data.tier || "anonymous";
+            }
+        } catch (e) {
+            // Ignorer l'erreur réseau et garder les valeurs par défaut
+        }
+    }
+
+    const emojis: Record<string, string> = {
+        microbe: '🦠', spore: '🍄', seed: '🌱', flower: '🌸', nectar: '🍯', anonymous: '👤'
+    };
+    const tierEmoji = emojis[tier] || '❓';
+
+    const response = `## 🍯💚 POLLINATIONS OPENCODE PLUGIN 💚🍯
+
+Bienvenue **${name}** sur le plugin Pollinations pour OpenCode !
+
+Ce plugin vous permet de générer du code, des images, d'analyser des vidéos et interagir avec les meilleurs modèles d'Intelligence Artificielle de manière totalement transparente et intégrée à votre environnement de travail. Accédez aux capacités des LLMs de pointe, que ce soit via des requêtes de chat, la refonte de votre base de code, ou directement dans le terminal.
+
+---
+
+> **Your tiers:** ${tierEmoji} ${tier.toUpperCase()}
+
+---
+
+## 🌍 Qu'est-ce que pollinations.ai ?
+pollinations.ai est une plateforme d'IA open-source construite par et pour la communauté. Nous offrons une API unifiée pour les images, le texte, l'audio et la vidéo. Tout fonctionne de manière ouverte : notre code, notre feuille de route, nos conversations. Des centaines de développeurs construisent déjà des outils, des jeux, des bots et des expériences farfelues avec nous. Vous êtes les bienvenus !
+
+Pas de boîtes noires. Pas de dépendance exclusive (vendor lock-in). Juste une API conviviale et un Discord rempli de personnes qui s'entraident réellement.
+
+---
+
+## 📈 Évoluez votre Palier (Tier)
+Pour les développeurs qui créent avec pollinations.ai. Montez de niveau pour gagner plus de Pollen quotidien.
+
+- 🦠 **Microbe** (0.1 pollen/jour) : Pour débloquer : S'inscrire
+- 🍄 **Spore** (1 pollen/jour) : Pour débloquer : Vérification automatique (Vérifié à l'inscription)
+- 🌱 **Seed** (3 pollen/jour) : Pour débloquer : 8+ points dev (Mise à niveau automatique hebdomadaire)
+- 🌸 **Flower** (10 pollen/jour) : Pour débloquer : Publier une application (🌱 Doit être Seed en premier)
+- 🍯 **Nectar** (20 pollen/jour) : Bientôt disponible 🔮
+
+✨ *Nous sommes en bêta ! Nous apprenons ce qui fonctionne le mieux pour notre communauté et pourrons ajuster les valeurs de pollen et les règles des paliers. Merci de faire partie de cette aventure !*
+
+---
+
+## 💎 Qu'est-ce que le Pollen ?
+Faire tourner des modèles d'IA coûte de l'argent. Le Pollen est notre moyen de faire fonctionner les serveurs sans publicité ni revente de vos données. Un crédit simple et unique pour tous les modèles — prévisible, transparent, sans surprises. 
+
+**$1 ≈ 1 Pollen** (les prix peuvent évoluer). Vous le dépensez pour faire des appels API.
+
+## 🛒 Comment obtenir du Pollen ?
+Il y a trois moyens d'ajouter du Pollen à votre solde :
+
+1. **L'acheter** : Achetez des packs de Pollen directement par carte bancaire. Ce Pollen va dans votre portefeuille (wallet) et n'expire jamais. Des packs simples, pas d'abonnements, pas de paliers bloquants.
+2. **Pollen Quotidien** : Pendant et après la bêta, les développeurs inscrits reçoivent des subventions quotidiennes de Pollen pour soutenir leurs expérimentations, en fonction de leur palier (microbe, spore, seed, flower, nectar).
+3. **Le Gagner** : Complétez des récompenses communautaires ponctuelles (comme aider à résoudre un problème technique ou contribuer au projet). Chaque contribution vous fait gagner du Pollen. Nous le remarquons et nous partageons.
+
+---
+
+### 💡 Comment le Pollen est-il dépensé ?
+1. **Les subventions quotidiennes (Tier grants)** sont utilisées en premier.
+2. **Le Pollen acheté (Wallet)** est utilisé une fois le Pollen quotidien épuisé.
+⚠️ **Exception** : 💎 Les modèles *Paid Only* (ex: claude-large, veo, seedream-pro) requièrent uniquement du Pollen acheté.`;
+
+    return { handled: true, response };
 }
 
 // === INTEGRATION OPENCODE ===

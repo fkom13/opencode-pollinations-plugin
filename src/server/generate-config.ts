@@ -3,10 +3,7 @@ import * as https from 'https';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { loadConfig } from './config.js';
-const HOMEDIR = os.homedir();
-const CONFIG_DIR_POLLI = path.join(HOMEDIR, '.pollinations');
-const CONFIG_FILE = path.join(CONFIG_DIR_POLLI, 'config.json');
+import { loadConfig, CONFIG_FILE } from './config.js';
 
 // --- INTERFACES SCRICT ---
 
@@ -47,15 +44,11 @@ interface OpenCodeModel {
     };
 }
 
+import { log as logSystem } from './logger.js';
+
 // --- LOGGING ---
-const LOG_FILE = '/tmp/opencode_pollinations_config.log';
 function log(msg: string) {
-    try {
-        const ts = new Date().toISOString();
-        if (!fs.existsSync(LOG_FILE)) fs.writeFileSync(LOG_FILE, '');
-        fs.appendFileSync(LOG_FILE, `[ConfigGen] ${ts} ${msg}\n`);
-    } catch (e) { }
-    // Force output to stderr for CLI visibility if needed, but clean.
+    logSystem(`[ConfigGen] ${msg}`);
 }
 
 // Fetch Helper
@@ -105,6 +98,14 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     // Use forced key (from Hook) or cached key
     const effectiveKey = forceApiKey || config.apiKey;
 
+    // 0. CONNECT MODEL (Always present, first in list)
+    modelsOutput.push({
+        id: 'pollinations/connect',
+        name: '🌸 Pollinations — Guide & Connexion',
+        object: 'model',
+        variants: {}
+    });
+
     // 1. FREE UNIVERSE
     try {
         // Switch to main models endpoint (User provided curl confirms it has 'description')
@@ -122,17 +123,6 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
         modelsOutput.push({ id: "free/mistral", name: "Mistral Nemo (Fallback)", object: "model", variants: {} });
         modelsOutput.push({ id: "free/openai", name: "OpenAI (Fallback)", object: "model", variants: {} });
         modelsOutput.push({ id: "free/gemini", name: "Gemini Flash (Fallback)", object: "model", variants: {} });
-    }
-
-    // 1.5 FALLBACK: Si aucun modèle, ajouter le modèle de connexion
-    if (modelsOutput.length === 0) {
-        log(`[ConfigGen] No models available. Adding connect-pollinations fallback.`);
-        modelsOutput.unshift({
-            id: 'connect-pollinations',
-            name: '⚡ Pollinations',
-            object: 'model',
-            variants: {}
-        });
     }
 
     // ALIAS Removed for Clean Config

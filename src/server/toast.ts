@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { loadConfig } from './config.js';
 
 // === QUEUE GLOBALE & CLIENT ===
@@ -45,17 +47,39 @@ export function emitLogToast(
 export function emitStatusToast(
     type: 'info' | 'warning' | 'error' | 'success',
     message: string,
-    title?: string
+    title?: string,
+    metadata?: { filePath?: string; params?: Record<string, any> }
 ) {
     const config = loadConfig();
     const verbosity = config.gui.status;
 
     if (verbosity === 'none') return;
-    // 'alert' logic handled by caller (proxy.ts) usually, but we can filter here too? 
-    // Actually, 'all' sends everything. 'alert' sends only warnings/errors.
     if (verbosity === 'alert' && type !== 'error' && type !== 'warning') return;
 
-    dispatchToast('status', type, message, title || 'Pollinations Status');
+    let finalMessage = message;
+
+    if (metadata?.filePath) {
+        finalMessage += `\n📁 ${metadata.filePath}`;
+    }
+
+    if (type === 'success' || type === 'error') {
+        // En arrière-plan, essaye de récupérer le quota localement sans bloquer l'appel
+        import('./quota.js').then(({ getQuotaStatus, formatQuotaForToast }) => {
+            getQuotaStatus(false).then(quota => {
+                const quotaMsg = formatQuotaForToast
+                    ? formatQuotaForToast(quota)
+                    : `🌻 Freetier: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} | Wallet: $${quota.walletBalance.toFixed(2)}`;
+                finalMessage += `\n${quotaMsg}`;
+                dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+            }).catch(() => {
+                dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+            });
+        }).catch(() => {
+            dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+        });
+    } else {
+        dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+    }
 }
 
 // INTERNAL DISPATCHER
@@ -98,14 +122,12 @@ function dispatchToast(
 
 // === HELPERS ===
 
+import { logToast } from './logger.js';
+
 function logToastToFile(toast: ToastMessage) {
-    try {
-        const logLine = `[${new Date(toast.timestamp).toISOString()}] [${toast.channel.toUpperCase()}] [${toast.type.toUpperCase()}] ${toast.message}`;
-        fs.appendFileSync('/tmp/pollinations-toasts.log', logLine + '\n');
-    } catch (e) { }
+    const logLine = `[${new Date(toast.timestamp).toISOString()}] [${toast.channel.toUpperCase()}] [${toast.type.toUpperCase()}] ${toast.message}`;
+    logToast(logLine);
 }
-
-
 
 export function createToastHooks(client: any) {
     return {

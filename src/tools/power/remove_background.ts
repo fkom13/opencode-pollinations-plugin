@@ -4,6 +4,7 @@ import * as https from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
 import { resolveOutputDir, formatFileSize, TOOL_DIRS } from '../shared.js';
+import { getConfigDir } from '../../server/config.js';
 
 // ─── Provider Defaults ───────────────────────────────────────────────────────
 
@@ -13,10 +14,7 @@ const BACKGROUNDCUT_API_URL = 'https://backgroundcut.co/api/v1/cut/';
 
 // ─── Key Storage ─────────────────────────────────────────────────────────────
 
-const KEYS_FILE = path.join(
-    process.env.HOME || process.env.USERPROFILE || '/tmp',
-    '.pollinations', 'backgroundcut_keys.json'
-);
+const KEYS_FILE = path.join(getConfigDir(), 'backgroundcut_keys.json');
 
 interface KeyStore {
     keys: string[];

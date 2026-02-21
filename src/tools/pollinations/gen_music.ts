@@ -25,8 +25,10 @@ import {
     estimateMusicCost,
     extractCostFromHeaders,
     isCostEstimatorEnabled,
-    MUSIC_MODEL,
 } from './shared.js';
+import { loadConfig } from '../../server/config.js';
+import { checkCostControl } from './cost-guard.js';
+import { emitStatusToast } from '../../server/toast.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -37,7 +39,7 @@ const MODEL_NAME = 'elevenmusic';
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
-export const genMusicTool: ToolDefinition = tool({
+export const polliGenMusicTool: ToolDefinition = tool({
     description: `Generate music from a text description using Pollinations AI.
 
 **🎵 Model:** elevenmusic (ElevenLabs Music)
@@ -87,8 +89,19 @@ export const genMusicTool: ToolDefinition = tool({
         // Estimate cost
         const estimatedCost = estimateMusicCost(duration);
 
+        // Cost Guard check V2
+        const costCheck = checkCostControl('polli_gen_music', args, MODEL_NAME, estimatedCost, 'audio');
+        if (!costCheck.allowed) {
+            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+        }
+
         // Estimate generation time
-        const genTimeSeconds = Math.ceil(duration * 1.2); // ~1.2s per second of audio
+        const genTimeSeconds = Math.ceil(duration * 1.2);
+
+        // Emit start toast
+        const config = loadConfig();
+        const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
+        emitStatusToast('info', `Génération musique: ${duration}s (~${genTimeSeconds}s gen)${argsStr}`, '🎵 polli_gen_music');
 
         // Metadata
         context.metadata({ title: `🎵 Music: ${duration}s (~${genTimeSeconds}s gen time)` });
@@ -105,7 +118,7 @@ export const genMusicTool: ToolDefinition = tool({
             if (instrumental) {
                 params.set('instrumental', 'true');
             }
-            
+
             // Seed for reproducibility
             if (args.seed !== undefined) {
                 params.set('seed', String(args.seed));
@@ -124,31 +137,54 @@ export const genMusicTool: ToolDefinition = tool({
             const responseHeaders = result.headers;
 
             // Save audio
-            const outputDir = args.save_to || getDefaultOutputDir('music');
+            let outputDir = getDefaultOutputDir('music');
+            let filename = args.filename;
+
+            if (args.save_to) {
+                if (args.save_to.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+                    outputDir = path.dirname(args.save_to);
+                    filename = path.basename(args.save_to);
+                } else {
+                    outputDir = args.save_to;
+                }
+            }
+
             ensureDir(outputDir);
 
-            const filename = args.filename || generateFilename('music', MODEL_NAME, 'mp3');
+            filename = filename || generateFilename('music', MODEL_NAME, 'mp3');
             const filePath = path.join(outputDir, filename.endsWith('.mp3') ? filename : `${filename}.mp3`);
 
             fs.writeFileSync(filePath, audioData);
             const fileSize = fs.statSync(filePath).size;
 
+            let actualCost = estimatedCost;
+            if (responseHeaders) {
+                const costTracking = extractCostFromHeaders(responseHeaders);
+                if (costTracking.costUsd !== undefined) actualCost = costTracking.costUsd;
+            }
+
             // Build result
-            const lines: string[] = [
-                `🎵 Musique Générée`,
-                `━━━━━━━━━━━━━━━━━━`,
-                `Prompt: ${args.prompt}`,
-                `Durée: ~${duration}s`,
-                `Mode: ${instrumental ? 'Instrumental (sans voix)' : 'Avec voix possible'}`,
-                `Fichier: ${filePath}`,
-                `Taille: ${formatFileSize(fileSize)}`,
-            ];
-            
+            const lines: string[] = [];
+
+            // Inject costWarning at top if present
+            if (costCheck.message && !costCheck.allowed) {
+                lines.push(costCheck.message);
+                lines.push('');
+            }
+
+            lines.push(`🎵 Musique Générée`);
+            lines.push(`━━━━━━━━━━━━━━━━━━`);
+            lines.push(`Prompt: ${args.prompt}`);
+            lines.push(`Durée: ~${duration}s`);
+            lines.push(`Mode: ${instrumental ? 'Instrumental (sans voix)' : 'Avec voix possible'}`);
+            lines.push(`Fichier: ${filePath}`);
+            lines.push(`Taille: ${formatFileSize(fileSize)}`);
+
             // Cost info
             if (isCostEstimatorEnabled()) {
-                lines.push(`Coût estimé: ${formatCost(estimatedCost)}`);
+                lines.push(`Coût: ${formatCost(actualCost)}`);
             }
-            
+
             if (responseHeaders['x-model-used']) {
                 lines.push(`Modèle utilisé: ${responseHeaders['x-model-used']}`);
             }
@@ -156,11 +192,16 @@ export const genMusicTool: ToolDefinition = tool({
                 lines.push(`Request ID: ${responseHeaders['x-request-id']}`);
             }
 
+            // Emit success toast
+            emitStatusToast('success', `Musique générée ✓ (${duration}s)`, '🎵 gen_music');
+
             return lines.join('\n');
 
         } catch (err: any) {
+            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🎵 gen_music');
+
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits insuffisants.`;
+                return `❌ Crédits pollen insuffisants.`;
             }
             if (err.message?.includes('401') || err.message?.includes('403')) {
                 return `❌ Clé API invalide ou non autorisée.`;
