@@ -7,7 +7,7 @@
   Free AI models, multimodal generation, and smart quota management — directly in your editor.
   <br><br>
 
-![Version](https://img.shields.io/badge/version-6.1.0--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-6.1.0--beta.22-blue.svg)
 ![Downloads](https://img.shields.io/npm/dt/opencode-pollinations-plugin?label=downloads&color=brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-Beta-orange.svg)
@@ -23,12 +23,13 @@
 
 ---
 
-## ✨ What's New in v6.1-beta
+## ✨ What's New in v6.1-beta.22
 
 The jump from v5.9 to v6.1 is not incremental. The plugin has grown from a smart proxy into a **full multimodal agent toolkit**:
 
 - **15+ native tools** for generation, design, and media processing — usable directly in OpenCode's agent mode
-- **Ledger quota system**: local `~/.pollinations/usage_history.json` tracking for 100% accurate usage with zero lag
+- **Smart Fetch Quota**: 100% exact math fetching directly from Pollinations API for quota verification (zero local cache)
+- **Dynamic Pricing**: Tool costs are estimated live based on Tinybird API model stats. Token models have a built-in max theoretical threshold limit (Cost Guard).
 - **Stealth notifications**: status toasts now only fire in relevant contexts, no more noise
 - **Background removal** with multi-key rotation and automatic fallback to free provider
 - **Video, music, audio generation** via the Pollinations API
@@ -239,7 +240,8 @@ Config is read from (highest priority first):
 ### ✅ Shipped (v5.x → v6.1-beta)
 - Free + Enterprise proxy with transparent fallback (Safety Net)
 - Dynamic port allocation — cross-platform (no more `fuser`, no port conflicts)
-- Pollen/tier quota tracking with local Ledger
+- Pollen/tier quota tracking with Smart Fetch API (no local logging)
+- Dynamic Pricing (Tinybird stats) and Cost Guard max thresholds
 - Agent tools: image, audio, music, video generation
 - Agent tools: web search, scraping, deep research
 - Design tools: diagrams, palettes, QR codes

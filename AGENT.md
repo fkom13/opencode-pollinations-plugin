@@ -351,22 +351,15 @@ Tous dans `scripts/` : `test_keys.sh`, `repro_*.cjs`, etc.
 
 > ⚠️ **Mettre à jour cette section à chaque début de session de dev.**
 
-### Sprint actuel
+### Sprint actuel (Terminé)
 
-_À renseigner en début de session._
-
-```
-- [
-
-/home/fkomp/Bureau/oracle/opencode-pollinations-plugin/CONSEIL_ORDRE_EXECUTION.md
-
-] ...
-```
+- Sprint 1.5 : Tarification dynamique, Tinybird API, et Cost Guard avancé (x3) (Validé)
+- Sprint 2 : Refonte complète du moteur de quota avec suppression du Ledger local au profit du Smart Fetch (Validé)
 
 ### Bloquants connus
 
-_Aucun pour l'instant._
+_Aucun pour l'instant. Les conflits de types TypeScript ont été résolus._
 
 ### Prochaine version cible
 
-_À renseigner._
+- `v6.1.0` (Stable / Latest) — En attente de test de déploiement sur VPS Oracle avant la promotion.
