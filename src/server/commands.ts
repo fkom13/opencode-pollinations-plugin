@@ -1,8 +1,8 @@
 import * as https from 'https';
-import { loadConfig, saveConfig, PollinationsConfigV5 } from './config.js';
-import { getQuotaStatus, QuotaStatus } from './quota.js';
+import { loadConfig, saveConfig, saveKeyToAuthJson, PollinationsConfigV5 } from './config.js';
+import { getQuotaStatus, QuotaStatus, fetchUsageForPeriod } from './quota.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
-import { getDetailedUsage, DetailedUsageEntry } from './pollinations-api.js';
+import { DetailedUsageEntry } from './pollinations-api.js';
 import { generatePollinationsConfig } from './generate-config.js';
 import { ModelRegistry } from './models/index.js';
 import type { PollinationsModel, ModelCategory } from './models/types.js';
@@ -201,7 +201,7 @@ export async function handleCommand(command: string): Promise<CommandResult> {
         case 'help':
             return handleHelpCommand();
         case 'models':
-            return handleModelsCommand(args);
+            return await handleModelsCommand(args);
         case 'pricing':
             return await handlePricingCommand();
         case 'infos':
@@ -308,10 +308,10 @@ export async function handleUsageCommand(args: string[]): Promise<CommandResult>
             if (config.keyHasAccessToProfile === false) {
                 response += `\n> ⚠️ *Votre clé API ne permet pas l'accès aux détails d'usage (Restriction).*`;
             } else {
-                const usageData = await getDetailedUsage(config.apiKey);
-                if (usageData && usageData.usage) {
-                    const lastReset = calculateResetDate(quota.nextResetAt);
-                    const stats = calculateCurrentPeriodStats(usageData.usage, lastReset, quota.tierLimit);
+                const lastReset = calculateResetDate(quota.nextResetAt);
+                const usageData = await fetchUsageForPeriod(config.apiKey, lastReset);
+                if (usageData && usageData.length > 0) {
+                    const stats = calculateCurrentPeriodStats(usageData, lastReset, quota.tierLimit);
 
                     response += `\n### 📊 Détail Période (depuis ${lastReset.toLocaleTimeString()})\n`;
                     response += `**Total Requêtes**: ${stats.totalRequests} | **Tokens**: In ${formatTokens(stats.inputTokens)} / Out ${formatTokens(stats.outputTokens)}\n\n`;
@@ -396,6 +396,7 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
         if (enterpriseModels.length > 0) {
             // SUCCESS
             saveConfig({ apiKey: key }); // Don't force mode 'pro'. Let user decide.
+            saveKeyToAuthJson(key); // NATIVE SYNC: Hot-reload on OpenCode bypasses restart requirement !
 
             const masked = key.substring(0, 6) + '...';
             // Count Paid Only models found
@@ -427,7 +428,7 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
 
             return {
                 handled: true,
-                response: `✅ **Connexion Réussie!**\n- Clé: \`${masked}\`\n- Modèles Débloqués: ${enterpriseModels.length} (dont ${diamondCount} 💎 Paid)${forcedModeMsg}`
+                response: `✅ **Connexion Réussie! (Injection à chaud)**\n- Clé: \`${masked}\`\n- Modèles Pro Débloqués: ${enterpriseModels.length} (dont ${diamondCount} 💎 Paid)${forcedModeMsg}`
             };
         } else {
             // FAILURE (Valid JSON but no Enterprise models - likely Invalid Key or Free plan only?)
@@ -472,17 +473,31 @@ function handleConfigCommand(args: string[]): CommandResult {
 
     if (!key) {
         const config = loadConfig();
-        // Mask API key for security (R6)
-        const safeConfig = { ...config };
-        if (safeConfig.apiKey) {
-            const k = safeConfig.apiKey;
-            safeConfig.apiKey = k.length > 8
-                ? `${k.substring(0, 5)}****${k.substring(k.length - 4)}`
-                : '****';
-        }
+        const k = config.apiKey ? (config.apiKey.length > 8 ? `${config.apiKey.substring(0, 5)}****${config.apiKey.substring(config.apiKey.length - 4)}` : '****') : 'Non configurée';
+
+        const markdownResponse = `## ⚙️ Configuration Pollinations
+Voici l'état actuel de votre configuration locale.
+
+| Paramètre | Valeur Actuelle | Rôle | Commande |
+|-----------|-----------------|------|----------|
+| **apiKey** | \`${k}\` | Votre clé API secrète (BYOK) | \`/pollinations connect <key>\` |
+| **mode** | \`${config.mode}\` | Mode d'accès | \`/pollinations mode <manual/pro/alwaysfree>\` |
+| **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | Sécurité: Désactiver outils payants | \`/poll config enablePaidTools <true/false>\` |
+| **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | Demande confirmation si le seuil d'alerte est dépassé | \`/poll config costConfirmation <true/false>\` |
+| **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | Seuil d'alerte coût Outils | \`/poll config costThreshold <X>\` |
+| **cost_estimator**| \`${config.costEstimator ?? true}\` | Afficher l'estimation de coût dans les Toasts | \`/poll config cost_estimator <true/false>\` |
+| **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | Modèle de repli Chat vers l'univers free legacy | \`/pollinations fallback <main> <agent>\` |
+| **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| Modèle de repli Agent vers l'univers free legacy | \`/pollinations fallback <main> <agent>\` |
+| **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| Modèle Agent principal (free/* ou enter/*) | *Géré automatiquement* |
+| **status_gui** | \`${config.gui?.status || 'all'}\` | Toasts de statut (all, alert, none) | \`/poll config status_gui <all/alert/none>\` |
+| **logs_gui** | \`${config.gui?.logs || 'error'}\` | Niveau de log (verbose, error) | \`/poll config logs_gui <verbose/error/none>\` |
+| **threshold_tier** | \`${config.thresholds?.tier || 80}%\` | Alerte limite Quotidienne Gratuite | \`/poll config threshold_tier <1-100>\` |
+| **threshold_wallet** | \`${config.thresholds?.wallet || 80}%\` | Alerte baisse de Wallet Premium | \`/poll config threshold_wallet <1-100>\` |
+| **status_bar** | \`${config.statusBar ?? true}\` | Affiche l'icône dans la barre de statut | \`/poll config status_bar <true/false>\` |`;
+
         return {
             handled: true,
-            response: JSON.stringify(safeConfig, null, 2)
+            response: markdownResponse
         };
     }
 
@@ -617,7 +632,7 @@ function parseNameDesc(m: PollinationsModel): { nom: string, desc: string } {
     return { nom: fullDesc, desc: "" };
 }
 
-export function handleModelsCommand(args: string[]): CommandResult {
+export async function handleModelsCommand(args: string[]): Promise<CommandResult> {
     const filter = args[0] as ModelCategory | undefined; // optional: image, video, audio, text
 
     if (!ModelRegistry.isReady()) {
@@ -627,14 +642,38 @@ export function handleModelsCommand(args: string[]): CommandResult {
         };
     }
 
+    const sections: string[] = [];
+
+    // --- FETCH FREE UNIVERSE GITHUB/LEGACY MODELS ---
+    if (!filter || filter === 'text') {
+        try {
+            const freeRes = await fetch('https://text.pollinations.ai/models', { signal: AbortSignal.timeout(4000) });
+            if (freeRes.ok) {
+                const freeData = await freeRes.json();
+                sections.push('## 🎁 Modèles Free Universe (Communautaire / Legacy API)\n');
+                sections.push(`> *Bonus gratuit disponible sans clé via l'API \`text.pollinations.ai\`. Dédié au Chat textuel.*\n`);
+                sections.push('| Nom | Alias / ID | Description | Vision | Tools |');
+                sections.push('|-----|------------|-------------|--------|-------|');
+                for (const m of freeData) {
+                    const desc = m.description || m.name;
+                    const aliases = m.aliases ? m.aliases.join(', ') : m.name;
+                    sections.push(`| \`${m.name}\` | ${aliases} | ${desc.substring(0, 40)} | ${m.vision ? '👁️' : '❌'} | ${m.tools ? '🛠️' : '❌'} |`);
+                }
+                sections.push('');
+            }
+        } catch (e) {
+            sections.push('## 🎁 Modèles Free Universe\n*(⚠️ L\'API communautaire text.pollinations.ai semble temporairement indisponible)*\n');
+        }
+    }
+
+    sections.push('## 📋 Modèles Pollinations Enter (Principaux)\n');
+
     const categories: { cat: ModelCategory; emoji: string; label: string }[] = [
         { cat: 'image', emoji: '🎨', label: 'Image' },
         { cat: 'video', emoji: '🎬', label: 'Video' },
         { cat: 'audio', emoji: '🔊', label: 'Audio' },
         { cat: 'text', emoji: '📝', label: 'Text' },
     ];
-
-    const sections: string[] = ['## 📋 Modèles Pollinations Enter\n'];
 
     for (const { cat, emoji, label } of categories) {
         if (filter && filter !== cat) continue;
@@ -754,6 +793,23 @@ export async function handleInfosCommand(): Promise<CommandResult> {
 Bienvenue **${name}** sur le plugin Pollinations pour OpenCode !
 
 Ce plugin vous permet de générer du code, des images, d'analyser des vidéos et interagir avec les meilleurs modèles d'Intelligence Artificielle de manière totalement transparente et intégrée à votre environnement de travail. Accédez aux capacités des LLMs de pointe, que ce soit via des requêtes de chat, la refonte de votre base de code, ou directement dans le terminal.
+ 
+**Ce Que ce plugin vous apporte en plus ! :**
+
+**🛠️ Outils Gratuits Intégrés (Toujours disponibles) :**
+- \`gen_qrcode\` / \`gen_diagram\` / \`gen_palette\` : Outils visuels et dev.
+- \`remove_background\` : Détourage d'image natif.
+- \`extract_frames\` / \`extract_audio\` : Extraction rapide de contenu média.
+- \`file_to_url\` : Hébergement instantané de vos fichiers locaux en ligne.
+
+**💎 Outils Pollinations (Premium - Automatisés avec votre Clé) :**
+- \`polli_gen_image\` : Génération d'images (Flux, Seedream, Gemini) + support Image-to-Image.
+- \`polli_gen_video\` : Génération vidéo text-to-video / image-to-video (Veo, Wan, LTX...).
+- \`polli_gen_audio\`/\`polli_stt\` : Transcription Whisper, Text-to-Speech ElevenLabs.
+- \`polli_gen_music\` : Moteur de musique générative.
+- \`polli_web_search\` : Recherche connectée pour étendre la base de contexte de l'agent.
+
+- **Une configuration granulaire**, des modes de gestions de vos tokens et de vos outils, de la sécurisation des coûts des outils consommant du pollen...
 
 ---
 

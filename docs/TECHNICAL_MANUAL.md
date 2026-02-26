@@ -1,6 +1,6 @@
 # 📘 Technical Manual — OpenCode Pollinations Plugin v6.1-beta
 
-> **Version**: 6.1.0-beta | **Status**: Beta | **Last Updated**: 2026-02-18
+> **Version**: 6.1.0-beta.22 | **Status**: Beta | **Last Updated**: 2026-02-26
 
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
@@ -379,8 +379,8 @@ const CACHE_TTL = 30000; // 30 seconds
 | flower | 10 | 🌸 |
 | nectar | 20 | 🍯 |
 
-**Ledger (v6.1 — New):**
-Local usage tracking via `~/.pollinations/usage_history.json`. Provides instant, accurate quota display with zero API lag. No more stale 30-second cache for the dashboard display.
+**Smart Fetch Quota (v6.1.0-beta.22 — New):**
+Local usage tracking has been entirely replaced by a recursive API fetch (`fetchUsageForPeriod`). The system queries `/account/usage?limit=100` iteratively until it reaches the exact mathematical timestamp of `nextResetAt - 24h` (in absolute UTC). This guarantees 100% exact alignment with the Pollinations backend billing without relying on local cache or local timezones.
 
 ---
 
@@ -596,17 +596,6 @@ Key storage format (`~/.pollinations/backgroundcut_keys.json`):
 }
 ```
 
-### `~/.pollinations/usage_history.json` (Ledger — v6.1)
-```json
-{
-    "date": "2026-02-18",
-    "entries": [
-        { "model": "enter/claude", "tokens": 1200, "pollen": 0.12, "timestamp": "..." }
-    ],
-    "totalPollen": 0.12
-}
-```
-
 ### `~/.pollinations/backgroundcut_keys.json`
 ```json
 {
@@ -728,7 +717,7 @@ Inject "⚠️ Switched to free model" warning into stream
 | Stop reason normalization | v5.9 | Across all upstream providers |
 | Loop detection (Guillotine) | v5.9 | "User:" pattern hard stop |
 | Paid-only model enforcement | v5.5 | walletBalance check |
-| Ledger quota system | v6.1 | Local usage_history.json |
+| Smart Fetch quota system | v6.1-b22 | Recursive API fetch replaces local Ledger |
 | Stealth notifications | v6.1 | Toasts only in paid sessions |
 | Tools system | v6.1 | 15+ tools in tools/ |
 | gen_image, gen_audio, gen_music | v6.1 | Pollinations generation |

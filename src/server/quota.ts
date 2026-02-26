@@ -1,8 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as https from 'https'; // Use Native HTTPS
-import * as crypto from 'crypto';
-import { loadConfig, getConfigDir } from './config.js';
+import { loadConfig } from './config.js';
 
 // === INTERFACES ===
 
@@ -14,16 +11,7 @@ interface Profile {
     createdAt: string;
     nextResetAt: string;
 }
-
-export interface DetailedUsageEntry {
-    timestamp: string;
-    type: string;
-    model: string;
-    meter_source: 'tier' | 'pack';
-    cost_usd: number;
-    requests?: number;
-    // ... autres champs
-}
+import { DetailedUsageEntry } from './pollinations-api.js';
 
 interface ResetInfo {
     nextReset: Date;
@@ -83,69 +71,47 @@ function logQuota(msg: string) {
     logApi(`[QUOTA] ${msg}`);
 }
 
-// === HISTORY MANAGER (JSON) ===
+// === SMART FETCH API ===
 
-function getHistoryFilePath(): string {
-    const historyDir = getConfigDir();
-    if (!fs.existsSync(historyDir)) {
-        try { fs.mkdirSync(historyDir, { recursive: true }); } catch (e) { }
-    }
-    return path.join(historyDir, 'usage_history.json');
-}
+export async function fetchUsageForPeriod(apiKey: string, lastReset: Date): Promise<DetailedUsageEntry[]> {
+    let allUsage: DetailedUsageEntry[] = [];
+    let offset = 0;
+    const limit = 100; // Bulk fetch 
 
-function computeEntrySignature(entry: DetailedUsageEntry): string {
-    // Unique signature per transaction: timestamp + model + cost + source
-    return crypto.createHash('md5').update(`${entry.timestamp}|${entry.model}|${entry.cost_usd}|${entry.meter_source}`).digest('hex');
-}
-
-function updateLocalHistory(newEntries: DetailedUsageEntry[]): DetailedUsageEntry[] {
-    const filePath = getHistoryFilePath();
-    let history: DetailedUsageEntry[] = [];
-
-    // 1. Load existing
-    try {
-        if (fs.existsSync(filePath)) {
-            const raw = fs.readFileSync(filePath, 'utf-8');
-            history = JSON.parse(raw);
+    while (true) {
+        let usageRes;
+        try {
+            usageRes = await fetchAPI<{ usage: DetailedUsageEntry[] }>(`/account/usage?limit=${limit}&offset=${offset}`, apiKey);
+        } catch (e) {
+            logQuota(`SmartFetch failed at offset ${offset}: ${e}`);
+            break;
         }
-    } catch (e) {
-        logQuota(`Failed to load history: ${e}`);
-        history = [];
-    }
 
-    // 2. Merge (Deduplication via Signature)
-    const existingSignatures = new Set(history.map(computeEntrySignature));
-    let addedCount = 0;
-
-    for (const entry of newEntries) {
-        const sig = computeEntrySignature(entry);
-        if (!existingSignatures.has(sig)) {
-            history.push(entry);
-            existingSignatures.add(sig);
-            addedCount++;
+        if (!usageRes.usage || usageRes.usage.length === 0) {
+            break; // No more records
         }
+
+        let reachedCutoff = false;
+        for (const entry of usageRes.usage) {
+            const timestampStr = entry.timestamp.includes('Z') ? entry.timestamp : entry.timestamp.replace(' ', 'T') + 'Z';
+            const entryTime = new Date(timestampStr);
+            if (entryTime < lastReset) {
+                reachedCutoff = true;
+                break; // Entry is from previous period, stop.
+            }
+            allUsage.push(entry);
+        }
+
+        // If we found an entry older than lastReset, or if the page was not full, we reached the end.
+        if (reachedCutoff || usageRes.usage.length < limit) {
+            break;
+        }
+
+        offset += limit;
     }
 
-    // 3. Prune (> 48h)
-    const now = Date.now();
-    const beforePrune = history.length;
-    history = history.filter(e => {
-        const entryTime = new Date(e.timestamp.replace(' ', 'T') + 'Z').getTime();
-        return (now - entryTime) < HISTORY_RETENTION_MS;
-    });
-
-    // 4. Sort (Newest first)
-    history.sort((a, b) => new Date(b.timestamp.replace(' ', 'T') + 'Z').getTime() - new Date(a.timestamp.replace(' ', 'T') + 'Z').getTime());
-
-    // 5. Save
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
-        logQuota(`History Update: Added ${addedCount}, Pruned ${beforePrune - history.length}, Total ${history.length} entries.`);
-    } catch (e) {
-        logQuota(`Failed to save history: ${e}`);
-    }
-
-    return history;
+    logQuota(`SmartFetch: Retrieved ${allUsage.length} transactions for current period.`);
+    return allUsage;
 }
 
 // === MAIN QUOTA FUNCTION ===
@@ -169,22 +135,22 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
         // SEQUENTIAL FETCH (Avoid Rate Limits)
         const profileRes = await fetchAPI<Profile>('/account/profile', config.apiKey);
         const balanceRes = await fetchAPI<{ balance: number }>('/account/balance', config.apiKey);
-        const usageRes = await fetchAPI<{ usage: DetailedUsageEntry[] }>('/account/usage', config.apiKey);
-
-        logQuota(`Fetch Success. Tier: ${profileRes.tier}, Balance: ${balanceRes.balance}`);
 
         const profile = profileRes;
         const balance = balanceRes.balance;
 
-        // 2. Update Local History (The Source of Truth)
-        const fullHistory = updateLocalHistory(usageRes.usage || []);
+        // 2. Convertir Timezone : Obtenir instant exact du Reset
+        const resetInfo = calculateResetInfo(profile.nextResetAt);
+        logQuota(`Fetch Success. Tier: ${profile.tier}, Balance: ${balance}, Next Reset: ${profile.nextResetAt}`);
+
+        // 3. Smart Fetch : Récupérer uniquement les dépenses du jour (depuis lastReset)
+        const periodUsage = await fetchUsageForPeriod(config.apiKey, resetInfo.lastReset);
 
         const tierInfo = TIER_LIMITS[profile.tier] || { pollen: 1, emoji: '❓' };
         const tierLimit = tierInfo.pollen;
 
-        // 3. Calculate Reset & Usage from History
-        const resetInfo = calculateResetInfo(profile.nextResetAt);
-        const { tierUsed } = calculateCurrentPeriodUsage(fullHistory, resetInfo);
+        // 4. Calcul Strict FreeTier / Wallet
+        const { tierUsed } = calculateCurrentPeriodUsage(periodUsage, resetInfo);
 
         // 4. Calculate Balances
         const tierRemaining = Math.max(0, tierLimit - tierUsed);
@@ -287,45 +253,22 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
 }
 
 function calculateResetInfo(nextResetAt: string): ResetInfo {
-    const nextResetFromAPI = new Date(nextResetAt);
+    const nextReset = new Date(nextResetAt);
+    const lastReset = new Date(nextReset.getTime() - ONE_DAY_MS);
     const now = new Date();
 
-    const resetHour = nextResetFromAPI.getUTCHours();
-    const resetMinute = nextResetFromAPI.getUTCMinutes();
-    const resetSecond = nextResetFromAPI.getUTCSeconds();
-
-    const todayResetUTC = new Date(Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        resetHour,
-        resetMinute,
-        resetSecond
-    ));
-
-    let lastReset: Date;
-    let nextReset: Date;
-
-    if (now >= todayResetUTC) {
-        lastReset = todayResetUTC;
-        nextReset = new Date(todayResetUTC.getTime() + ONE_DAY_MS);
-    } else {
-        lastReset = new Date(todayResetUTC.getTime() - ONE_DAY_MS);
-        nextReset = todayResetUTC;
-    }
-
-    const timeUntilReset = nextReset.getTime() - now.getTime();
-    const timeSinceReset = now.getTime() - lastReset.getTime();
-    const progressPercent = (timeSinceReset / ONE_DAY_MS) * 100;
+    const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
+    const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());
+    const progressPercent = Math.min(100, (timeSinceReset / ONE_DAY_MS) * 100);
 
     return {
         nextReset,
         lastReset,
         timeUntilReset,
         timeSinceReset,
-        resetHour,
-        resetMinute,
-        resetSecond,
+        resetHour: nextReset.getUTCHours(),
+        resetMinute: nextReset.getUTCMinutes(),
+        resetSecond: nextReset.getUTCSeconds(),
         progressPercent
     };
 }

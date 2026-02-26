@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.22] — 2026-02-26
+
+### ✨ Refonte Majeure — Moteur de Quotas et Timezone (Sprint 2)
+- **Suppression du Ledger Local** : Le système de cache lourd et capricieux `usage_history.json` a été entièrement supprimé.
+- **Smart Fetch API** : Remplacé par une boucle récursive interrogeant l'API `/account/usage?limit=100&offset=x` jusqu'à isoler mathématiquement la consommation unique de la journée. Les commandes `/poll usage full` utilisent désormais ce système paginé sans limite à 100 requêtes.
+- **Correction Timezone Absolue** : Le calcul du reset ne bidouille plus l'heure locale, il prend simplement `nextResetAt - 24h` (UTC) en source de vérité API inébranlable.
+- **Calcul Strict Wallet/Freetier** : La consommation payante du Wallet est maintenant déduite de la soustraction pure : `Balance Totale Pollinations - Crédits FreeTiers restants`. Sync garantie à 100% avec le compte réel.
+
+### ✨ Refonte — Pricing Dynamique (Sprint 1.5)
+- **Statistiques Tinybird** : Le `fetcher.ts` récupère désormais en parallèle les métriques d'usage des modèles via `/api/model-stats` pour injecter un `averageCost` empirique dans le `ModelRegistry`.
+- **Cost Guard (Max x3)** : Les modèles facturés aux tokens (texte, audio) bénéficient d'un garde-fou x3 sur l'estimateur de coût. Les rapports d'outils génératifs intègrent désormais dynamiquement le "Max théorique".
+
+---
+
 ## [6.1.0-beta.18] — 2026-02-20
 
 ### 🐛 Fixed — UX Cleanups
