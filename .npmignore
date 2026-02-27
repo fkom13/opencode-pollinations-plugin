@@ -8,8 +8,9 @@ tests/
 tsconfig.json
 
 # Documentation (Available on GitHub, redundant in package)
-docs/
-docs/TECHNICAL_SECRETS_REMBG.md
+docs/*
+!docs/images/
+!docs/TECHNICAL_MANUAL.md
 _archs/
 TECHNICAL_MANUAL.md
 AGENT.md
