@@ -25,9 +25,10 @@ import {
     isCostEstimatorEnabled,
     supportsI2I,
     getPaidImageModels,
+    fetchEnterBalance,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
-import { checkCostControl } from './cost-guard.js';
+import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -39,33 +40,12 @@ const DEFAULT_MODEL = 'flux';
 export const polliGenImageTool: ToolDefinition = tool({
     description: `Generate an image from a text prompt using Pollinations AI.
 
-**💎 Models disponibles** (clé API requise):
-| Model | Cost | T2I | I2I | Notes |
-|-------|------|-----|-----|-------|
-| flux | 0.0002 🌻 | ✅ | ❌ | Fast high-quality |
-| zimage | 0.0002 🌻 | ✅ | ❌ | 6B Flux with 2x upscaling |
-| imagen-4 | 0.0025 🌻 | ✅ | ❌ | Google high fidelity |
-| klein | 0.008 🌻 | ✅ | ✅ | FLUX.2 Klein 4B |
-| klein-large | 0.012 🌻 | ✅ | ✅ | FLUX.2 Klein 9B |
-| kontext | 0.04 🌻 | ✅ | ✅ | In-Context Editing |
-| seedream | 0.03 🌻 | ✅ | ✅ | ByteDance ARK quality |
-| seedream-pro | 0.04 🌻 | ✅ | ✅ | 4K, Multi-Image support |
-| gptimage | tokens | ✅ | ❌ | OpenAI GPT Image Mini |
-| gptimage-large | tokens | ✅ | ❌ | OpenAI GPT Image 1.5 |
-| nanobanana | tokens | ✅ | ✅ | Gemini 2.5 Flash |
-| nanobanana-pro | tokens | ✅ | ✅ | Gemini 3 Pro Thinking |
+💡 **Modèles Image Dynamiques** :
+L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, Midjourney, Seedream, etc.) et ils changent fréquemment. Le catalogue à jour est listé ci-dessous.
 
-**🖼️ Image-to-Image (I2I)**:
-Models with I2I support can transform existing images.
-- Use \`reference_image\` parameter with URL or local path
-- \`seedream-pro\` supports multiple images (comma-separated URLs)
-- \`kontext\` specializes in in-context editing
-
-**⚙️ Per-Model Parameters**:
-- \`width/height\`: All models (default: 1024x1024)
-- \`quality\`: gptimage only (low/med/high)
-- \`transparent\`: gptimage only (true/false)
-- \`seed\`: Reproducibility (-1 for random)`,
+**Exemples d'utilisation Optionnelle** :
+- **I2I (Image-to-Image)** : Utilisez le paramètre \`reference_image\` avec une URL ou chemin local si le modèle le supporte.
+- L'outil embarque un "costGuard" automatique gérant la confirmation des coûts.`,
 
     args: {
         prompt: tool.schema.string().describe('Description of the image to generate'),
@@ -182,6 +162,9 @@ Models with I2I support can transform existing images.
             const headers: Record<string, string> = {};
             if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
+            // 1. Fetch balance avant génération
+            const balBefore = await fetchEnterBalance();
+
             const result = await httpsGet(url, headers);
             imageData = result.data;
             responseHeaders = result.headers;
@@ -210,21 +193,22 @@ Models with I2I support can transform existing images.
             const filePath = path.join(outputDir, filename.includes('.') ? filename : `${filename}.png`);
 
             fs.writeFileSync(filePath, imageData);
-            const fileSize = fs.statSync(filePath).size;
-
-            // Extract actual cost from headers if available
-            let actualCost = estimatedCost;
-            const costTracking = extractCostFromHeaders(responseHeaders);
-
-            if (costTracking.costUsd !== undefined) {
-                actualCost = costTracking.costUsd;
-            } else if (isCostEstimatorEnabled() && costTracking.imageTokens) {
-                // Token-based cost calculation would go here if needed (fallback)
-                // For images, cost is often flat per-image, but keeping token placeholder
-                actualCost = estimatedCost;
+            // 2. Fetch balance après génération (delay for API sync)
+            let balAfter: number | null = null;
+            let realCost: number | undefined;
+            if (balBefore !== null) {
+                await new Promise(r => setTimeout(r, 1000)); // Laisse le temps au ledger
+                balAfter = await fetchEnterBalance();
+                if (balAfter !== null) {
+                    realCost = Math.round((balBefore - balAfter) * 10000) / 10000;
+                }
             }
 
+            // Extract cost from headers as fallback/info
+            const costTracking = extractCostFromHeaders(responseHeaders);
+
             // Build result
+            const fileSize = fs.statSync(filePath).size;
             const lines: string[] = [];
 
             // Inject costWarning at top if present
@@ -247,9 +231,22 @@ Models with I2I support can transform existing images.
             lines.push(`Fichier: ${filePath}`);
             lines.push(`Taille: ${formatFileSize(fileSize)}`);
 
-            // Cost info
+            // Pricing details (Estimé vs Réel)
             if (isCostEstimatorEnabled()) {
-                lines.push(`Coût: ${formatCost(actualCost)}`);
+                const maxCost = estimatedCost * 3;
+                lines.push(`\n💰 **Rapport Financier :**`);
+                if (isTokenBased('image', usedModel)) {
+                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)} (Max théorique: ${formatCost(maxCost)})`);
+                } else {
+                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)}`);
+                }
+                if (realCost !== undefined) {
+                    lines.push(`- Coût Réel     : **${formatCost(realCost)}** (via Solde Wallet)`);
+                } else if (costTracking.costUsd !== undefined) {
+                    lines.push(`- Coût Réel     : **${formatCost(costTracking.costUsd)}** (via Headers API)`);
+                } else {
+                    lines.push(`- Coût Réel     : Inconnu (API injoignable)`);
+                }
             }
             if (responseHeaders['x-request-id']) {
                 lines.push(`Request ID: ${responseHeaders['x-request-id']}`);

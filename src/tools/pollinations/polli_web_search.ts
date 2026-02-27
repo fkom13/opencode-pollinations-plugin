@@ -20,7 +20,7 @@ import {
     extractCostFromHeaders,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
-import { checkCostControl } from './cost-guard.js';
+import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
 
 // ─── Mode Configuration ────────────────────────────────────────────────────
@@ -179,7 +179,12 @@ ${includeSources ? 'Always include source URLs at the end of your response.' : '
             if (args.recency && args.recency !== 'any') {
                 lines.push(`Récence: ${args.recency}`);
             }
-            lines.push(`Coût estimé: ${formatCost(actualCost)}`);
+            if (isTokenBased('audio', modeConfig.model)) {
+                const maxCost = estimatedCost * 3;
+                lines.push(`Coût estimé: ${formatCost(actualCost)} (Max théorique: ${formatCost(maxCost)})`);
+            } else {
+                lines.push(`Coût estimé: ${formatCost(actualCost)}`);
+            }
             lines.push('');
             lines.push(content);
 

@@ -48,6 +48,7 @@ export interface PollinationsModel {
     aspectRatios?: string[];
     costHeader?: string;
     genTimeEstimate?: string;
+    averageCost?: number; // Fetched from model-stats API (Tinybird)
 }
 
 // ─── Registry Interface ──────────────────────────────────────────────────

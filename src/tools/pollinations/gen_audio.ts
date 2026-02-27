@@ -32,7 +32,7 @@ import {
     getAudioModels,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
-import { checkCostControl } from './cost-guard.js';
+import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
 
 // ─── TTS Configuration ────────────────────────────────────────────────────
@@ -275,7 +275,12 @@ export const polliGenAudioTool: ToolDefinition = tool({
 
             // Cost info
             if (isCostEstimatorEnabled()) {
-                lines.push(`Coût: ${formatCost(actualCost)}`);
+                if (isTokenBased('audio', model)) {
+                    const maxCost = estimatedCost * 3;
+                    lines.push(`Coût: ${formatCost(actualCost)} (Max théorique: ${formatCost(maxCost)})`);
+                } else {
+                    lines.push(`Coût: ${formatCost(actualCost)}`);
+                }
             }
 
             if (responseHeaders['x-request-id']) {

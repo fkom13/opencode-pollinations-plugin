@@ -270,6 +270,37 @@ export function saveConfig(updates: Partial<PollinationsConfigV5>) {
     }
 }
 
+// === NATIVE AUTH SYNC ===
+export function saveKeyToAuthJson(key: string): boolean {
+    let success = false;
+    for (const authFile of EXTERNAL_PATHS.auth) {
+        try {
+            let authData: any = {};
+            if (fs.existsSync(authFile)) {
+                authData = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
+            } else {
+                // Ensure directory exists if we create a new auth.json
+                fs.mkdirSync(path.dirname(authFile), { recursive: true });
+            }
+
+            // Set the key (OpenCode standard struct)
+            authData['pollinations'] = {
+                type: "api",
+                key: key
+            };
+
+            fs.writeFileSync(authFile, JSON.stringify(authData, null, 2), 'utf-8');
+            logConfig(`Synchronized API key to native auth file: ${authFile}`);
+            success = true;
+            // Only write to the first valid one we find/create, or write to all existing?
+            // Usually writing to all existing ones is safest to avoid desync
+        } catch (e) {
+            logConfig(`Failed to sync to auth file ${authFile}: ${e}`);
+        }
+    }
+    return success;
+}
+
 // === MIGRATION UTIL ===
 export function migrateLegacyConfig() {
     try {

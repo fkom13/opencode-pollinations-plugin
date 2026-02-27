@@ -32,9 +32,10 @@ import {
     validateAspectRatio,
     getDurationRange,
     getVideoModels,
+    fetchEnterBalance,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
-import { checkCostControl } from './cost-guard.js';
+import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -48,26 +49,12 @@ const DEFAULT_ASPECT_RATIO = '16:9';
 export const polliGenVideoTool: ToolDefinition = tool({
     description: `Generate a video from a text prompt or image using Pollinations AI.
 
-**🎬 Available Models:**
+💡 **Modèles Vidéo Dynamiques** :
+L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V), leurs limites de durée, options d'aspect ratios et tarifs (tokens ou USD) sont injectés ci-dessous en temps réel.
 
-| Model | T2V | I2V | Audio | Duration | Aspect Ratios | Cost | Gen Time |
-|-------|-----|-----|-------|----------|---------------|------|----------|
-| grok-video | ✅ | ❌ | ✅ | 1-15s | 16:9, 9:16, 1:1, 4:3 | 0.0025/s 💎 | ~10s |
-| ltx-2 | ✅ | ❌ | ✅ | 5-20s | 16:9 | 0.01/s 💎 | ~35s |
-| wan | ✅ | ✅ | ✅ | 5-15s | 16:9, 9:16, 1:1, 4:3 | 0.025/s 💎 | ~30s |
-| veo | ✅ | ✅ | ✅ | 4-8s | 16:9, 9:16, 1:1 | 0.15/s 💎 | ~45-68s |
-| seedance | ✅ | ✅ | ❌ | 4-12s | 16:9, 9:16, 1:1 | tokens | ~30s |
-| seedance-pro | ✅ | ✅ | ❌ | 4-12s | 16:9, 9:16, 1:1 | tokens 💎 | ~30s |
-
-**⚠️ Important Notes:**
-- \`veo\` interpolation: Use \`reference_image=url1,url2\` for transitions
-- \`ltx-2\` may return 520 intermittently (retry OK)
-- \`grok-video\` includes audio generation
-
-**💡 Tips:**
-- Start with \`grok-video\` for testing (cheapest: 0.0025/sec)
-- Use \`wan\` for image-to-video with native audio
-- Use \`veo\` for highest quality (most expensive: 0.15/sec)`,
+**Exemples d'options communes** :
+- \`veo\` interpolation: Utilisez \`reference_image=url1,url2\` pour les transitions.
+- L'outil gérera le "costGuard" si l'utilisateur doit confirmer.`,
 
     args: {
         prompt: tool.schema.string().describe('Description of the video to generate'),
@@ -190,6 +177,9 @@ export const polliGenVideoTool: ToolDefinition = tool({
                 'Authorization': `Bearer ${apiKey}`,
             };
 
+            // 1. Fetch balance avant génération
+            const balBefore = await fetchEnterBalance();
+
             // Video generation takes time (30-70 seconds depending on model)
             const result = await httpsGet(url, headers);
             const videoData = result.data;
@@ -216,22 +206,17 @@ export const polliGenVideoTool: ToolDefinition = tool({
             fs.writeFileSync(filePath, videoData);
             const fileSize = fs.statSync(filePath).size;
 
-            // Extract actual cost from headers
-            let actualCost = estimatedCost;
+            // Extract actual cost from headers as fallback
             const costTracking = extractCostFromHeaders(responseHeaders);
 
-            if (costTracking.costUsd !== undefined) {
-                actualCost = costTracking.costUsd;
-            } else if (isCostEstimatorEnabled()) {
-                if (costTracking.videoSeconds) {
-                    // Try to extract base cost from static cache for fallback calculation
-                    const costMatch = modelConfig?.cost?.match(/[\d.]+/);
-                    if (costMatch && modelConfig?.costHeader === 'x-usage-completion-video-seconds') {
-                        actualCost = costTracking.videoSeconds * parseFloat(costMatch[0]);
-                    }
-                } else if (costTracking.videoTokens) {
-                    // Token-based fallback (seedance models)
-                    actualCost = costTracking.videoTokens * 0.00001; // Approximate
+            // 2. Fetch balance après génération (delay for API sync)
+            let balAfter: number | null = null;
+            let realCost: number | undefined;
+            if (balBefore !== null) {
+                await new Promise(r => setTimeout(r, 1000)); // Laisse le temps au ledger
+                balAfter = await fetchEnterBalance();
+                if (balAfter !== null) {
+                    realCost = Math.round((balBefore - balAfter) * 10000) / 10000;
                 }
             }
 
@@ -268,9 +253,22 @@ export const polliGenVideoTool: ToolDefinition = tool({
             lines.push(`Fichier: ${filePath}`);
             lines.push(`Taille: ${formatFileSize(fileSize)}`);
 
-            // Cost info
+            // Pricing details (Estimé vs Réel)
             if (isCostEstimatorEnabled()) {
-                lines.push(`Coût: ${formatCost(actualCost)}`);
+                const maxCost = estimatedCost * 3;
+                lines.push(`\n💰 **Rapport Financier :**`);
+                if (isTokenBased('video', model)) {
+                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)} (Max théorique: ${formatCost(maxCost)})`);
+                } else {
+                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)}`);
+                }
+                if (realCost !== undefined) {
+                    lines.push(`- Coût Réel     : **${formatCost(realCost)}** (via Solde Wallet)`);
+                } else if (costTracking.costUsd !== undefined) {
+                    lines.push(`- Coût Réel     : **${formatCost(costTracking.costUsd)}** (via Headers API)`);
+                } else {
+                    lines.push(`- Coût Réel     : Inconnu (API injoignable)`);
+                }
             }
 
             if (responseHeaders['x-model-used']) {

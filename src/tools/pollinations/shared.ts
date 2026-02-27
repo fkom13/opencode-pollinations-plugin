@@ -617,6 +617,31 @@ export function extractCostFromHeaders(headers: Record<string, string>): CostTra
 }
 
 /**
+ * Fetch current Enter balance (`/account/balance`) for Real Cost calculation.
+ */
+export async function fetchEnterBalance(): Promise<number | null> {
+    const apiKey = getApiKey();
+    if (!apiKey) return null;
+
+    try {
+        const url = 'https://gen.pollinations.ai/account/balance';
+        // Using native fetch
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(5000)
+        });
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        // The endpoint usually returns just { "balance": 9.9... }
+        return data.balance !== undefined ? data.balance : null;
+    } catch {
+        return null; // Silent catch
+    }
+}
+
+
+/**
  * Check if cost estimator is enabled in config
  */
 export function isCostEstimatorEnabled(): boolean {
@@ -624,12 +649,26 @@ export function isCostEstimatorEnabled(): boolean {
     return config.costEstimator !== false; // Default true
 }
 
+// ─── COST ESTIMATION BENCHMARKS ──────────────────────────────────────────
+
+export function per1pollen(cost: number | null): string {
+    if (!cost || cost <= 0) return "—";
+    const x = 1 / cost;
+    if (x >= 1_000_000) return `${(x / 1_000_000).toFixed(1)}M`;
+    if (x >= 100_000) return `${Math.round(x / 1000)}K`;
+    if (x >= 10_000) return `${(x / 1000).toFixed(1)}K`.replace(/\.0K$/, "K");
+    if (x >= 1_000) return `${Math.round(x / 100) * 100}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    if (x >= 100) return `${Math.round(x)}`;
+    if (x >= 10) return `${Math.round(x * 10) / 10}`;
+    return `${x.toFixed(1)}`;
+}
+
 export function estimateImageCost(model: string): number {
     // Try ModelRegistry first
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('image', model);
-        if (m && m.pricing.completionImageTokens) {
-            return m.pricing.completionImageTokens;
+        if (m && m.averageCost !== undefined) {
+            return m.averageCost;
         }
     }
     // Fallback to static
@@ -643,14 +682,8 @@ export function estimateVideoCost(model: string, duration: number): number {
     // Try ModelRegistry first
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('video', model);
-        if (m) {
-            if (m.pricing.completionVideoSeconds) {
-                return duration * m.pricing.completionVideoSeconds;
-            }
-            if (m.pricing.completionVideoTokens) {
-                const tokensPerSecond = 21780;
-                return (duration * tokensPerSecond) * m.pricing.completionVideoTokens;
-            }
+        if (m && m.averageCost !== undefined) {
+            return m.averageCost;
         }
     }
     // Fallback to static
@@ -671,8 +704,8 @@ export function estimateTtsCost(textLength: number): number {
     // Try ModelRegistry first
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('audio', 'elevenlabs');
-        if (m && m.pricing.completionAudioTokens) {
-            return (textLength / 1000) * m.pricing.completionAudioTokens;
+        if (m && m.averageCost !== undefined) {
+            return m.averageCost;
         }
     }
     return (textLength / 1000) * 0.00018;
@@ -682,8 +715,8 @@ export function estimateMusicCost(duration: number): number {
     // Try ModelRegistry first
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('audio', 'elevenmusic');
-        if (m && m.pricing.completionAudioSeconds) {
-            return duration * m.pricing.completionAudioSeconds;
+        if (m && m.averageCost !== undefined) {
+            return m.averageCost;
         }
     }
     return duration * 0.005;

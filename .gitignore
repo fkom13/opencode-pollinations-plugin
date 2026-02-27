@@ -18,6 +18,7 @@ out/
 .npmrc
 config.json
 .pollinations/
+docs/TECHNICAL_SECRETS_REMBG.md
 
 # Logs
 *.log
