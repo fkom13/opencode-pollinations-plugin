@@ -284,35 +284,6 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         log(`Incoming Model (OpenCode ID): ${body.model}`);
 
-        // 0. TEST 4: Virtual Model Handler for Commands
-        if (body.model === 'pollinations/pollimock-handler' || body.model === 'pollimock-handler') {
-            const mockContent = "🚀 **[TEST 4] Modèle Virtuel de Commande !**\n\nCe texte n'a jamais quitté ton ordinateur. La commande `/pollimock` a demandé à OpenCode de se brancher temporairement sur le modèle virtuel `pollimock-handler`.\nLe proxy a intercepté cet appel et répondu instantanément.\n\n✅ L'historique affiche bien le message du Chat, **mais la requête LLM est totalement court-circuitée**.\nC'est la méthode ultime pour créer des vues de configuration via commandes (`/pollinations-config` par ex) sans polluer le crédit ou les LLM tiers !";
-            res.writeHead(200, {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive'
-            });
-            const chunk = JSON.stringify({
-                id: 'mock-' + Date.now(),
-                object: 'chat.completion.chunk',
-                created: Math.floor(Date.now() / 1000),
-                model: body.model,
-                choices: [{ index: 0, delta: { role: 'assistant', content: mockContent }, finish_reason: null }]
-            });
-            res.write(`data: ${chunk}\n\n`);
-            const chunkEnd = JSON.stringify({
-                id: 'mock-' + Date.now(),
-                object: 'chat.completion.chunk',
-                created: Math.floor(Date.now() / 1000),
-                model: body.model,
-                choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
-            });
-            res.write(`data: ${chunkEnd}\n\n`);
-            res.write('data: [DONE]\n\n');
-            res.end();
-            return;
-        }
-
         // 0. SPECIAL: pollinations/connect (Guide & Status)
         const CONNECT_MODEL_IDS = ['pollinations/connect', 'free/pollinations/connect', 'enter/pollinations/connect', 'connect-pollinations'];
         if (CONNECT_MODEL_IDS.includes(body.model)) {

@@ -125,19 +125,9 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     return {
         "chat.message": async (input: any) => {
             const m = input.model;
-            if (m) {
-                if (m.modelID && !m.modelID.includes('pollimock-handler')) {
-                    sessionModels.set(input.sessionID, `${m.providerID}/${m.modelID}`);
-                    log(`[Hook] Saved active model ${m.providerID}/${m.modelID} for session ${input.sessionID}`);
-                } else if (m.modelID && m.modelID.includes('pollimock-handler')) {
-                    const prev = sessionModels.get(input.sessionID);
-                    if (prev) {
-                        log(`[Hook] Virtual model triggered. Reverting to ${prev} in 500ms...`);
-                        setTimeout(() => {
-                            ctx.client.tui.executeCommand({ body: { command: `/model ${prev}` } }).catch(console.error);
-                        }, 500);
-                    }
-                }
+            if (m && m.modelID) {
+                sessionModels.set(input.sessionID, `${m.providerID}/${m.modelID}`);
+                log(`[Hook] Saved active model ${m.providerID}/${m.modelID} for session ${input.sessionID}`);
             }
         },
         tool: toolRegistry,
@@ -158,12 +148,6 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
             // Dynamic Provider Name
             const version = require('../package.json').version;
 
-            // Inject Virtual Handler Model
-            modelsObj['pollimock-handler'] = {
-                id: 'pollimock-handler',
-                name: 'Command Handler (Virtual)',
-                options: { hidden: true } // Try to hide from UI if OpenCode supports it
-            };
 
             config.provider['pollinations'] = {
                 id: 'pollinations',

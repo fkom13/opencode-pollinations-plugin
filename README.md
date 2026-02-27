@@ -180,15 +180,31 @@ Certain models (`claude-large`, `gemini-large`, `veo`, `seedream-pro`) are **Pai
 
 Aliases: `/poll` works as a shorthand for all commands.
 
-### Config Keys
+### Config Keys & Agent Understanding
 
+The plugin employs a **strict separation of concerns** between Chat/Conversational settings and Tool (generation/search) settings.
+
+#### 1. Chat Models & Fallbacks
 | Key | Values | Description |
 |-----|--------|-------------|
-| `status_gui` | `none` / `alert` / `all` | Toast verbosity |
-| `logs_gui` | `none` / `error` / `verbose` | Technical log verbosity |
-| `threshold_tier` | `0-100` | Alert threshold for tier (%) |
-| `threshold_wallet` | `0-100` | Safety Net trigger ($) |
-| `status_bar` | `true` / `false` | Status bar widget |
+| `mode` | `manual` / `alwaysfree` / `pro` | Automatic fallback routing strategy for chat. |
+| `threshold_tier` | `0-100` | Alert threshold percentage for Free Tier quota. |
+| `threshold_wallet` | `0-100` | Alert threshold percentage for Premium Wallet balance. |
+
+#### 2. Tools Protection
+| Key | Values | Description |
+|-----|--------|-------------|
+| `enablePaidTools` | `true` / `false` | Allows generation tools to consume Wallet pollen. |
+| `costConfirmationRequired` | `true` / `false` | Demands validation if a tool estimate exceeds threshold. |
+| `costThreshold` | numeric (e.g., `0.05`) | Trigger limit in Pollen for the confirmation lock. |
+| `cost_estimator` | `true` / `false` | Shows live cost estimates in tool outputs. |
+
+#### 3. UI & Notifications
+| Key | Values | Description |
+|-----|--------|-------------|
+| `status_gui` | `none` / `alert` / `all` | Toast notification verbosity. |
+| `logs_gui` | `none` / `error` / `verbose` | Technical log verbosity. |
+| `status_bar` | `true` / `false` | Status bar widget visibility. |
 
 ---
 
