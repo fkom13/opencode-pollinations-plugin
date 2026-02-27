@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.26] — 2026-02-27
+
+### 🤖 Agent System — Upgrade `polli_config`
+- **Seuils en Pourcentage** : L'outil `polli_config` gère désormais `thresholdsTier` et `thresholdsWallet` explicitement en mode pourcentage (0-100%) rendant l'interface compatible avec le système de protection des portefeuilles.
+- **Visual Feedback** : Toute modification de la configuration par l'agent déclenche désormais un toast visuel discret s'affichant dans la barre d'état OpenCode (`emitStatusToast`) pour alerter l'utilisateur d'un changement de règle effectué en arrière plan.
+
+---
+
 ## [6.1.0-beta.25] — 2026-02-27
 
 ### 🤖 Agent System — Outil de Configuration Autonome (`polli_config`)
