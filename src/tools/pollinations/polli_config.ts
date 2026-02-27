@@ -9,7 +9,7 @@ CRITICAL: Do not confuse 'Mode' with features. The conceptual "Mode Manuel" usua
 To discover model prefixes or precise names, use the 'polli_status' tool.
 
 Available settings to modify via this tool:
-1. mode: The general operating mode of the plugin ("manual", "alwaysfree" or "pro").
+1. mode: Only the high-level tier ("manual", "alwaysfree" or "pro"). WARNING: Changing mode DOES NOT auto-enable paid tools or confirmations. You must change the other flags explicitly!
 2. costEstimator: Show live cost estimates in tool outputs. (false = Silent Mode).
 3. costConfirmationRequired: Safety lock. If true, crossing the threshold requires explicit user confirmation.
 4. enablePaidTools: Let the AI use the paid 'Wallet' balance instead of free tier.
@@ -20,7 +20,7 @@ Available settings to modify via this tool:
     args: {
         action: tool.schema.enum(['view', 'update'])
             .describe('Action to perform: "view" to see current configuration, "update" to modify it.'),
-        mode: tool.schema.enum(['manual', 'alwaysfree', 'pro']).optional().describe('General Plugin Mode. PRO allows wallet deductions, MANUAL requires you to pass explicit flags (no auto-deduction). ALWAYSFREE forces free-tier.'),
+        mode: tool.schema.enum(['manual', 'alwaysfree', 'pro']).optional().describe('CRITICAL: Changing mode does NOT change your rights. To allow paid tools, change enablePaidTools. To enable confirmations, change costConfirmationRequired.'),
         costEstimator: tool.schema.boolean().optional().describe('Set to true to show cost estimates auto. Set to false for "Manual Mode" (hide estimates).'),
         statusBar: tool.schema.boolean().optional().describe('Enable/disable status bar visibility (true/false)'),
         costConfirmationRequired: tool.schema.boolean().optional().describe('Safety Lock: Set to true to ask user confirmation before spending money. Set to false to spend automatically.'),
@@ -64,7 +64,12 @@ Available settings to modify via this tool:
 
             const newConfig = loadConfig();
             if (newConfig.statusBar) {
-                emitStatusToast('info', "⚙️ Configuration du plugin mise à jour par l'Agent", 'Config Update');
+                const changedKeys = Object.keys(updates).join(", ");
+                let toastMsg = "⚙️ Configuration modifiée par l'Agent";
+                if (changedKeys.length > 0) {
+                    toastMsg += ` (${changedKeys})`;
+                }
+                emitStatusToast('info', toastMsg, 'Config Update');
             }
 
             return `Configuration successfully updated.\nApplied changes:\n${JSON.stringify(updates, null, 2)}\n\n(Note: Verify with polli_status if you need to know model prefixes).`;
