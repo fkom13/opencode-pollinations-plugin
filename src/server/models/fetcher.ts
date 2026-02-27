@@ -64,7 +64,7 @@ function detectOutputType(raw: any): ModelCategory {
 
 // ─── Model Mapping ──────────────────────────────────────────────────────
 
-function mapRawToModel(raw: any, fallbackCategory: ModelCategory): PollinationsModel {
+function mapRawToModel(raw: any, fallbackCategory: ModelCategory, averageCost?: number): PollinationsModel {
     const category = detectCategory(raw);
     const inputMods: string[] = raw.input_modalities || ['text'];
     const outputMods: string[] = raw.output_modalities || ['text'];
@@ -89,6 +89,7 @@ function mapRawToModel(raw: any, fallbackCategory: ModelCategory): PollinationsM
         reasoning: raw.reasoning,
         is_specialized: raw.is_specialized,
         context_window: raw.context_window,
+        averageCost: averageCost !== undefined && !isNaN(averageCost) ? averageCost : undefined,
     };
 
     // Apply local patches from manual.ts
@@ -126,28 +127,45 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
         { url: `https://${API_BASE}/text/models`, fallbackCategory: 'text' as ModelCategory },
     ];
 
+    const statsPromise = fetchJson('https://enter.pollinations.ai/api/model-stats', headers).catch(() => ({ data: [] }));
+
     const fetches = endpoints.map(async ({ url, fallbackCategory }) => {
         try {
             const raw = await fetchJson(url, headers);
-            const list: any[] = Array.isArray(raw) ? raw : (raw.data || []);
-
-            for (const item of list) {
-                const model = mapRawToModel(item, fallbackCategory);
-                // Utiliser id au lieu de name pour dédupliquer car certains ont le même name mais des ids différents
-                const uniqueId = model.name;
-                if (!seen.has(uniqueId)) {
-                    seen.add(uniqueId);
-                    results.push(model);
-                }
-            }
-            log(`[ModelFetcher] Fetched ${list.length} models from ${url}`);
+            return { url, fallbackCategory, raw };
         } catch (e) {
             log(`[ModelFetcher] Failed to fetch ${url}: ${e}`);
-            // Silently fail — cache will use static fallback
+            return { url, fallbackCategory, raw: [] };
         }
     });
 
-    await Promise.all(fetches);
+    const resultsRaw = await Promise.all([...fetches, statsPromise]);
+
+    // Le dernier élément du Promise.all est model-stats
+    const statsRaw: any = resultsRaw.pop();
+    const statsList = Array.isArray(statsRaw?.data) ? statsRaw.data : [];
+    const statsMap = new Map<string, number>();
+    for (const s of statsList) {
+        if (s.model && s.avg_cost_usd !== undefined) {
+            statsMap.set(s.model, parseFloat(s.avg_cost_usd));
+        }
+    }
+
+    for (const res of resultsRaw as { url: string, fallbackCategory: ModelCategory, raw: any }[]) {
+        const list: any[] = Array.isArray(res.raw) ? res.raw : (res.raw.data || []);
+        for (const item of list) {
+            const modelId = item.name || item.id;
+            const avgCost = statsMap.get(modelId);
+            const model = mapRawToModel(item, res.fallbackCategory, avgCost);
+
+            const uniqueId = model.name;
+            if (!seen.has(uniqueId)) {
+                seen.add(uniqueId);
+                results.push(model);
+            }
+        }
+        log(`[ModelFetcher] Parsed ${list.length} models from ${res.url}`);
+    }
 
     log(`[ModelFetcher] Total: ${results.length} models (${results.filter(m => m.category === 'image').length} image, ${results.filter(m => m.category === 'video').length} video, ${results.filter(m => m.category === 'audio').length} audio, ${results.filter(m => m.category === 'text').length} text)`);
 

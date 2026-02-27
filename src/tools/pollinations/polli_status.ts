@@ -2,7 +2,8 @@ import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
 import { handleUsageCommand, handleInfosCommand, handlePricingCommand, handleModelsCommand } from '../../server/commands.js';
 
 export const polliStatusTool: ToolDefinition = tool({
-    description: `Check the current status, available models, live pricing, and account usage/tiers for the Pollinations AI plugin.`,
+    description: `Check the current status, available models, live pricing, and account usage/tiers for the Pollinations AI plugin.
+Use this tool to understand the universe of models, account balance, and usage. NOT for discovering hidden parameters.`,
     args: {
         info_type: tool.schema.enum(['usage', 'pricing', 'models', 'infos', 'all'])
             .describe('Type of information to retrieve: usage=quota/wallet, pricing=model costs, models=list of models, infos=tier details, all=everything')
@@ -22,7 +23,7 @@ export const polliStatusTool: ToolDefinition = tool({
         }
 
         if (type === 'models' || type === 'all') {
-            const res = handleModelsCommand([]);
+            const res = await handleModelsCommand([]);
             results.push(res.response || String(res.error));
         }
 

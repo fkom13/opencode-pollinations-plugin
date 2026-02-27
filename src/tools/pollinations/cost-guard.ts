@@ -74,6 +74,19 @@ export function removePendingRequest(id: string) {
 
 // ─── Main Function ───────────────────────────────────────────────────────
 
+export function isTokenBased(category: 'image' | 'video' | 'audio' | 'text', modelName: string): boolean {
+    const m = ModelRegistry.getByNameOrAlias(category, modelName);
+    return !!(m?.pricing && (
+        m.pricing.completionImageTokens !== undefined ||
+        m.pricing.completionVideoTokens !== undefined ||
+        m.pricing.completionAudioTokens !== undefined ||
+        m.pricing.completionTextTokens !== undefined ||
+        m.pricing.promptTextTokens !== undefined ||
+        m.pricing.promptImageTokens !== undefined ||
+        m.pricing.promptAudioTokens !== undefined
+    ) && (m.pricing.completionVideoSeconds === undefined && m.pricing.completionAudioSeconds === undefined));
+}
+
 /**
  * Check if a generation should proceed based on cost control settings.
  * 
@@ -96,17 +109,25 @@ export function checkCostControl(
     const askConfirm = config.costConfirmationRequired === true; // default true
     const costLimit = config.costThreshold ?? 0.0;
 
+    const m = ModelRegistry.getByNameOrAlias(category, modelName);
+
+    // Détection token-based (si le modèle a une de ces propriétés de tarification, il est variable)
+    const _isTokenBased = isTokenBased(category, modelName);
+
+    const maxCost = _isTokenBased ? estimatedCost * 3 : estimatedCost;
+
     // ─── Bypass Check (For polli_gen_confirm) ────────────────
     if (args && (args as any)[Symbol.for('polli_confirmed')]) {
         return {
             allowed: true,
-            message: `💰 Coût validé: ${formatCost(estimatedCost)}`
+            message: _isTokenBased
+                ? `💰 Coût validé (Max théorique: ${formatCost(maxCost)})`
+                : `💰 Coût validé: ${formatCost(estimatedCost)}`
         };
     }
 
     // ─── Rule 1: Wallet Protection (Hard Block) ────
     if (!enablePaid) {
-        const m = ModelRegistry.getByNameOrAlias(category, modelName);
         if (m?.paid_only) {
             return {
                 allowed: false,
@@ -121,13 +142,13 @@ Résultat: REJETÉ, demandez à l'utilisateur d'activer le mode enablePaidTools 
     }
 
     // ─── Rule 2: Cost Confirmation (Suspend & Ticket) ─
-    if (askConfirm && estimatedCost > costLimit) {
+    if (askConfirm && maxCost > costLimit) {
         const reqId = `req_${Math.random().toString(16).substring(2, 10)}`;
         savePendingRequest({
             id: reqId,
             toolName,
             args,
-            estimatedCost,
+            estimatedCost: maxCost,
             model: modelName,
             timestamp: Date.now()
         });
@@ -138,7 +159,10 @@ Résultat: REJETÉ, demandez à l'utilisateur d'activer le mode enablePaidTools 
             pendingRequestId: reqId,
             reason: 'cost_exceeds_limit',
             message: `⚠️ **Confirmation de Coût Requise**
-Le coût estimé de cette action (${formatCost(estimatedCost)}) dépasse le seuil défini (${formatCost(costLimit)}).
+${_isTokenBased
+                    ? `Le coût estimé moyen est de ${formatCost(estimatedCost)} cependant ce modèle token-based peut vous coûter jusqu'à ${formatCost(maxCost)} ce qui dépasse le seuil défini (${formatCost(costLimit)}).`
+                    : `Le coût estimé de cette action (${formatCost(estimatedCost)}) dépasse le seuil défini (${formatCost(costLimit)}).`
+                }
 💳 **Pour valider cette transaction et exécuter la requête**, 
 Présentez le cout à l'utilisateur et demandez explicitement sa validation !!! 
 (S'il valide, appelez l'outil \`polli_gen_confirm\` avec l'ID : \`${reqId}\` et l'action \`confirm\`. S'il refuse, appelez l'outil avec l'action \`cancel\` pour purger la requête).`,
@@ -149,7 +173,9 @@ Présentez le cout à l'utilisateur et demandez explicitement sa validation !!!
     return {
         allowed: true,
         message: estimatedCost > 0
-            ? `💰 Coût estimé: ${formatCost(estimatedCost)}`
+            ? (_isTokenBased
+                ? `💰 Coût estimé moyen: ${formatCost(estimatedCost)} (Max: ${formatCost(maxCost)})`
+                : `💰 Coût estimé: ${formatCost(estimatedCost)}`)
             : undefined,
     };
 }

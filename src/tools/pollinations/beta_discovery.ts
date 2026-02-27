@@ -121,7 +121,7 @@ async function probeEndpoint(method: 'GET' | 'POST', endpointUrl: string, payloa
 
 export const polliBetaDiscoveryTool: ToolDefinition = tool({
     description: `Explore the Pollinations API using Hybrid Discovery (OpenAPI + Active Probing).
-Use this to find undocumented parameters, models, voices, and endpoints.
+Use this tool ONLY to reverse engineer and fill the manual registry. Do not use this tool lightly for general operations.
 
 Commands available:
 - 'list_endpoints': (Whitebox) Returns all routes from OpenAPI.

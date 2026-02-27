@@ -105,6 +105,12 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     ModelRegistry.refresh().then(() => {
         const stats = ModelRegistry.stats();
         log(`[ModelRegistry] Ready: ${stats.image} image, ${stats.video} video, ${stats.audio} audio, ${stats.text} text`);
+
+        // Démarrage du patcher asynchrone des descriptions des Outils (Phase 1.5)
+        import('./server/models/worker.js').then(module => {
+            module.ToolRegistryWorker.start();
+        }).catch(e => log(`[ToolWorker] Failed to load worker: ${e}`));
+
     }).catch(e => log(`[ModelRegistry] Init failed (will use fallback): ${e}`));
 
     setGlobalClient(ctx.client);

@@ -9,6 +9,7 @@ tsconfig.json
 
 # Documentation (Available on GitHub, redundant in package)
 docs/
+docs/TECHNICAL_SECRETS_REMBG.md
 _archs/
 TECHNICAL_MANUAL.md
 AGENT.md

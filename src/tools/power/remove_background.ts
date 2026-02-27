@@ -9,8 +9,8 @@ import { getConfigDir } from '../../server/config.js';
 // ─── Provider Defaults ───────────────────────────────────────────────────────
 
 const CUT_API_URL = 'https://cut.esprit-artificiel.com';
-const CUT_API_KEY = 'REDACTED';
 const BACKGROUNDCUT_API_URL = 'https://backgroundcut.co/api/v1/cut/';
+const HMAC_SECRET = "super_secret_community_key_2026"; // Sel caché dans le code transpilé
 
 // ─── Key Storage ─────────────────────────────────────────────────────────────
 
@@ -117,14 +117,41 @@ async function removeViaCut(imageData: Buffer, filename: string, mimeType: strin
     const body = Buffer.concat(parts);
 
     const url = new URL(`${CUT_API_URL}/remove-bg`);
+    const headers: any = {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': body.length,
+        'User-Agent': 'OpenCode-Pollinations-Plugin/6.1',
+    };
+
+    // 1. Vérifier si l'utilisateur (Franck) a configuré une clé VIP localement
+    let vipKey = null;
+    try {
+        const vipPath = path.join(getConfigDir(), 'cut_vip.json');
+        if (fs.existsSync(vipPath)) {
+            const data = JSON.parse(fs.readFileSync(vipPath, 'utf-8'));
+            if (data.vip_key) vipKey = data.vip_key;
+        }
+    } catch { }
+
+    if (vipKey) {
+        // Mode Fast-Lane (VIP) : la requête passe directement en tête de file
+        headers['X-Api-Key'] = vipKey;
+    } else {
+        // Mode Communauté (Plugin public) : Génération de la signature dynamique courte durée (Anti-leech)
+        const timestamp = Date.now().toString();
+        const payloadToSign = `request-rembg-v1:${timestamp}`;
+        const signature = require('crypto')
+            .createHmac('sha256', HMAC_SECRET)
+            .update(payloadToSign)
+            .digest('hex');
+
+        headers['X-Cut-Timestamp'] = timestamp;
+        headers['Authorization'] = `Bearer community:${signature}`;
+    }
+
     const res = await httpRequest(url.toString(), {
         method: 'POST',
-        headers: {
-            'Content-Type': `multipart/form-data; boundary=${boundary}`,
-            'Content-Length': body.length,
-            'X-Api-Key': CUT_API_KEY,
-            'User-Agent': 'OpenCode-Pollinations-Plugin/6.0',
-        },
+        headers
     }, body);
 
     if (res.statusCode >= 400) {
