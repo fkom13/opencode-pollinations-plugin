@@ -6,22 +6,23 @@ export const polliConfigTool: ToolDefinition = tool({
     description: `[CRITICAL TOOL FOR ASSISTANT] View or modify the Pollinations plugin configuration.
 You must strictly understand the 3 INDEPENDENT categories of settings before explaining or changing them:
 
-=== 1. CHAT MODELS & FALLBACKS (Applies ONLY to conversational models, NOT tools) ===
+=== 1. CHAT MODELS & FALLBACKS (Applies ONLY to conversational chat models) ===
 - mode: Dictates fallback rules for the chat.
    * 'manual': No automatic rules.
    * 'alwaysfree': Free tiers first. If 'thresholdsTier' is reached -> fallbacks to Free Universe. NEVER uses Wallet.
    * 'pro': Uses Wallet. If 'thresholdsWallet' is reached -> fallbacks to Free Universe.
 - thresholdsTier: WARNING PERCENTAGE (e.g. 10 for 10%) that triggers chat fallback in 'alwaysfree' mode.
 - thresholdsWallet: WARNING PERCENTAGE (e.g. 50 for 50%) that triggers chat fallback in 'pro' mode.
+*Note: 'enter.agent' or 'free.agent' are fallback conversational models for logic reasoning, THEY DO NOT GENERATE IMAGES OR VIDEOS!*
 
 === 2. TOOLS PROTECTION (Applies ONLY to independent 'polli_' tools like image, video, search) ===
-- enablePaidTools: Allow tools to use the Wallet balance (true/false).
-- costConfirmationRequired: Safety lock for tools. If true, asks user confirmation before running a tool.
-- costThreshold: USD/🌼 limit that triggers the tool confirmation lock.
-- costEstimator: Shows live cost estimates in tool outputs (false = Silent Mode).
+- enablePaidTools: Allow tools to execute models that consume 'Wallet' pollen. If false, tools can only use models that consume 'Freetier' pollen.
+- costConfirmationRequired: Safety lock for tools. If true, the user MUST manually confirm BEFORE executing ANY tool whose cost estimate exceeds the 'costThreshold'.
+- costThreshold: USD/🌼 limit (cost of the tool execution) that triggers the confirmation lock.
+- costEstimator: Shows live cost estimates IN TOOL OUTPUTS (false = Silent Mode).
 
 === 3. UI & NOTIFICATIONS (General display) ===
-- statusBar: Show/Hide the bottom status bar in the OpenCode UI.
+- statusBar: Show/Hide the floating status bar notification in the OpenCode UI.
 
 Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protection!`,
     args: {

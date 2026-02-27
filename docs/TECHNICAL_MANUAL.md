@@ -192,26 +192,31 @@ config.provider['pollinations'] = {
 ```typescript
 interface PollinationsConfigV5 {
     version: string | number;
-    mode: 'manual' | 'alwaysfree' | 'pro';
     apiKey?: string;
+    
+    // === CHAT MODELS & FALLBACKS ===
+    mode: 'manual' | 'alwaysfree' | 'pro';
+    thresholds: {
+        tier: number;       // % Threshold before Free Universe fallback (0-100)
+        wallet: number;     // % Threshold before Free Universe fallback (0-100)
+    };
+    fallbacks: {
+        free: { main: string; agent: string; };
+        enter: { agent: string; }; // For agent reasoning ONLY, not media generation
+    };
 
+    // === TOOLS PROTECTION ===
+    enablePaidTools: boolean;            // Allow tools to consume Wallet pollen
+    costConfirmationRequired?: boolean;  // Ask user if cost exceeds threshold
+    costThreshold?: number;              // The limit triggering confirmation (in pollen/$)
+    costEstimator?: boolean;             // Display live calculation in tool output
+
+    // === UI & NOTIFICATIONS ===
+    statusBar: boolean;
     gui: {
         status: 'none' | 'alert' | 'all';
         logs: 'none' | 'error' | 'verbose';
     };
-
-    thresholds: {
-        tier: number;       // % of daily grant (0-100)
-        wallet: number;     // $ absolute threshold
-    };
-
-    fallbacks: {
-        free: { main: string; agent: string; };
-        enter: { agent: string; };
-    };
-
-    enablePaidTools: boolean;
-    statusBar: boolean;
 }
 ```
 

@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.30] — 2026-02-27
+
+### 🛠 Architecture & Agent — Alignement final des concepts et Nettoyage
+- **Suppression du Mock (pollimock)** : Le modèle virtuel `Command Handler (Virtual)` et le hook exclusif sur `pollimock-handler` (dans `index.ts` et `proxy.ts`) ont été définitivement supprimés car obsolètes. L'Agent d'aide utilise exclusivement le handler `pollinations/connect` (🌸 Pollinations — Guide & Connexion).
+- **Recadrage Sémantique de `polli_config`** : Suite aux erreurs de compréhension persistantes chez l'Agent Kimi (assimilation du "mode" à un statut "payant/gratuit" sur les tools ou de `enter.agent` à la génération média), la taxonomie a été une nouvelle fois durcie :
+  - `enter.agent` et `free.agent` : Explicitée comme étant *uniquement* dédiés au raisonnement logique, JAMAIS pour générer des images ou des vidéos.
+  - `enablePaidTools/costConfirmation` : Repositionnée sur l'impact de coût estimé via le Pollen (`costThreshold`) et non sur une distinction "Outil de base" / "Outil payant". S'active **dès qu'un outil engage du wallet ou du tier** au -delà du `costThreshold`.
+- **Mise à jour Documents** : Les documentations publiques (`README.md` et `TECHNICAL_MANUAL.md`) ont été mises à jour pour acter la séparation en 3 piliers (Chat, Tools, UI) des paramètres de configuration.
+
+---
+
 ## [6.1.0-beta.29] — 2026-02-27
 
 ### 🤖 Agent System — Refonte Sémantique Majeure (Chat vs Tools)
