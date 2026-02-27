@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.27] — 2026-02-27
+
+### 🤖 Agent System — Affinements de `polli_config`
+- **Correction Sémantique du 'Mode'** : Mise à jour de la description de l'argument `mode` pour avertir fermement l'IA que sa modification n'impacte ni les droits d'accès ni l'activation des outils payants. La distinction avec les autres paramètres est dorénavant explicite et empêchera les hallucinations logicelles constatées chez certains LLMs (ex: Kimi).
+- **Toasts Détaillés** : Lors de la modification silencieuse d'un paramètre, la notification visuelle (`emitStatusToast`) liste maintenant textuellement le(s) paramètre(s) touché(s) entre parenthèses *(ex: Configuration modifiée par l'Agent (costConfirmationRequired))*.
+
+---
+
 ## [6.1.0-beta.26] — 2026-02-27
 
 ### 🤖 Agent System — Upgrade `polli_config`
