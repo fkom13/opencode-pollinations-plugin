@@ -72,7 +72,10 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
 
             const newConfig = loadConfig();
             if (newConfig.statusBar) {
-                const changedDetails = Object.keys(updates).map(k => `${k}=${updates[k as keyof typeof updates]}`).join(", ");
+                const changedDetails = Object.keys(updates).map(k => {
+                    const val = updates[k as keyof typeof updates];
+                    return `${k}=${typeof val === 'object' ? JSON.stringify(val) : val}`;
+                }).join(", ");
                 let toastMsg = "⚙️ Configuration modifiée par l'Agent";
                 if (changedDetails.length > 0) {
                     toastMsg += ` (${changedDetails})`;

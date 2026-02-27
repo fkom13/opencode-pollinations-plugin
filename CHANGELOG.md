@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.31] — 2026-02-27
+
+### 🛠 Fix — Affichage des paramètres Agent (polli_config)
+- **Toast Configs (UI)** : Correction du formatage de notification pour les modifications agentiques complexes. Les objets imbriqués transmis par l'IA (comme `thresholds`) sont désormais correctement encodés en texte lors de l'affichage dans la barre de statut *(fini le `[object Object]`)*.
+
+---
+
 ## [6.1.0-beta.30] — 2026-02-27
 
 ### 🛠 Architecture & Agent — Alignement final des concepts et Nettoyage
