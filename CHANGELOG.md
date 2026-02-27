@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.23] — 2026-02-27
+
+### 🔐 Sécurité & Optimisation — Rembg API (Sprint 3)
+- **Fast-Lane & Anti-Leech HMAC** : Le tool `remove_background` n'embarque plus la clé API statique. Il génère désormais une signature asymétrique HMAC (`Authorization: Bearer community:sha256`) avec un jeton d'expiration de 60 secondes pour les appels communautaires (leech-blocker). 
+- **Compatibilité VIP Absolue** : Détection silencieuse du fichier `~/.config/opencode/cut_vip.json`. Les développeurs disposant de leur propre instance et clé récupèrent l'accès immédiat (Header `X-Api-Key` old-school bypassant la file d'attente HMAC côté serveur).
+- **Historique GitHub Nettoyé** : Les anciennes versions (`beta.1` à `beta.22`) stockant accidentellement la clé API en clair ont été purgées et écrasées (git filter-branch force-push). Seule la branch `v6-beta` propre subsiste.
+
+---
+
 ## [6.1.0-beta.22] — 2026-02-26
 
 ### ✨ Refonte Majeure — Moteur de Quotas et Timezone (Sprint 2)
