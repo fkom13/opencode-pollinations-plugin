@@ -4,23 +4,30 @@ import { emitStatusToast } from '../../server/toast.js';
 
 export const polliConfigTool: ToolDefinition = tool({
     description: `[CRITICAL TOOL FOR ASSISTANT] View or modify the Pollinations plugin configuration.
-Use this tool ONLY when the user explicitly asks to view or change plugin settings (e.g. "change threshold", "disable cost estimates", "enable paid tools", "pass in manual mode").
-CRITICAL: Do not confuse 'Mode' with features. The conceptual "Mode Manuel" usually means disabling 'costEstimator' and enabling 'costConfirmationRequired' so the user has full control. 
-To discover model prefixes or precise names, use the 'polli_status' tool.
+You must strictly understand the 3 INDEPENDENT categories of settings before explaining or changing them:
 
-Available settings to modify via this tool:
-1. mode: Only the high-level tier ("manual", "alwaysfree" or "pro"). WARNING: Changing mode DOES NOT auto-enable paid tools or confirmations. You must change the other flags explicitly!
-2. costEstimator: Show live cost estimates in tool outputs. (false = Silent Mode).
-3. costConfirmationRequired: Safety lock. If true, crossing the threshold requires explicit user confirmation.
-4. enablePaidTools: Let the AI use the paid 'Wallet' balance instead of free tier.
-5. costThreshold: The USD/🌼 limit that triggers the confirmation lock lock (0.00 to 10.00).
-6. statusBar: Show/Hide the bottom status bar in UI.
-7. thresholdsTier: The WARNING PERCENTAGE (e.g. 10 for 10%) for the Free Tier quota.
-8. thresholdsWallet: The WARNING PERCENTAGE (e.g. 50 for 50%) for the Wallet balance.`,
+=== 1. CHAT MODELS & FALLBACKS (Applies ONLY to conversational models, NOT tools) ===
+- mode: Dictates fallback rules for the chat.
+   * 'manual': No automatic rules.
+   * 'alwaysfree': Free tiers first. If 'thresholdsTier' is reached -> fallbacks to Free Universe. NEVER uses Wallet.
+   * 'pro': Uses Wallet. If 'thresholdsWallet' is reached -> fallbacks to Free Universe.
+- thresholdsTier: WARNING PERCENTAGE (e.g. 10 for 10%) that triggers chat fallback in 'alwaysfree' mode.
+- thresholdsWallet: WARNING PERCENTAGE (e.g. 50 for 50%) that triggers chat fallback in 'pro' mode.
+
+=== 2. TOOLS PROTECTION (Applies ONLY to independent 'polli_' tools like image, video, search) ===
+- enablePaidTools: Allow tools to use the Wallet balance (true/false).
+- costConfirmationRequired: Safety lock for tools. If true, asks user confirmation before running a tool.
+- costThreshold: USD/🌼 limit that triggers the tool confirmation lock.
+- costEstimator: Shows live cost estimates in tool outputs (false = Silent Mode).
+
+=== 3. UI & NOTIFICATIONS (General display) ===
+- statusBar: Show/Hide the bottom status bar in the OpenCode UI.
+
+Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protection!`,
     args: {
         action: tool.schema.enum(['view', 'update'])
             .describe('Action to perform: "view" to see current configuration, "update" to modify it.'),
-        mode: tool.schema.enum(['manual', 'alwaysfree', 'pro']).optional().describe('CRITICAL: Changing mode does NOT change your rights. To allow paid tools, change enablePaidTools. To enable confirmations, change costConfirmationRequired.'),
+        mode: tool.schema.enum(['manual', 'alwaysfree', 'pro']).optional().describe('CHAT ONLY: Dictates automatic fallback rules (manual/alwaysfree/pro).'),
         costEstimator: tool.schema.boolean().optional().describe('Set to true to show cost estimates auto. Set to false for "Manual Mode" (hide estimates).'),
         statusBar: tool.schema.boolean().optional().describe('Enable/disable status bar visibility (true/false)'),
         costConfirmationRequired: tool.schema.boolean().optional().describe('Safety Lock: Set to true to ask user confirmation before spending money. Set to false to spend automatically.'),
@@ -64,10 +71,10 @@ Available settings to modify via this tool:
 
             const newConfig = loadConfig();
             if (newConfig.statusBar) {
-                const changedKeys = Object.keys(updates).join(", ");
+                const changedDetails = Object.keys(updates).map(k => `${k}=${updates[k as keyof typeof updates]}`).join(", ");
                 let toastMsg = "⚙️ Configuration modifiée par l'Agent";
-                if (changedKeys.length > 0) {
-                    toastMsg += ` (${changedKeys})`;
+                if (changedDetails.length > 0) {
+                    toastMsg += ` (${changedDetails})`;
                 }
                 emitStatusToast('info', toastMsg, 'Config Update');
             }
