@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.28] — 2026-02-27
+
+### 🛠 UI & Commandes — Refonte du tableau `/poll config`
+- **Version Dynamique** : Le tableau markdown renvoyé par la commande `/poll config` affiche de nouveau la version exacte du plugin.
+- **Homogénéisation des Alias** : Toutes les commandes listées dans `/poll config` et `/poll help` utilisent désormais l'alias court `/poll` par défaut (et mentionnent que `/pollinations` reste valide) pour plus de clarté.
+- **Correction Clé Configuration** : L'option `costConfirmation` affichée dans le tableau a été corrigée en `costConfirmationRequired` pour correspondre à la véritable clé de l'API.
+
+---
+
 ## [6.1.0-beta.27] — 2026-02-27
 
 ### 🤖 Agent System — Affinements de `polli_config`
