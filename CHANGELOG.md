@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.1.0-beta.29] — 2026-02-27
+
+### 🤖 Agent System — Refonte Sémantique Majeure (Chat vs Tools)
+- **Séparation Conceptuelle Stricte** : La description du tool `polli_config` a été entièrement réécrite pour forcer l'IA à scinder sa compréhension en 3 catégories indépendantes :
+  1. `CHAT MODELS & FALLBACKS` (gère le `mode` et les seuils d'avertissement `thresholdsTier` / `thresholdsWallet` qui déclenchent les fallbacks du chat).
+  2. `TOOLS PROTECTION` (gère indépendamment l'activation `enablePaidTools`, les versements `costConfirmationRequired` et l'affichage `costEstimator` pour les tools de génération).
+  3. `UI & NOTIFICATIONS` (gère la `statusBar`).
+  *L'Agent ne fera plus jamais l'amalgame entre le Mode du Chat et l'activation des Outils Payants.*
+- **Toasts Exhaustifs** : La notification système générée lors d'une modification agentique affiche désormais la clé ET sa nouvelle valeur *(ex: Configuration modifiée par l'Agent (mode=manual, enablePaidTools=false))*.
+
+---
+
 ## [6.1.0-beta.28] — 2026-02-27
 
 ### 🛠 UI & Commandes — Refonte du tableau `/poll config`
