@@ -29,6 +29,7 @@ import { polliWebSearchTool } from './pollinations/polli_web_search.js';
 import { polliBetaDiscoveryTool } from './pollinations/beta_discovery.js';
 import { polliGenConfirmTool } from './pollinations/polli_gen_confirm.js';
 import { polliStatusTool } from './pollinations/polli_status.js';
+import { polliConfigTool } from './pollinations/polli_config.js';
 
 import * as fs from 'fs';
 
@@ -87,6 +88,9 @@ export function createToolRegistry(): Record<string, any> {
         // Model API discovery & diagnostics
         tools['polli_beta_discovery'] = polliBetaDiscoveryTool;
 
+        // Plugin Configuration editor (Agents)
+        tools['polli_config'] = polliConfigTool;
+
         // Plugin Status / Info / Pricing helper map
         tools['polli_status'] = polliStatusTool;
 
@@ -110,5 +114,6 @@ export {
     polliWebSearchTool,
     polliBetaDiscoveryTool,
     polliGenConfirmTool,
-    polliStatusTool
+    polliStatusTool,
+    polliConfigTool
 };
