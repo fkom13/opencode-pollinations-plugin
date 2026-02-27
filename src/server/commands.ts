@@ -475,19 +475,20 @@ function handleConfigCommand(args: string[]): CommandResult {
         const config = loadConfig();
         const k = config.apiKey ? (config.apiKey.length > 8 ? `${config.apiKey.substring(0, 5)}****${config.apiKey.substring(config.apiKey.length - 4)}` : '****') : 'Non configurée';
 
-        const markdownResponse = `## ⚙️ Configuration Pollinations
+        const markdownResponse = `## ⚙️ Configuration Pollinations (v${config.version || 'inconnue'})
+*Vous pouvez utiliser indifféremment \`/pollinations\` ou son alias court \`/poll\` pour toutes ces commandes.*
 Voici l'état actuel de votre configuration locale.
 
 | Paramètre | Valeur Actuelle | Rôle | Commande |
 |-----------|-----------------|------|----------|
-| **apiKey** | \`${k}\` | Votre clé API secrète (BYOK) | \`/pollinations connect <key>\` |
-| **mode** | \`${config.mode}\` | Mode d'accès | \`/pollinations mode <manual/pro/alwaysfree>\` |
+| **apiKey** | \`${k}\` | Votre clé API secrète (BYOK) | \`/poll connect <key>\` |
+| **mode** | \`${config.mode}\` | Mode d'accès | \`/poll mode <manual/pro/alwaysfree>\` |
 | **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | Sécurité: Désactiver outils payants | \`/poll config enablePaidTools <true/false>\` |
-| **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | Demande confirmation si le seuil d'alerte est dépassé | \`/poll config costConfirmation <true/false>\` |
+| **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | Demande confirmation si le seuil d'alerte est dépassé | \`/poll config costConfirmationRequired <true/false>\` |
 | **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | Seuil d'alerte coût Outils | \`/poll config costThreshold <X>\` |
 | **cost_estimator**| \`${config.costEstimator ?? true}\` | Afficher l'estimation de coût dans les Toasts | \`/poll config cost_estimator <true/false>\` |
-| **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | Modèle de repli Chat vers l'univers free legacy | \`/pollinations fallback <main> <agent>\` |
-| **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| Modèle de repli Agent vers l'univers free legacy | \`/pollinations fallback <main> <agent>\` |
+| **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | Modèle de repli Chat vers l'univers free legacy | \`/poll fallback <main> <agent>\` |
+| **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| Modèle de repli Agent vers l'univers free legacy | \`/poll fallback <main> <agent>\` |
 | **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| Modèle Agent principal (free/* ou enter/*) | *Géré automatiquement* |
 | **status_gui** | \`${config.gui?.status || 'all'}\` | Toasts de statut (all, alert, none) | \`/poll config status_gui <all/alert/none>\` |
 | **logs_gui** | \`${config.gui?.logs || 'error'}\` | Niveau de log (verbose, error) | \`/poll config logs_gui <verbose/error/none>\` |
@@ -578,7 +579,7 @@ Voici l'état actuel de votre configuration locale.
         return { handled: true, response: `✅ costThreshold = ${threshold} 🌻` };
     }
 
-    if (key === 'costConfirmation' && value) {
+    if (key === 'costConfirmationRequired' && value) {
         const enabled = value === 'true';
         saveConfig({ costConfirmationRequired: enabled });
         return { handled: true, response: `✅ costConfirmationRequired = ${enabled}` };
@@ -593,14 +594,15 @@ Voici l'état actuel de votre configuration locale.
 function handleHelpCommand(): CommandResult {
     const help = `
 ### 🌸 Pollinations Plugin - Commandes V6
+*(L'alias \`/poll\` est géré et recommandé à la place de \`/pollinations\` !)*
 
 **Mode & Usage**
-- **\`/pollinations mode [mode]\`**: Change le mode (manual, alwaysfree, pro).
-- **\`/pollinations usage [full]\`**: Affiche le dashboard (full = détail).
-- **\`/pollinations fallback <main> [agent]\`**: Configure le Safety Net.
+- **\`/poll mode [mode]\`**: Change le mode (manual, alwaysfree, pro).
+- **\`/poll usage [full]\`**: Affiche le dashboard (full = détail).
+- **\`/poll fallback <main> [agent]\`**: Configure le Safety Net.
 
 **Configuration**
-- **\`/pollinations config [key] [value]\`**:
+- **\`/poll config [key] [value]\`**:
    - \`status_gui\`: none, alert, all
   - \`logs_gui\`: none, error, verbose
   - \`threshold_tier\` / \`threshold_wallet\`: 0-100
@@ -608,12 +610,12 @@ function handleHelpCommand(): CommandResult {
   - \`cost_estimator\`: true/false (show cost in outputs)
   - \`enablePaidTools\`: true/false (wallet protection)
   - \`costThreshold\`: seuil en pollen (défaut: 0.15)
-  - \`costConfirmation\`: true/false (confirmation coût)
+  - \`costConfirmationRequired\`: true/false (confirmation coût)
 
 **Modèles & Pricing**
-- **\`/pollinations models [type]\`**: Liste des modèles (type: image, video, audio, text)
-- **\`/pollinations pricing\`**: Tableau de pricing détaillé
-- **\`/pollinations infos\`**: Explications sur les Tiers et le Pollen
+- **\`/poll models [type]\`**: Liste des modèles (type: image, video, audio, text)
+- **\`/poll pricing\`**: Tableau de pricing détaillé
+- **\`/poll infos\`**: Explications sur les Tiers et le Pollen
 
 > 💡 **RMBG keys**: Use the \`rmbg_keys\` tool (works with any model).
 `.trim();
