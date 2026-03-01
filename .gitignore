@@ -1,7 +1,8 @@
 # Dependencies
 node_modules/
+package-lock.json
 
-# Build output (Artifacts)
+# Build output
 dist/
 out/
 *.tgz
@@ -9,31 +10,33 @@ out/
 # IDE/Editor
 .vscode/
 .vscode-test/
+.idea/
 *.vsix
 .DS_Store
+Thumbs.db
 *.swp
 
-# Environment & Config (Secrets/Local)
+# Environment & Config
 .env
+.env.*
 .npmrc
 config.json
 .pollinations/
-docs/technical/
 
-# Logs
-*.log
+# Test & Debug
+tests/
+test_*.js
+test_*.ts
+coverage/
 logs/
-
-# Archives (legacy/obsolete code)
-_archs/
-
-# Gencodedoc (versioning tool)
-.gencodedoc/
-.gencodedoc.yaml
+*.log
+npm-debug.log*
 
 # Documentation Generation
+docs/
 opencode-pollinations-plugin_tree_code.md
 
-# OS specific
-.DS_Store
-Thumbs.db
+# Tools Specific
+.gencodedoc/
+.gencodedoc.yaml
+_archs/

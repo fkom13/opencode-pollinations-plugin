@@ -26,10 +26,13 @@ import {
     supportsI2I,
     getPaidImageModels,
     fetchEnterBalance,
+    sanitizeFilename,
+    validateHttpUrl,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
+import { t } from '../../locales/index.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -38,26 +41,19 @@ const DEFAULT_MODEL = 'flux';
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
 export const polliGenImageTool: ToolDefinition = tool({
-    description: `Generate an image from a text prompt using Pollinations AI.
-
-💡 **Modèles Image Dynamiques** :
-L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, Midjourney, Seedream, etc.) et ils changent fréquemment. Le catalogue à jour est listé ci-dessous.
-
-**Exemples d'utilisation Optionnelle** :
-- **I2I (Image-to-Image)** : Utilisez le paramètre \`reference_image\` avec une URL ou chemin local si le modèle le supporte.
-- L'outil embarque un "costGuard" automatique gérant la confirmation des coûts.`,
+    description: t('tools.image.desc'),
 
     args: {
-        prompt: tool.schema.string().describe('Description of the image to generate'),
-        model: tool.schema.string().optional().describe('Model to use (default: flux). Unknown models accepted as (beta).'),
-        width: tool.schema.number().min(256).max(4096).optional().describe('Image width (default: 1024)'),
-        height: tool.schema.number().min(256).max(4096).optional().describe('Image height (default: 1024)'),
-        reference_image: tool.schema.string().optional().describe('URL(s) for image-to-image editing (comma-separated for multi-image models)'),
-        seed: tool.schema.number().optional().describe('Seed for reproducibility (-1 for random)'),
-        quality: tool.schema.enum(['low', 'med', 'high']).optional().describe('Quality for gptimage models only'),
-        transparent: tool.schema.boolean().optional().describe('Transparent background for gptimage models only'),
-        save_to: tool.schema.string().optional().describe('Custom output directory'),
-        filename: tool.schema.string().optional().describe('Custom filename (without extension)'),
+        prompt: tool.schema.string().describe(t('tools.image.arg_prompt')),
+        model: tool.schema.string().describe(t('tools.image.arg_model')),
+        width: tool.schema.number().min(256).max(4096).optional().describe(t('tools.image.arg_width')),
+        height: tool.schema.number().min(256).max(4096).optional().describe(t('tools.image.arg_height')),
+        reference_image: tool.schema.string().optional().describe(t('tools.image.arg_ref')),
+        seed: tool.schema.number().optional().describe(t('tools.image.arg_seed')),
+        quality: tool.schema.enum(['low', 'med', 'high']).optional().describe(t('tools.image.arg_quality')),
+        transparent: tool.schema.boolean().optional().describe(t('tools.image.arg_trans')),
+        save_to: tool.schema.string().optional().describe(t('tools.image.arg_save_to')),
+        filename: tool.schema.string().optional().describe(t('tools.image.arg_filename')),
     },
 
     async execute(args, context) {
@@ -65,7 +61,7 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
         const hasKey = hasApiKey();
 
         // Determine model based on key presence
-        let model = args.model || DEFAULT_MODEL;
+        let model = args.model;
         const width = args.width || 1024;
         const height = args.height || 1024;
 
@@ -76,23 +72,26 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
 
         // Force Auth Check for ALL Image Generations
         if (!hasKey) {
-            return `❌ **Clé API Requise** pour la génération d'images.
-💡 Utilisez \`/pollinations connect <clé>\` pour activer le service.
-💎 Modèles disponibles: ${Object.keys(imageModels).slice(0, 5).join(', ')}...`;
+            return t('tools.image.req_key', { models: Object.keys(imageModels).slice(0, 5).join(', ') });
         }
 
         // Unknown model → beta passthrough (don't reject)
         if (isBetaModel) {
-            emitStatusToast('warning', `Modèle "${model}" non référencé — mode (beta)`, '🎨 gen_image');
+            emitStatusToast('warning', t('tools.image.unreferenced_model', { model }), '🎨 gen_image');
         }
 
         // Validate I2I support (for known models only; beta models get default behavior)
-        if (args.reference_image && knownModel && !supportsI2I(model)) {
-            return `⚠️ Le modèle "${model}" ne supporte pas l'Image-to-Image.
-💡 Modèles I2I supportés: ${Object.entries(imageModels)
+        if (args.reference_image) {
+            if (!validateHttpUrl(args.reference_image)) {
+                return t('tools.image.req_url_i2i') || '❌ URL invalide. Utilisez http:// ou https://';
+            }
+            if (knownModel && !supportsI2I(model)) {
+                const models = Object.entries(imageModels)
                     .filter(([, info]) => info.i2i)
                     .map(([name]) => name)
-                    .join(', ')}`;
+                    .join(', ');
+                return t('tools.image.no_i2i', { model, models });
+            }
         }
 
         // Estimate cost
@@ -101,13 +100,13 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
         // Cost Guard check V2
         const costCheck = checkCostControl('polli_gen_image', args, model, estimatedCost, 'image');
         if (!costCheck.allowed) {
-            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+            return costCheck.message || t('tools.image.blocked');
         }
 
         // Emit start toast
         const config = loadConfig();
         const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
-        emitStatusToast('info', `Génération image: ${model} (${width}×${height})${argsStr}`, '🎨 polli_gen_image');
+        emitStatusToast('info', t('tools.image.generating', { model, width, height }) + argsStr, '🎨 polli_gen_image');
 
         // Set metadata
         context.metadata({ title: `🎨 Image: ${model}${isBetaModel ? ' (beta)' : ''}` });
@@ -135,15 +134,7 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
 
             // I2I: reference image(s)
             if (args.reference_image) {
-                // Check if it's a local file path
-                let imageUrl = args.reference_image;
-                if (!args.reference_image.startsWith('http')) {
-                    // For local files, we'd need to upload first
-                    // For now, require URL
-                    return `❌ Les fichiers locaux nécessitent d'être uploadés d'abord.
-💡 Utilisez l'outil \`file_to_url\` pour obtenir une URL publique.`;
-                }
-                params.set('image', imageUrl);
+                params.set('image', args.reference_image);
             }
 
             // Quality (gptimage only)
@@ -176,7 +167,7 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
 
             // Save the image
             let outputDir = getDefaultOutputDir('images');
-            let filename = args.filename;
+            let filename = args.filename ? sanitizeFilename(args.filename) : undefined;
 
             if (args.save_to) {
                 if (args.save_to.match(/\.(png|jpe?g|webp|gif)$/i)) {
@@ -217,35 +208,35 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
                 lines.push('');
             }
 
-            lines.push(`🎨 Image Générée`);
+            lines.push(t('tools.image.res_title'));
             lines.push(`━━━━━━━━━━━━━━━━━━`);
-            lines.push(`Prompt: ${args.prompt.substring(0, 100)}${args.prompt.length > 100 ? '...' : ''}`);
-            lines.push(`Modèle: ${usedModel}${isBetaModel ? ' (beta)' : ''}`);
-            lines.push(`Résolution: ${width}×${height}`);
+            lines.push(t('tools.image.res_prompt', { prompt: args.prompt.substring(0, 100) + (args.prompt.length > 100 ? '...' : '') }));
+            lines.push(t('tools.image.res_model', { model: `${usedModel}${isBetaModel ? ' (beta)' : ''}` }));
+            lines.push(t('tools.image.res_res', { width, height }));
 
             // Add I2I info if used
             if (args.reference_image) {
-                lines.push(`I2I Source: ${args.reference_image.substring(0, 50)}...`);
+                lines.push(t('tools.image.res_i2i_src', { src: args.reference_image.substring(0, 50) + '...' }));
             }
 
-            lines.push(`Fichier: ${filePath}`);
-            lines.push(`Taille: ${formatFileSize(fileSize)}`);
+            lines.push(t('tools.image.res_file', { path: filePath }));
+            lines.push(t('tools.image.res_size', { size: formatFileSize(fileSize) }));
 
             // Pricing details (Estimé vs Réel)
             if (isCostEstimatorEnabled()) {
                 const maxCost = estimatedCost * 3;
-                lines.push(`\n💰 **Rapport Financier :**`);
+                lines.push(t('tools.image.cost_title'));
                 if (isTokenBased('image', usedModel)) {
-                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)} (Max théorique: ${formatCost(maxCost)})`);
+                    lines.push(`- Cost   : ${formatCost(estimatedCost)} (Max théorique: ${formatCost(maxCost)})`);
                 } else {
-                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)}`);
+                    lines.push(t('tools.image.cost_estimated', { cost: formatCost(estimatedCost) }));
                 }
                 if (realCost !== undefined) {
-                    lines.push(`- Coût Réel     : **${formatCost(realCost)}** (via Solde Wallet)`);
+                    lines.push(t('tools.image.cost_real_wallet', { cost: formatCost(realCost) }));
                 } else if (costTracking.costUsd !== undefined) {
-                    lines.push(`- Coût Réel     : **${formatCost(costTracking.costUsd)}** (via Headers API)`);
+                    lines.push(t('tools.image.cost_real_api', { cost: formatCost(costTracking.costUsd) }));
                 } else {
-                    lines.push(`- Coût Réel     : Inconnu (API injoignable)`);
+                    lines.push(t('tools.image.cost_unknown'));
                 }
             }
             if (responseHeaders['x-request-id']) {
@@ -253,26 +244,23 @@ L'API Pollinations (Enter) possède une quantité importante de modèles (Flux, 
             }
 
             // Emit success toast
-            emitStatusToast('success', `Image générée ✓ (${usedModel})`, '🎨 gen_image', { filePath: filePath });
+            emitStatusToast('success', t('tools.image.success', { model: usedModel }), '🎨 gen_image', { filePath: filePath });
 
             return lines.join('\n');
 
         } catch (err: any) {
-            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🎨 gen_image');
+            emitStatusToast('error', t('tools.image.error', { error: err.message?.substring(0, 60) }), '🎨 gen_image');
 
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits pollen insuffisants pour le modèle "${model}".
-💡 Vérifiez votre solde avec /pollinations usage`;
+                return t('tools.image.insufficient_funds', { model });
             }
             if (err.message?.includes('401') || err.message?.includes('403')) {
-                return `❌ Clé API invalide ou non autorisée.
-🔧 Vérifiez votre clé avec /pollinations connect`;
+                return t('tools.image.invalid_key');
             }
             if (err.message?.includes('400')) {
-                return `❌ Paramètres invalides: ${err.message}
-💡 Vérifiez que le modèle supporte les paramètres fournis.`;
+                return t('tools.image.invalid_params', { error: err.message });
             }
-            return `❌ Erreur génération image: ${err.message}`;
+            return t('tools.image.gen_error_msg', { error: err.message });
         }
     },
 });

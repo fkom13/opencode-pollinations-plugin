@@ -8,16 +8,15 @@ tests/
 tsconfig.json
 
 # Documentation (Available on GitHub, redundant in package)
-docs/*
-!docs/images/
-!docs/TECHNICAL_MANUAL.md
+docs/
 _archs/
 TECHNICAL_MANUAL.md
 AGENT.md
 CHANGELOG.md
 CONTRIBUTING.md
-# LICENSE is automatically included by npm
-# README.md is automatically included by npm
+*.md
+!README.md
+!LICENSE.md
 
 # Versioning & Dev Tools
 .gencodedoc/
@@ -26,15 +25,20 @@ CONTRIBUTING.md
 .git/
 .gitignore
 .github/
+.vscode/
+.vscode-test/
+.idea/
 
-# Logs & Temp
+# Logs & Environment
 logs/
 *.log
 npm-debug.log*
-opencode-pollinations-plugin_tree_code.md
+.env
+.env.*
+config.json
+.pollinations/
 
-# Editor Configs
-.vscode/
-.idea/
+# Editor Configs & OS
 *.swp
 .DS_Store
+Thumbs.db

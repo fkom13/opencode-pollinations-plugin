@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import * as https from 'https';
 
 // Primary URL for the OpenAPI spec
-const OPENAPI_URL = 'https://gen.pollinations.ai/openapi.json';
+const OPENAPI_URL = 'https://enter.pollinations.ai/api/docs/open-api/generate-schema';
 // Fallback local path
 const LOCAL_FALLBACK_PATH = '/home/fkomp/Bureau/oracle/Documentations/API - Severals documentations for multiples api usages/pollinations/pollinations_enter_beta/PolinationsGenBeta_api.json';
 
@@ -122,6 +122,10 @@ async function probeEndpoint(method: 'GET' | 'POST', endpointUrl: string, payloa
 export const polliBetaDiscoveryTool: ToolDefinition = tool({
     description: `Explore the Pollinations API using Hybrid Discovery (OpenAPI + Active Probing).
 Use this tool ONLY to reverse engineer and fill the manual registry. Do not use this tool lightly for general operations.
+
+🔥 CRITICAL RULES FOR AI AGENTS:
+1. The EXACT and ONLY base URL for any generative media endpoints (image, video, audio) is: **https://gen.pollinations.ai**
+2. The URL 'enter.pollinations.ai' is strictly reserved for the OpenAPI schema documentation and account management. Do NOT hallucinate target endpoints on it!
 
 Commands available:
 - 'list_endpoints': (Whitebox) Returns all routes from OpenAPI.

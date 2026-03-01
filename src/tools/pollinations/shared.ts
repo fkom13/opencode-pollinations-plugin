@@ -183,6 +183,24 @@ export function getAudioModels(): Record<string, {
 }
 
 /**
+ * Text Model accessor
+ * Returns text models from registry
+ */
+export function getTextModels(): Record<string, { desc: string; }> {
+    if (ModelRegistry.isReady()) {
+        const models = ModelRegistry.all().filter((m: any) => m.category === 'text');
+        const result: Record<string, { desc: string }> = {};
+        for (const m of models) {
+            result[m.name] = {
+                desc: m.description
+            };
+        }
+        return result;
+    }
+    return {};
+}
+
+/**
  * Music Model accessor (backward compatible)
  */
 export function getMusicModel(): Record<string, {
@@ -428,15 +446,30 @@ export function httpsGet(
                         headers: res.headers as Record<string, string>
                     });
                 } else {
-                    reject(new Error(`HTTP ${res.statusCode}`));
+                    const errorBody = Buffer.concat(chunks).toString();
+                    let errMsg = `HTTP ${res.statusCode}`;
+                    try {
+                        const errJson = JSON.parse(errorBody);
+                        if (errJson.error && errJson.error.message) {
+                            errMsg += `: ${errJson.error.message}`;
+                            if (errJson.error.details?.fieldErrors) {
+                                errMsg += ` - Fields: ${JSON.stringify(errJson.error.details.fieldErrors)}`;
+                            }
+                        } else {
+                            errMsg += `: ${errorBody.substring(0, 200)}`;
+                        }
+                    } catch {
+                        errMsg += `: ${errorBody.substring(0, 200)}`;
+                    }
+                    reject(new Error(errMsg));
                 }
             });
         });
 
         req.on('error', reject);
-        req.setTimeout(120000, () => {
+        req.setTimeout(300000, () => {
             req.destroy();
-            reject(new Error('Timeout'));
+            reject(new Error('Timeout (300s)'));
         });
         req.end();
     });
@@ -474,15 +507,29 @@ export function httpsPost(
                     });
                 } else {
                     const errorBody = Buffer.concat(chunks).toString();
-                    reject(new Error(`HTTP ${res.statusCode}: ${errorBody.substring(0, 200)}`));
+                    let errMsg = `HTTP ${res.statusCode}`;
+                    try {
+                        const errJson = JSON.parse(errorBody);
+                        if (errJson.error && errJson.error.message) {
+                            errMsg += `: ${errJson.error.message}`;
+                            if (errJson.error.details?.fieldErrors) {
+                                errMsg += ` - Fields: ${JSON.stringify(errJson.error.details.fieldErrors)}`;
+                            }
+                        } else {
+                            errMsg += `: ${errorBody.substring(0, 200)}`;
+                        }
+                    } catch {
+                        errMsg += `: ${errorBody.substring(0, 200)}`;
+                    }
+                    reject(new Error(errMsg));
                 }
             });
         });
 
         req.on('error', reject);
-        req.setTimeout(120000, () => {
+        req.setTimeout(300000, () => {
             req.destroy();
-            reject(new Error('Timeout'));
+            reject(new Error('Timeout (300s)'));
         });
         req.write(bodyData);
         req.end();
@@ -542,15 +589,29 @@ export function httpsPostMultipart(
                     });
                 } else {
                     const errorBody = Buffer.concat(chunks).toString();
-                    reject(new Error(`HTTP ${res.statusCode}: ${errorBody.substring(0, 200)}`));
+                    let errMsg = `HTTP ${res.statusCode}`;
+                    try {
+                        const errJson = JSON.parse(errorBody);
+                        if (errJson.error && errJson.error.message) {
+                            errMsg += `: ${errJson.error.message}`;
+                            if (errJson.error.details?.fieldErrors) {
+                                errMsg += ` - Fields: ${JSON.stringify(errJson.error.details.fieldErrors)}`;
+                            }
+                        } else {
+                            errMsg += `: ${errorBody.substring(0, 200)}`;
+                        }
+                    } catch {
+                        errMsg += `: ${errorBody.substring(0, 200)}`;
+                    }
+                    reject(new Error(errMsg));
                 }
             });
         });
 
         req.on('error', reject);
-        req.setTimeout(120000, () => {
+        req.setTimeout(300000, () => {
             req.destroy();
-            reject(new Error('Timeout'));
+            reject(new Error('Timeout (300s)'));
         });
         req.write(bodyData);
         req.end();
@@ -720,6 +781,33 @@ export function estimateMusicCost(duration: number): number {
         }
     }
     return duration * 0.005;
+}
+
+// ─── Security & Validation Utils ─────────────────────────────────────────
+
+/**
+ * Empêche le Path Traversal en s'assurant que le nom de fichier
+ * est restreint à son nom de base et ne contient pas de caractères malveillants.
+ */
+export function sanitizeFilename(filename: string): string {
+    if (!filename) return '';
+    // Conserve uniquement le basename brut (protège contre ../../ etc)
+    const base = path.basename(filename);
+    // Optionnel : on peut restreindre les caractères si nécessaire
+    return base;
+}
+
+/**
+ * Valide qu'une URL est bien HTTP ou HTTPS et empêche les schémas dangereux (file://, javascript:).
+ */
+export function validateHttpUrl(urlStr: string): boolean {
+    if (!urlStr) return false;
+    try {
+        const parsed = new URL(urlStr);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
 }
 
 // ─── File Utils ──────────────────────────────────────────────────────────

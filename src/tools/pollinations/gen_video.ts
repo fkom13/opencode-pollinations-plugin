@@ -33,10 +33,13 @@ import {
     getDurationRange,
     getVideoModels,
     fetchEnterBalance,
+    sanitizeFilename,
+    validateHttpUrl,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
+import { t } from '../../locales/index.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -47,34 +50,26 @@ const DEFAULT_ASPECT_RATIO = '16:9';
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
 export const polliGenVideoTool: ToolDefinition = tool({
-    description: `Generate a video from a text prompt or image using Pollinations AI.
-
-💡 **Modèles Vidéo Dynamiques** :
-L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V), leurs limites de durée, options d'aspect ratios et tarifs (tokens ou USD) sont injectés ci-dessous en temps réel.
-
-**Exemples d'options communes** :
-- \`veo\` interpolation: Utilisez \`reference_image=url1,url2\` pour les transitions.
-- L'outil gérera le "costGuard" si l'utilisateur doit confirmer.`,
+    description: t('tools.polli_gen_video.desc'),
 
     args: {
-        prompt: tool.schema.string().describe('Description of the video to generate'),
-        model: tool.schema.string().optional().describe(`Video model (default: ${CHEAPEST_MODEL})`),
-        duration: tool.schema.number().min(1).max(20).optional().describe('Duration in seconds (default: 3, varies by model)'),
-        aspect_ratio: tool.schema.enum(['16:9', '9:16', '1:1', '4:3']).optional().describe('Aspect ratio (default: 16:9, varies by model)'),
-        reference_image: tool.schema.string().optional().describe('URL for I2V (required for wan) or comma-separated URLs for veo interpolation'),
-        seed: tool.schema.number().optional().describe('Seed for reproducibility (-1 for random)'),
-        save_to: tool.schema.string().optional().describe('Custom output directory'),
-        filename: tool.schema.string().optional().describe('Custom filename (without extension)'),
+        prompt: tool.schema.string().describe(t('tools.polli_gen_video.arg_prompt')),
+        model: tool.schema.string().describe(t('tools.polli_gen_video.arg_model', { model: CHEAPEST_MODEL })),
+        duration: tool.schema.number().optional().describe(t('tools.polli_gen_video.arg_duration')),
+        aspect_ratio: tool.schema.enum(['16:9', '9:16', '1:1', '4:3']).optional().describe(t('tools.polli_gen_video.arg_aspect')),
+        reference_image: tool.schema.string().optional().describe(t('tools.polli_gen_video.arg_ref')),
+        seed: tool.schema.number().optional().describe(t('tools.polli_gen_video.arg_seed')),
+        save_to: tool.schema.string().optional().describe(t('tools.polli_gen_video.arg_save_to')),
+        filename: tool.schema.string().optional().describe(t('tools.polli_gen_video.arg_filename')),
     },
 
     async execute(args, context) {
         const apiKey = getApiKey();
         if (!apiKey) {
-            return `❌ La génération vidéo nécessite une clé API Pollinations.
-🔧 Connectez votre clé avec /pollinations connect`;
+            return t('tools.polli_gen_video.req_key');
         }
 
-        const model = args.model || CHEAPEST_MODEL;
+        const model = args.model;
         const aspectRatio = args.aspect_ratio || DEFAULT_ASPECT_RATIO;
 
         // Get model config from dynamic registry
@@ -83,7 +78,7 @@ L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V
         const isBetaModel = !modelConfig;
 
         if (isBetaModel) {
-            emitStatusToast('warning', `Modèle "${model}" non référencé — mode (beta)`, '🎬 gen_video');
+            emitStatusToast('warning', t('tools.polli_gen_video.warn_beta', { model }), '🎬 gen_video');
         }
 
         // Validate duration (for known models; beta models use defaults)
@@ -91,32 +86,37 @@ L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V
         const duration = args.duration || Math.min(DEFAULT_DURATION, maxDuration);
 
         if (duration < minDuration || duration > maxDuration) {
-            return `❌ Durée invalide pour ${model}: ${duration}s
-💡 Durée supportée: ${minDuration}-${maxDuration}s`;
+            return t('tools.polli_gen_video.invalid_duration', { model, duration, min: minDuration, max: maxDuration });
         }
 
         // Validate aspect ratio (for known models; beta models accept any)
         if (!isBetaModel && !validateAspectRatio(model, aspectRatio)) {
-            return `❌ Aspect ratio non supporté par ${model}: ${aspectRatio}
-💡 Ratios supportés: ${modelConfig!.aspectRatios.join(', ')}`;
+            return t('tools.polli_gen_video.invalid_aspect', { model, aspect: aspectRatio, supported: modelConfig!.aspectRatios.join(', ') });
         }
 
-        // Check I2V requirements
+        // Check I2V requirements & validation
+        if (args.reference_image) {
+            const urls = args.reference_image.split(',').map(u => u.trim());
+            for (const u of urls) {
+                if (!validateHttpUrl(u)) {
+                    return '❌ URL invalide. Utilisez http:// ou https://';
+                }
+            }
+        }
+
         const requiresReferenceImage = !isBetaModel && requiresI2V(model);
         const supportsReferenceImage = isBetaModel || supportsI2V(model);
 
         if (requiresReferenceImage && !args.reference_image) {
-            return `❌ Le modèle "${model}" nécessite une image de départ (I2V ONLY).
-💡 Ajoutez --reference_image <url>
-💡 Pour du T2V, utilisez: grok-video, ltx-2, veo, seedance`;
+            return t('tools.polli_gen_video.req_i2v', { model });
         }
 
         if (args.reference_image && !supportsReferenceImage) {
-            return `⚠️ Le modèle "${model}" ne supporte pas l'I2V.
-💡 Modèles I2V: ${Object.entries(videoModels)
-                    .filter(([, info]) => info.i2v)
-                    .map(([name]) => name)
-                    .join(', ')}`;
+            const models = Object.entries(videoModels)
+                .filter(([, info]) => info.i2v)
+                .map(([name]) => name)
+                .join(', ');
+            return t('tools.polli_gen_video.no_i2v', { model, models });
         }
 
         // Estimate cost
@@ -125,13 +125,13 @@ L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V
         // Cost Guard check V2
         const costCheck = checkCostControl('polli_gen_video', args, model, estimatedCost, 'video');
         if (!costCheck.allowed) {
-            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+            return costCheck.message || t('tools.polli_gen_video.blocked');
         }
 
         // Emit start toast
         const config = loadConfig();
         const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
-        emitStatusToast('info', `Génération vidéo: ${model} (${duration}s)${argsStr}`, '🎬 polli_gen_video');
+        emitStatusToast('info', t('tools.polli_gen_video.toast_start', { model, duration }) + argsStr, '🎬 polli_gen_video');
 
         // Metadata
         context.metadata({ title: `🎬 Video: ${model}${isBetaModel ? ' (beta)' : ''} (${duration}s)` });
@@ -187,7 +187,7 @@ L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V
 
             // Save video
             let outputDir = getDefaultOutputDir('videos');
-            let filename = args.filename;
+            let filename = args.filename ? sanitizeFilename(args.filename) : undefined;
 
             if (args.save_to) {
                 if (args.save_to.match(/\.(mp4|webm|mov|avi)$/i)) {
@@ -229,88 +229,84 @@ L'API vidéo Pollinations évolue constamment. Les modèles disponibles (T2V/I2V
                 lines.push('');
             }
 
-            lines.push(`🎬 Vidéo Générée`);
+            lines.push(t('tools.polli_gen_video.res_title'));
             lines.push(`━━━━━━━━━━━━━━━━━━`);
-            lines.push(`Prompt: ${args.prompt.substring(0, 80)}${args.prompt.length > 80 ? '...' : ''}`);
-            lines.push(`Modèle: ${model}${isBetaModel ? ' (beta)' : ''}${modelConfig?.cost?.includes('💎') ? ' 💎' : ''}`);
-            lines.push(`Durée: ~${duration}s`);
-            lines.push(`Aspect: ${aspectRatio}`);
+            lines.push(t('tools.polli_gen_video.res_prompt', { prompt: args.prompt.substring(0, 80) + (args.prompt.length > 80 ? '...' : '') }));
+            lines.push(t('tools.polli_gen_video.res_model', { model: `${model}${isBetaModel ? ' (beta)' : ''}${modelConfig?.cost?.includes('💎') ? ' 💎' : ''}` }));
+            lines.push(t('tools.polli_gen_video.res_duration', { duration }));
+            lines.push(t('tools.polli_gen_video.res_aspect', { aspect: aspectRatio }));
 
             // Add I2V info if used
             if (args.reference_image) {
                 const isInterpolation = model === 'veo' && args.reference_image.includes(',');
-                lines.push(`I2V Mode: ${isInterpolation ? 'Interpolation (multi-image)' : 'Single image'}`);
-                lines.push(`Source: ${args.reference_image.substring(0, 50)}...`);
+                lines.push(t('tools.polli_gen_video.res_i2v_mode', { mode: isInterpolation ? t('tools.polli_gen_video.res_i2v_interp') : t('tools.polli_gen_video.res_i2v_single') }));
+                lines.push(t('tools.polli_gen_video.res_source', { url: args.reference_image.substring(0, 50) + '...' }));
             }
 
             // Audio info (known models only)
             if (modelConfig?.audio) {
-                lines.push(`Audio: ✅ Généré automatiquement`);
+                lines.push(t('tools.polli_gen_video.res_audio_ok'));
             } else if (!isBetaModel) {
-                lines.push(`Audio: ❌ Non supporté par ce modèle`);
+                lines.push(t('tools.polli_gen_video.res_audio_no'));
             }
 
-            lines.push(`Fichier: ${filePath}`);
-            lines.push(`Taille: ${formatFileSize(fileSize)}`);
+            lines.push(t('tools.polli_gen_video.res_file', { path: filePath }));
+            lines.push(t('tools.polli_gen_video.res_size', { size: formatFileSize(fileSize) }));
 
             // Pricing details (Estimé vs Réel)
             if (isCostEstimatorEnabled()) {
                 const maxCost = estimatedCost * 3;
-                lines.push(`\n💰 **Rapport Financier :**`);
+                lines.push(t('tools.polli_gen_video.res_cost_title'));
                 if (isTokenBased('video', model)) {
-                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)} (Max théorique: ${formatCost(maxCost)})`);
+                    lines.push(t('tools.polli_gen_video.res_cost_est_tok', { cost: formatCost(estimatedCost), maxCost: formatCost(maxCost) }));
                 } else {
-                    lines.push(`- Coût Estimé   : ${formatCost(estimatedCost)}`);
+                    lines.push(t('tools.polli_gen_video.res_cost_est', { cost: formatCost(estimatedCost) }));
                 }
                 if (realCost !== undefined) {
-                    lines.push(`- Coût Réel     : **${formatCost(realCost)}** (via Solde Wallet)`);
+                    lines.push(t('tools.polli_gen_video.res_cost_real_wallet', { cost: formatCost(realCost) }));
                 } else if (costTracking.costUsd !== undefined) {
-                    lines.push(`- Coût Réel     : **${formatCost(costTracking.costUsd)}** (via Headers API)`);
+                    lines.push(t('tools.polli_gen_video.res_cost_real_headers', { cost: formatCost(costTracking.costUsd) }));
                 } else {
-                    lines.push(`- Coût Réel     : Inconnu (API injoignable)`);
+                    lines.push(t('tools.polli_gen_video.res_cost_real_unknown'));
                 }
             }
 
             if (responseHeaders['x-model-used']) {
-                lines.push(`Modèle utilisé: ${responseHeaders['x-model-used']}`);
+                lines.push(t('tools.polli_gen_video.res_model_used', { model: responseHeaders['x-model-used'] }));
             }
             if (responseHeaders['x-request-id']) {
-                lines.push(`Request ID: ${responseHeaders['x-request-id']}`);
+                lines.push(t('tools.polli_gen_video.res_request_id', { id: responseHeaders['x-request-id'] }));
             }
 
             // Gen time estimate (known models only)
             if (modelConfig?.genTime) {
-                lines.push(`⏱️ Temps de génération: ${modelConfig.genTime}`);
+                lines.push(t('tools.polli_gen_video.res_time', { time: modelConfig.genTime }));
             }
 
             // Emit success toast
-            emitStatusToast('success', `Vidéo générée ✓ (${model}, ${duration}s)`, '🎬 gen_video');
+            emitStatusToast('success', t('tools.polli_gen_video.toast_success', { model, duration }), '🎬 gen_video');
 
             return lines.join('\n');
 
         } catch (err: any) {
-            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🎬 gen_video');
+            emitStatusToast('error', t('tools.polli_gen_video.toast_err', { error: err.message?.substring(0, 60) }), '🎬 gen_video');
 
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits pollen insuffisants.
-💡 Essayez \`grok-video\` (le moins cher: 0.0025/sec)`;
+                return t('tools.polli_gen_video.err_pollen');
             }
             if (err.message?.includes('400')) {
                 if (requiresI2V(model) && !args.reference_image) {
-                    return `❌ Le modèle "${model}" est I2V ONLY.
-💡 Ajoutez --reference_image <url>`;
+                    return t('tools.polli_gen_video.err_i2v_req', { model });
                 }
-                return `❌ Paramètres invalides: ${err.message}`;
+                return t('tools.polli_gen_video.err_invalid', { msg: err.message });
             }
             if (err.message?.includes('520') && model === 'ltx-2') {
-                return `⚠️ LTX-2 a retourné une erreur 520 (intermittent).
-💡 Réessayez dans quelques secondes.`;
+                return t('tools.polli_gen_video.err_520');
             }
             if (err.message?.includes('Timeout')) {
-                return `❌ Timeout - La génération vidéo a pris trop de temps.
-💡 Réessayez avec une durée plus courte.`;
+                return t('tools.polli_gen_video.err_timeout');
             }
-            return `❌ Erreur génération vidéo: ${err.message}`;
+            return t('tools.polli_gen_video.err_gen', { error: err.message });
         }
     },
 });

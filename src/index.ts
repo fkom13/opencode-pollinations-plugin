@@ -92,7 +92,6 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     const v = require('../package.json').version;
     log(`Plugin Initializing v${v}...`);
     log(`[ENV] Keys: ${Object.keys(process.env).filter(k => k.includes('OPENCODE') || k.includes('APP') || k.includes('DATA')).join(', ')}`);
-    console.log(`🚀 POLLINATIONS PLUGIN v${v} LOADED 🚀`);
 
     // MIGRATE CONFIG
     migrateLegacyConfig();

@@ -18,133 +18,87 @@ import {
     httpsPost,
     formatCost,
     extractCostFromHeaders,
+    getTextModels,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
-
-// ─── Mode Configuration ────────────────────────────────────────────────────
-
-interface SearchMode {
-    model: string;
-    maxTokens: number;
-    systemPrompt: string;
-    label: string;
-    emoji: string;
-}
-
-const SEARCH_MODES: Record<string, SearchMode> = {
-    rapid: {
-        model: 'perplexity-fast',
-        maxTokens: 1500,
-        systemPrompt: 'You are a quick web search assistant. Provide concise, accurate answers with key sources. Be efficient and direct.',
-        label: 'Recherche Rapide',
-        emoji: '⚡',
-    },
-    medium: {
-        model: 'perplexity-fast',
-        maxTokens: 3000,
-        systemPrompt: 'You are a web search assistant. Provide comprehensive research with analysis, sources, and reasoning steps. Always include source URLs.',
-        label: 'Recherche Standard',
-        emoji: '🔎',
-    },
-    deep: {
-        model: 'perplexity-reasoning',
-        maxTokens: 8000,
-        systemPrompt: 'You are a deep research assistant. Provide exhaustive research with multiple perspectives, detailed analysis, all relevant sources, and thorough fact-checking. Consider edge cases and alternative viewpoints. Always include source URLs.',
-        label: 'Recherche Profonde',
-        emoji: '🔬',
-    },
-};
+import { t } from '../../locales/index.js';
 
 // ─── Cost Estimation ────────────────────────────────────────────────────
 
-function estimateSearchCost(mode: string): number {
-    switch (mode) {
-        case 'rapid': return 0.001;
-        case 'medium': return 0.003;
-        case 'deep': return 0.008;
-        default: return 0.003;
-    }
+function estimateSearchCost(model: string): number {
+    // Les requêtes de test montrent qu'un web-search coûte environ 0.005
+    return 0.005;
 }
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
 export const polliWebSearchTool: ToolDefinition = tool({
-    description: `Search the web using Pollinations AI with three depth levels.
-
-**Modes:**
-
-| Mode | Modèle | Usage | Coût estimé |
-|------|--------|-------|-------------|
-| ⚡ rapid | perplexity-fast | Quick facts, current events | ~0.001 🌻 |
-| 🔎 medium | perplexity-fast | Standard research with sources | ~0.003 🌻 |
-| 🔬 deep | perplexity-reasoning | In-depth analysis, multi-perspective | ~0.008 🌻 |
-
-**💡 Tips:**
-- Use \`rapid\` for quick lookups and current news
-- Use \`medium\` for documentation search and general queries
-- Use \`deep\` for complex research, fact-checking, and analysis
-- Add \`recency\` filter for time-sensitive queries`,
+    description: t('tools.polli_web_search.desc'),
 
     args: {
-        query: tool.schema.string().describe('Search query or research question'),
-        mode: tool.schema.enum(['rapid', 'medium', 'deep']).optional()
-            .describe('Search depth (default: medium)'),
+        query: tool.schema.string().describe(t('tools.polli_web_search.arg_query')),
+        model: tool.schema.string().describe(t('tools.polli_web_search.arg_model')),
         include_sources: tool.schema.boolean().optional()
-            .describe('Include source URLs in response (default: true)'),
+            .describe(t('tools.polli_web_search.arg_include_sources')),
         recency: tool.schema.enum(['any', 'day', 'week', 'month']).optional()
-            .describe('Filter by recency (default: any)'),
+            .describe(t('tools.polli_web_search.arg_recency')),
     },
 
     async execute(args, context) {
         const apiKey = getApiKey();
         if (!apiKey) {
-            return `❌ Web Search nécessite une clé API Pollinations.
-🔧 Connectez votre clé avec /pollinations connect`;
+            return t('tools.polli_web_search.req_key');
         }
 
-        const mode = args.mode || 'medium';
-        const modeConfig = SEARCH_MODES[mode];
+        const model = args.model;
         const includeSources = args.include_sources !== false;
 
+        // Verify model
+        const textModels = getTextModels();
+        const isBetaModel = !textModels[model];
+
+        if (isBetaModel) {
+            emitStatusToast('warning', t('tools.polli_web_search.warn_beta', { model }), '🌐 web_search');
+        }
+
         // Cost Guard
-        const estimatedCost = estimateSearchCost(mode);
-        const costCheck = checkCostControl('polli_web_search', args, modeConfig.model, estimatedCost, 'audio'); // text models use audio category
+        const estimatedCost = estimateSearchCost(model);
+        const costCheck = checkCostControl('polli_web_search', args, model, estimatedCost, 'audio'); // text models use audio category for tokens
         if (!costCheck.allowed) {
-            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+            return costCheck.message || t('tools.polli_web_search.blocked');
         }
 
         // Emit start toast
         const config = loadConfig();
         const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
-        emitStatusToast('info', `${modeConfig.emoji} ${modeConfig.label}: ${args.query.substring(0, 40)}...${argsStr}`, '🌐 polli_web_search');
+        emitStatusToast('info', `🌐 Web Research [${model}]: ${args.query.substring(0, 40)}...${argsStr}`, '🌐 polli_web_search');
 
         // Metadata
-        context.metadata({ title: `${modeConfig.emoji} Search: ${args.query.substring(0, 50)}...` });
+        context.metadata({ title: `🔎 Res: ${args.query.substring(0, 50)}...` });
 
         try {
             // Build recency hint
             const recencyHints: Record<string, string> = {
-                any: '',
-                day: 'Focus on information from the last 24 hours. ',
-                week: 'Focus on information from the last week. ',
-                month: 'Focus on information from the last month. ',
+                any: t('tools.polli_web_search.recency_any'),
+                day: t('tools.polli_web_search.recency_day'),
+                week: t('tools.polli_web_search.recency_week'),
+                month: t('tools.polli_web_search.recency_month'),
             };
 
-            const systemPrompt = `${modeConfig.systemPrompt}
+            const systemPrompt = `You are a specialized deep web research assistant.
 ${recencyHints[args.recency || 'any']}
-${includeSources ? 'Always include source URLs at the end of your response.' : ''}`;
+${includeSources ? t('tools.polli_web_search.include_sources_prompt') : ''}`;
 
             const { data: responseData, headers: responseHeaders } = await httpsPost(
                 'https://gen.pollinations.ai/v1/chat/completions',
                 {
-                    model: modeConfig.model,
+                    model: model,
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: args.query },
                     ],
-                    max_tokens: modeConfig.maxTokens,
                 },
                 {
                     'Authorization': `Bearer ${apiKey}`,
@@ -172,34 +126,34 @@ ${includeSources ? 'Always include source URLs at the end of your response.' : '
                 lines.push('');
             }
 
-            lines.push(`${modeConfig.emoji} ${modeConfig.label}`);
+            lines.push(`🔎 Web Research Analytics`);
             lines.push(`━━━━━━━━━━━━━━━━━━`);
-            lines.push(`Query: ${args.query}`);
-            lines.push(`Mode: ${mode} | Modèle: ${modeConfig.model}`);
+            lines.push(t('tools.polli_web_search.result_query', { query: args.query }));
+            lines.push(t('tools.polli_web_search.result_model', { model: model }));
             if (args.recency && args.recency !== 'any') {
-                lines.push(`Récence: ${args.recency}`);
+                lines.push(t('tools.polli_web_search.result_recency', { recency: args.recency }));
             }
-            if (isTokenBased('audio', modeConfig.model)) {
+            if (isTokenBased('audio', model)) {
                 const maxCost = estimatedCost * 3;
-                lines.push(`Coût estimé: ${formatCost(actualCost)} (Max théorique: ${formatCost(maxCost)})`);
+                lines.push(t('tools.polli_web_search.result_cost_max', { cost: formatCost(actualCost), maxCost: formatCost(maxCost) }));
             } else {
-                lines.push(`Coût estimé: ${formatCost(actualCost)}`);
+                lines.push(t('tools.polli_web_search.result_cost', { cost: formatCost(actualCost) }));
             }
             lines.push('');
             lines.push(content);
 
             // Emit success toast
-            emitStatusToast('success', `Recherche terminée ✓ (${mode})`, '🌐 polli_web_search');
+            emitStatusToast('success', t('tools.polli_web_search.toast_success', { model }), '🌐 polli_web_search');
 
             return lines.join('\n');
 
         } catch (err: any) {
-            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🌐 polli_web_search');
+            emitStatusToast('error', t('tools.polli_web_search.toast_error', { error: err.message?.substring(0, 60) }), '🌐 polli_web_search');
 
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits pollen insuffisants.`;
+                return t('tools.polli_web_search.insufficient_pollen');
             }
-            return `❌ Erreur Web Search: ${err.message}`;
+            return t('tools.polli_web_search.error_prefix', { error: err.message });
         }
     },
 });

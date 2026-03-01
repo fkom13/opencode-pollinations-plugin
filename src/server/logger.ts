@@ -21,7 +21,9 @@ ensureLogDir();
 export function log(msg: string, file = LOG_FILE): void {
     try {
         ensureLogDir(); // Ensure dir exists (in case it was deleted)
-        fs.appendFileSync(file, `[${new Date().toISOString()}] ${msg}\n`);
+        // Censure du header Authorization (MOD-01)
+        const safeMsg = msg.replace(/(Authorization:\s*Bearer\s+)[a-zA-Z0-9.\-_]+/gi, '$1[CENSORED]');
+        fs.appendFileSync(file, `[${new Date().toISOString()}] ${safeMsg}\n`);
     } catch { }
 }
 

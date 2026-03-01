@@ -21,6 +21,7 @@ import {
     formatFileSize,
     getAudioModels,
 } from './shared.js';
+import { t } from '../../locales/index.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -30,53 +31,32 @@ const SUPPORTED_FORMATS = ['mp3', 'wav', 'm4a', 'webm', 'mp4', 'mpeg', 'mpga', '
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
 export const polliSttTool: ToolDefinition = tool({
-    description: `Transcribe audio to text using Pollinations AI.
-
-**🎙️ Models:**
-
-| Model | Supplier | Notes |
-|-------|----------|-------|
-| whisper-large-v3 | OpenAI | **DEFAULT** - High accuracy, long audio |
-| whisper-1 | OpenAI | Standard accuracy |
-| scribe | ElevenLabs | Scribe v2 model |
-
-**📁 Supported Formats:**
-mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
-
-**💡 Tips:**
-- Use \`whisper-large-v3\` for the highest accuracy on long recordings
-- Supports both local files and URLs
-
-**📋 Output:**
-- Returns transcribed text
-- Includes detected language (if available)
-- Shows processing time`,
+    description: t('tools.polli_transcribe_audio.desc'),
 
     args: {
-        file: tool.schema.string().describe('Path to audio file or URL to transcribe'),
-        model: tool.schema.string().optional().describe(`STT model (default: ${DEFAULT_MODEL})`),
-        language: tool.schema.string().optional().describe('Language hint (e.g., "en", "fr", "es")'),
-        save_transcript: tool.schema.boolean().optional().describe('Save transcript to file (default: false)'),
+        file: tool.schema.string().describe(t('tools.polli_transcribe_audio.arg_file')),
+        model: tool.schema.string().describe(t('tools.polli_transcribe_audio.arg_model', { model: DEFAULT_MODEL })),
+        language: tool.schema.string().optional().describe(t('tools.polli_transcribe_audio.arg_language')),
+        save_transcript: tool.schema.boolean().optional().describe(t('tools.polli_transcribe_audio.arg_save')),
     },
 
     async execute(args, context) {
         const apiKey = getApiKey();
         if (!apiKey) {
-            return `❌ La transcription nécessite une clé API Pollinations.
-🔧 Connectez votre clé avec /pollinations connect`;
+            return t('tools.polli_transcribe_audio.req_key');
         }
 
-        const model = args.model || DEFAULT_MODEL;
+        const model = args.model;
 
         // Validate model
         const audioModels = getAudioModels();
         const modelInfo = audioModels[model];
         if (!modelInfo || (modelInfo.type !== 'stt' && modelInfo.type !== 'both')) {
-            return `❌ Modèle STT inconnu: ${model}
-💡 Modèles STT disponibles: ${Object.entries(audioModels)
-                    .filter(([, info]) => info.type === 'stt' || info.type === 'both')
-                    .map(([name]) => name)
-                    .join(', ')}`;
+            const models = Object.entries(audioModels)
+                .filter(([, info]) => info.type === 'stt' || info.type === 'both')
+                .map(([name]) => name)
+                .join(', ');
+            return t('tools.polli_transcribe_audio.err_unknown_model', { model, models });
         }
 
         // Check file
@@ -86,7 +66,7 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
 
         if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
             // Download from URL
-            context.metadata({ title: `🎙️ STT: Downloading...` });
+            context.metadata({ title: t('tools.polli_transcribe_audio.toast_dl') });
 
             try {
                 const https = await import('https');
@@ -124,20 +104,19 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
                 }
 
             } catch (err: any) {
-                return `❌ Impossible de télécharger l'audio: ${err.message}`;
+                return t('tools.polli_transcribe_audio.err_dl', { error: err.message });
             }
 
         } else {
             // Local file
             if (!fs.existsSync(audioPath)) {
-                return `❌ Fichier non trouvé: ${audioPath}`;
+                return t('tools.polli_transcribe_audio.err_not_found', { path: audioPath });
             }
 
             // Check format
             const ext = path.extname(audioPath).toLowerCase().replace('.', '');
             if (!SUPPORTED_FORMATS.includes(ext)) {
-                return `⚠️ Format non supporté: .${ext}
-💡 Formats supportés: ${SUPPORTED_FORMATS.join(', ')}`;
+                return t('tools.polli_transcribe_audio.err_format', { ext, formats: SUPPORTED_FORMATS.join(', ') });
             }
 
             audioBuffer = fs.readFileSync(audioPath);
@@ -147,7 +126,7 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
         const fileSize = audioBuffer.length;
 
         // Metadata
-        context.metadata({ title: `🎙️ STT: ${model} (${formatFileSize(fileSize)})` });
+        context.metadata({ title: t('tools.polli_transcribe_audio.toast_start', { model, size: formatFileSize(fileSize) }) });
 
         try {
             let transcript = '';
@@ -176,28 +155,27 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
             detectedLanguage = data.language || '';
 
             if (!transcript) {
-                return `❌ Aucune transcription générée.
-💡 Vérifiez que l'audio contient de la parole claire.`;
+                return t('tools.polli_transcribe_audio.err_no_transcript');
             }
 
             // Build result
             const lines: string[] = [
-                `🎙️ Transcription Audio`,
+                t('tools.polli_transcribe_audio.res_title'),
                 `━━━━━━━━━━━━━━━━━━`,
-                `Fichier: ${fileName}`,
-                `Taille: ${formatFileSize(fileSize)}`,
-                `Modèle: ${model}`,
+                t('tools.polli_transcribe_audio.res_file', { file: fileName }),
+                t('tools.polli_transcribe_audio.res_size', { size: formatFileSize(fileSize) }),
+                t('tools.polli_transcribe_audio.res_model', { model }),
             ];
 
             if (detectedLanguage) {
-                lines.push(`Langue détectée: ${detectedLanguage}`);
+                lines.push(t('tools.polli_transcribe_audio.res_lang_det', { lang: detectedLanguage }));
             }
             if (args.language) {
-                lines.push(`Langue demandée: ${args.language}`);
+                lines.push(t('tools.polli_transcribe_audio.res_lang_req', { lang: args.language }));
             }
 
             lines.push(``);
-            lines.push(`📝 **Transcription:**`);
+            lines.push(t('tools.polli_transcribe_audio.res_transcript_title'));
             lines.push(``);
             lines.push(transcript);
 
@@ -213,23 +191,22 @@ mp3, wav, m4a, webm, mp4, mpeg, mpga, ogg
 
                 fs.writeFileSync(outputPath, transcript);
                 lines.push(``);
-                lines.push(`💾 Transcription sauvegardée: ${outputPath}`);
+                lines.push(t('tools.polli_transcribe_audio.res_saved', { path: outputPath }));
             }
 
             return lines.join('\n');
 
         } catch (err: any) {
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits insuffisants.`;
+                return t('tools.polli_transcribe_audio.err_pollen');
             }
             if (err.message?.includes('401') || err.message?.includes('403')) {
-                return `❌ Clé API invalide ou non autorisée.`;
+                return t('tools.polli_transcribe_audio.err_auth');
             }
             if (err.message?.includes('413') || err.message?.includes('too large')) {
-                return `❌ Fichier audio trop volumineux.
-💡 Essayez de compresser ou découper l'audio.`;
+                return t('tools.polli_transcribe_audio.err_large');
             }
-            return `❌ Erreur transcription: ${err.message}`;
+            return t('tools.polli_transcribe_audio.err_stt', { error: err.message });
         }
     },
 });

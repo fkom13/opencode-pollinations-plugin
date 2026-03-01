@@ -1,6 +1,7 @@
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
 import { loadConfig, saveConfig } from '../../server/config.js';
 import { emitStatusToast } from '../../server/toast.js';
+import { t } from '../../locales/index.js';
 
 export const polliConfigTool: ToolDefinition = tool({
     description: `[CRITICAL TOOL FOR ASSISTANT] View or modify the Pollinations plugin configuration.
@@ -35,7 +36,8 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
         enablePaidTools: tool.schema.boolean().optional().describe('Allow execution of paid or premium models using user Wallet balance (true/false)'),
         costThreshold: tool.schema.number().optional().describe('Cost threshold in USD/🌼 above which confirmation is required'),
         thresholdsTier: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 10 for 10%) for Free Tier.'),
-        thresholdsWallet: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 50 for 50%) for Wallet balance.')
+        thresholdsWallet: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 50 for 50%) for Wallet balance.'),
+        lang: tool.schema.enum(['en', 'fr', 'es', 'de', 'it']).optional().describe('Plugin language for commands and toasts (en, fr, es, de, it).')
     },
     async execute(args, context) {
         if (args.action === 'view') {
@@ -57,6 +59,7 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
             if (args.costConfirmationRequired !== undefined) updates.costConfirmationRequired = args.costConfirmationRequired;
             if (args.enablePaidTools !== undefined) updates.enablePaidTools = args.enablePaidTools;
             if (args.costThreshold !== undefined) updates.costThreshold = args.costThreshold;
+            if (args.lang !== undefined) updates.lang = args.lang;
 
             if (args.thresholdsTier !== undefined || args.thresholdsWallet !== undefined) {
                 updates.thresholds = { ...currentConfig.thresholds };
@@ -65,7 +68,7 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
             }
 
             if (Object.keys(updates).length === 0) {
-                return "No configuration values provided to update. Please specify at least one setting via the arguments.";
+                return t('tools.config.no_values');
             }
 
             saveConfig(updates);
@@ -76,14 +79,14 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
                     const val = updates[k as keyof typeof updates];
                     return `${k}=${typeof val === 'object' ? JSON.stringify(val) : val}`;
                 }).join(", ");
-                let toastMsg = "⚙️ Configuration modifiée par l'Agent";
+                let toastMsg = t('toasts.config_updated');
                 if (changedDetails.length > 0) {
                     toastMsg += ` (${changedDetails})`;
                 }
                 emitStatusToast('info', toastMsg, 'Config Update');
             }
 
-            return `Configuration successfully updated.\nApplied changes:\n${JSON.stringify(updates, null, 2)}\n\n(Note: Verify with polli_status if you need to know model prefixes).`;
+            return t('tools.config.success', { updates: JSON.stringify(updates, null, 2) });
         }
 
         return "Invalid action. Use 'view' or 'update'.";

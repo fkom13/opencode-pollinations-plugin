@@ -30,10 +30,12 @@ import {
     extractCostFromHeaders,
     isCostEstimatorEnabled,
     getAudioModels,
+    sanitizeFilename,
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
 import { emitStatusToast } from '../../server/toast.js';
+import { t } from '../../locales/index.js';
 
 // ─── TTS Configuration ────────────────────────────────────────────────────
 
@@ -53,49 +55,25 @@ const DEFAULT_FORMAT = 'mp3';
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
 export const polliGenAudioTool: ToolDefinition = tool({
-    description: `Convert text to speech using Pollinations AI.
-
-**🔊 Models:**
-
-| Model | Type | Voices | Format | Cost | Notes |
-|-------|------|--------|--------|------|-------|
-| openai-audio | TTS + STT | 6 | mp3, wav, pcm16 | Lowest | **DEFAULT** - GPT-4o Audio |
-| elevenlabs | TTS | 34 | mp3, wav, etc. | Higher | Expressive voices |
-
-**🎵 OpenAI Audio (Default, Recommended):**
-- Voices: \`alloy\`, \`echo\`, \`fable\`, \`onyx\`, \`nova\`, \`shimmer\`
-- Formats: \`mp3\` (default), \`wav\`, \`pcm16\`
-- Uses GPT-4o Audio Preview modalities endpoint
-- Lowest cost option
-
-**🎤 ElevenLabs:**
-- 34 expressive voices including: rachel, domi, bella, adam, etc.
-- Higher quality natural-sounding speech
-- More expensive but more expressive
-
-**💡 Tips:**
-- Use \`openai-audio\` for cost-effective TTS
-- Use \`elevenlabs\` for more expressive/character voices
-- For STT (transcription), use the \`transcribe_audio\` tool`,
+    description: t('tools.polli_gen_audio.desc'),
 
     args: {
-        text: tool.schema.string().describe('Text to convert to speech'),
-        voice: tool.schema.string().optional().describe(`Voice to use (default: ${DEFAULT_VOICE})`),
-        model: tool.schema.string().optional().describe(`TTS model (default: ${DEFAULT_MODEL})`),
-        format: tool.schema.enum(['mp3', 'wav', 'pcm16']).optional().describe('Audio format (default: mp3, openai-audio only)'),
-        save_to: tool.schema.string().optional().describe('Custom output directory'),
-        filename: tool.schema.string().optional().describe('Custom filename (without extension)'),
+        text: tool.schema.string().describe(t('tools.polli_gen_audio.arg_text')),
+        voice: tool.schema.string().optional().describe(t('tools.polli_gen_audio.arg_voice', { voice: DEFAULT_VOICE })),
+        model: tool.schema.string().describe(t('tools.polli_gen_audio.arg_model', { model: DEFAULT_MODEL })),
+        format: tool.schema.enum(['mp3', 'wav', 'pcm16']).optional().describe(t('tools.polli_gen_audio.arg_format')),
+        save_to: tool.schema.string().optional().describe(t('tools.polli_gen_audio.arg_save_to')),
+        filename: tool.schema.string().optional().describe(t('tools.polli_gen_audio.arg_filename')),
     },
 
     async execute(args, context) {
         const apiKey = getApiKey();
         if (!apiKey) {
-            return `❌ Le TTS nécessite une clé API Pollinations.
-🔧 Connectez votre clé avec /pollinations connect`;
+            return t('tools.polli_gen_audio.req_key');
         }
 
         const text = args.text;
-        const model = args.model || DEFAULT_MODEL;
+        const model = args.model;
         const voice = args.voice || DEFAULT_VOICE;
         const format = args.format || DEFAULT_FORMAT;
 
@@ -105,19 +83,16 @@ export const polliGenAudioTool: ToolDefinition = tool({
         const isBetaModel = !modelInfo;
 
         if (isBetaModel) {
-            emitStatusToast('warning', `Modèle "${model}" non référencé — mode (beta)`, '🔊 gen_audio');
+            emitStatusToast('warning', t('tools.polli_gen_audio.warn_beta', { model }), '🔊 gen_audio');
         }
 
         // Validate voice for selected model
         if (model === 'openai-audio' && !OPENAI_VOICES.includes(voice)) {
-            return `⚠️ Voix "${voice}" non supportée par openai-audio.
-💡 Voix OpenAI: ${OPENAI_VOICES.join(', ')}`;
+            return t('tools.polli_gen_audio.unsupported_openai', { voice, voices: OPENAI_VOICES.join(', ') });
         }
 
         if (model === 'elevenlabs' && !ELEVENLABS_VOICES.includes(voice)) {
-            return `⚠️ Voix "${voice}" non reconnue pour elevenlabs.
-💡 Voix ElevenLabs populaires: rachel, domi, bella, adam, josh...
-📋 Total: ${ELEVENLABS_VOICES.length} voix disponibles`;
+            return t('tools.polli_gen_audio.unsupported_elevenlabs', { voice, count: ELEVENLABS_VOICES.length });
         }
 
         // Estimate cost
@@ -126,13 +101,13 @@ export const polliGenAudioTool: ToolDefinition = tool({
         // Cost Guard check V2
         const costCheck = checkCostControl('polli_gen_audio', args, model, estimatedCost, 'audio');
         if (!costCheck.allowed) {
-            return costCheck.message || '❌ Opération bloquée par le Cost Guard.';
+            return costCheck.message || t('tools.polli_gen_audio.blocked');
         }
 
         // Emit start toast
         const config = loadConfig();
         const argsStr = config.gui?.logs === 'verbose' ? `\nParameters: ${JSON.stringify(args)}` : '';
-        emitStatusToast('info', `Génération audio: ${model} (${text.length} chars)${argsStr}`, '🔊 polli_gen_audio');
+        emitStatusToast('info', t('tools.polli_gen_audio.toast_start', { model, length: text.length }) + argsStr, '🔊 polli_gen_audio');
 
         // Metadata
         context.metadata({ title: `🔊 TTS: ${voice}${isBetaModel ? ' (beta)' : ''} (${text.length} chars)` });
@@ -226,7 +201,7 @@ export const polliGenAudioTool: ToolDefinition = tool({
 
             // Save audio
             let outputDir = getDefaultOutputDir('audio');
-            let filename = args.filename;
+            let filename = args.filename ? sanitizeFilename(args.filename) : undefined;
 
             if (args.save_to) {
                 if (args.save_to.match(/\.(mp3|wav|ogg|m4a)$/i)) {
@@ -263,45 +238,45 @@ export const polliGenAudioTool: ToolDefinition = tool({
                 lines.push('');
             }
 
-            lines.push(`🔊 Audio Généré (TTS)`);
+            lines.push(t('tools.polli_gen_audio.res_title'));
             lines.push(`━━━━━━━━━━━━━━━━━━`);
-            lines.push(`Texte: "${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"`);
-            lines.push(`Modèle: ${model}${isBetaModel ? ' (beta)' : model === 'openai-audio' ? ' (recommandé)' : ''}`);
-            lines.push(`Voix: ${voice}`);
-            lines.push(`Format: ${actualFormat}`);
-            lines.push(`Durée estimée: ~${estimatedDuration}s`);
-            lines.push(`Fichier: ${filePath}`);
-            lines.push(`Taille: ${formatFileSize(fileSize)}`);
+            lines.push(t('tools.polli_gen_audio.res_text', { text: `${text.substring(0, 60)}${text.length > 60 ? '...' : ''}` }));
+            lines.push(t('tools.polli_gen_audio.res_model', { model: `${model}${isBetaModel ? ' (beta)' : model === 'openai-audio' ? ' (recommandé)' : ''}` }));
+            lines.push(t('tools.polli_gen_audio.res_voice', { voice }));
+            lines.push(t('tools.polli_gen_audio.res_format', { format: actualFormat }));
+            lines.push(t('tools.polli_gen_audio.res_est_duration', { duration: estimatedDuration }));
+            lines.push(t('tools.polli_gen_audio.res_file', { path: filePath }));
+            lines.push(t('tools.polli_gen_audio.res_size', { size: formatFileSize(fileSize) }));
 
             // Cost info
             if (isCostEstimatorEnabled()) {
                 if (isTokenBased('audio', model)) {
                     const maxCost = estimatedCost * 3;
-                    lines.push(`Coût: ${formatCost(actualCost)} (Max théorique: ${formatCost(maxCost)})`);
+                    lines.push(t('tools.polli_gen_audio.res_cost_tok', { cost: formatCost(actualCost), maxCost: formatCost(maxCost) }));
                 } else {
-                    lines.push(`Coût: ${formatCost(actualCost)}`);
+                    lines.push(t('tools.polli_gen_audio.res_cost', { cost: formatCost(actualCost) }));
                 }
             }
 
             if (responseHeaders['x-request-id']) {
-                lines.push(`Request ID: ${responseHeaders['x-request-id']}`);
+                lines.push(t('tools.polli_gen_audio.res_request_id', { id: responseHeaders['x-request-id'] }));
             }
 
             // Emit success toast
-            emitStatusToast('success', `Audio généré ✓ (${model}, ${voice})`, '🔊 gen_audio');
+            emitStatusToast('success', t('tools.polli_gen_audio.toast_success', { model, voice }), '🔊 gen_audio');
 
             return lines.join('\n');
 
         } catch (err: any) {
-            emitStatusToast('error', `Erreur: ${err.message?.substring(0, 60)}`, '🔊 gen_audio');
+            emitStatusToast('error', t('tools.polli_gen_audio.toast_err', { error: err.message?.substring(0, 60) }), '🔊 gen_audio');
 
             if (err.message?.includes('402') || err.message?.includes('Payment')) {
-                return `❌ Crédits pollen insuffisants.`;
+                return t('tools.polli_gen_audio.err_pollen');
             }
             if (err.message?.includes('401') || err.message?.includes('403')) {
-                return `❌ Clé API invalide ou non autorisée.`;
+                return t('tools.polli_gen_audio.err_auth');
             }
-            return `❌ Erreur TTS: ${err.message}`;
+            return t('tools.polli_gen_audio.err_tts', { error: err.message });
         }
     },
 });

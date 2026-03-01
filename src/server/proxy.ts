@@ -8,6 +8,7 @@ import { buildConnectResponse } from './connect-response.js';
 
 import { log } from './logger.js';
 import { getConfigDir } from './config.js';
+import { t } from '../locales/index.js';
 
 // --- PERSISTENCE: SIGNATURE MAP (Multi-Round Support) ---
 const SIG_FILE = path.join(getConfigDir(), 'pollinations-signature.json');
@@ -18,7 +19,7 @@ try {
     if (fs.existsSync(SIG_FILE)) {
         signatureMap = JSON.parse(fs.readFileSync(SIG_FILE, 'utf-8'));
     }
-} catch (e) { }
+} catch (e) { log(`[Proxy Signature] Error loading: ${e}`); }
 
 function saveSignatureMap() {
     try {
@@ -399,7 +400,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                         const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
                         if (paidModels.includes(actualModel)) {
                             log(`[AlwaysFree] BLOCKED: Paid Only Model (${actualModel}).`);
-                            emitStatusToast('warning', `🚫 Modèle payant bloqué: ${actualModel}`, 'AlwaysFree Mode');
+                            emitStatusToast('warning', t('proxy.warnings.paid_blocked_alwaysfree_title', { model: actualModel }), 'AlwaysFree Mode');
 
                             const blockMsg = {
                                 id: `chatcmpl-block-${Date.now()}`,
@@ -410,7 +411,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                                     index: 0,
                                     message: {
                                         role: 'assistant',
-                                        content: `🚫 **Modèle payant non disponible en mode AlwaysFree**\n\nLe modèle \`${actualModel}\` consomme directement votre wallet (💎 Paid Only).\n\n**Solutions :**\n• \`/pollinations config mode pro\` — Autorise les modèles payants avec protection wallet\n• \`/pollinations config mode manual\` — Aucune restriction, contrôle total`
+                                        content: t('proxy.warnings.paid_blocked_alwaysfree_msg', { model: actualModel })
                                     },
                                     finish_reason: 'stop'
                                 }],
@@ -422,23 +423,25 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                             return;
                         }
                     }
-                } catch (e) { }
+                } catch (e) { log(`[Proxy AlwaysFree] Error checking paid models: ${e}`); }
 
                 if (!isFallbackActive && quota.tier === 'error') {
                     // Network error or unknown error (but NOT auth_limited, handled above)
                     log(`[SafetyNet] AlwaysFree Mode: Quota Check Failed. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'AlwaysFree Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = "Quota Unreachable (Safety)";
+                    fallbackReason = t('proxy.warnings.quota_unreachable_msg');
                 } else {
                     const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
                     if (tierRatio <= (config.thresholds.tier / 100)) {
                         log(`[SafetyNet] AlwaysFree Mode: Tier (${(tierRatio * 100).toFixed(1)}%) <= Threshold (${config.thresholds.tier}%). Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'AlwaysFree Mode');
                         actualModel = config.fallbacks.free.main.replace('free/', '');
                         isEnterprise = false;
                         isFallbackActive = true;
-                        fallbackReason = `Daily Tier < ${config.thresholds.tier}% (Wallet Protected)`;
+                        fallbackReason = t('proxy.warnings.tier_limit_msg', { threshold: config.thresholds.tier });
                     }
                 }
             }
@@ -448,18 +451,34 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 if (quota.tier === 'error') {
                     // Network error or unknown
                     log(`[SafetyNet] Pro Mode: Quota Unreachable. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'Pro Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = "Quota Unreachable (Safety)";
+                    fallbackReason = t('proxy.warnings.quota_unreachable_msg');
                 } else {
                     const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
                     if (quota.walletBalance < config.thresholds.wallet && tierRatio <= (config.thresholds.tier / 100)) {
                         log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet} AND Tier < ${config.thresholds.tier}%. Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.wallet_tier_critical_title', { wallet: config.thresholds.wallet, tier: config.thresholds.tier }), 'Pro Mode');
                         actualModel = config.fallbacks.free.main.replace('free/', '');
                         isEnterprise = false;
                         isFallbackActive = true;
-                        fallbackReason = `Wallet & Tier Critical`;
+                        fallbackReason = t('proxy.warnings.wallet_tier_critical_msg', { wallet: config.thresholds.wallet, tier: config.thresholds.tier });
+                    } else if (quota.walletBalance < config.thresholds.wallet) {
+                        log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet}. Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.wallet_limit_title', { wallet: config.thresholds.wallet }), 'Pro Mode');
+                        actualModel = config.fallbacks.free.main.replace('free/', '');
+                        isEnterprise = false;
+                        isFallbackActive = true;
+                        fallbackReason = t('proxy.warnings.wallet_limit_msg', { threshold: config.thresholds.wallet });
+                    } else if (tierRatio <= (config.thresholds.tier / 100)) {
+                        log(`[SafetyNet] Pro Mode: Tier < ${config.thresholds.tier}%. Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'Pro Mode');
+                        actualModel = config.fallbacks.free.main.replace('free/', '');
+                        isEnterprise = false;
+                        isFallbackActive = true;
+                        fallbackReason = t('proxy.warnings.tier_limit_msg', { threshold: config.thresholds.tier });
                     }
                 }
             }
@@ -706,7 +725,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     if (fetchRes.status === 402) {
                         fallbackReason = "Insufficient Funds (Upstream 402)";
                         // Force refresh quota cache so next pre-flight check is accurate
-                        try { await getQuotaStatus(true); } catch (e) { }
+                        try { await getQuotaStatus(true); } catch (e) { log(`[Proxy Quota] Silent refresh error: ${e}`); }
                     }
                     else if (fetchRes.status === 429) fallbackReason = "Rate Limit (Upstream 429)";
                     else if (fetchRes.status === 401) fallbackReason = "Invalid API Key (Upstream 401)";

@@ -11,6 +11,7 @@ import { loadConfig } from '../../server/config.js';
 import { emitStatusToast } from '../../server/toast.js';
 import { ModelRegistry } from '../../server/models/index.js';
 import { formatCost } from './shared.js';
+import { t } from '../../locales/index.js';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -121,8 +122,8 @@ export function checkCostControl(
         return {
             allowed: true,
             message: _isTokenBased
-                ? `💰 Coût validé (Max théorique: ${formatCost(maxCost)})`
-                : `💰 Coût validé: ${formatCost(estimatedCost)}`
+                ? t('cost_guard.cost_validated_max', { maxCost: formatCost(maxCost) })
+                : t('cost_guard.cost_validated', { cost: formatCost(estimatedCost) })
         };
     }
 
@@ -132,10 +133,7 @@ export function checkCostControl(
             return {
                 allowed: false,
                 reason: 'paid_model_disabled',
-                message: `❌ **Wallet Protégé**
-Modèle: ${modelName} (payant)
-enablePaidTools: désactivé
-Résultat: REJETÉ, demandez à l'utilisateur d'activer le mode enablePaidTools via la commande pollinations appropriée si vous voulez utiliser ce modèle.`,
+                message: t('cost_guard.wallet_protected', { modelName }),
             };
         }
         // TODO: (Future) Add Check against FreeTier Quota empty API
@@ -153,19 +151,16 @@ Résultat: REJETÉ, demandez à l'utilisateur d'activer le mode enablePaidTools 
             timestamp: Date.now()
         });
 
+        const reasonText = _isTokenBased
+            ? t('cost_guard.reason_token', { cost: formatCost(estimatedCost), maxCost: formatCost(maxCost), limit: formatCost(costLimit) })
+            : t('cost_guard.reason_fixed', { cost: formatCost(estimatedCost), limit: formatCost(costLimit) });
+
         return {
             allowed: false, // NOT allowed to proceed automatically
             confirmationRequired: true,
             pendingRequestId: reqId,
             reason: 'cost_exceeds_limit',
-            message: `⚠️ **Confirmation de Coût Requise**
-${_isTokenBased
-                    ? `Le coût estimé moyen est de ${formatCost(estimatedCost)} cependant ce modèle token-based peut vous coûter jusqu'à ${formatCost(maxCost)} ce qui dépasse le seuil défini (${formatCost(costLimit)}).`
-                    : `Le coût estimé de cette action (${formatCost(estimatedCost)}) dépasse le seuil défini (${formatCost(costLimit)}).`
-                }
-💳 **Pour valider cette transaction et exécuter la requête**, 
-Présentez le cout à l'utilisateur et demandez explicitement sa validation !!! 
-(S'il valide, appelez l'outil \`polli_gen_confirm\` avec l'ID : \`${reqId}\` et l'action \`confirm\`. S'il refuse, appelez l'outil avec l'action \`cancel\` pour purger la requête).`,
+            message: t('cost_guard.confirmation_req', { reasonText, reqId }),
         };
     }
 
@@ -174,8 +169,9 @@ Présentez le cout à l'utilisateur et demandez explicitement sa validation !!!
         allowed: true,
         message: estimatedCost > 0
             ? (_isTokenBased
-                ? `💰 Coût estimé moyen: ${formatCost(estimatedCost)} (Max: ${formatCost(maxCost)})`
-                : `💰 Coût estimé: ${formatCost(estimatedCost)}`)
+                ? t('cost_guard.estimated_max', { cost: formatCost(estimatedCost), maxCost: formatCost(maxCost) })
+                : t('cost_guard.estimated', { cost: formatCost(estimatedCost) })
+            )
             : undefined,
     };
 }

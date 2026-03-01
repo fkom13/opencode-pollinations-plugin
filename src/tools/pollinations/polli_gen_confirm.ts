@@ -1,5 +1,6 @@
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
 import { getPendingRequest, removePendingRequest } from './cost-guard.js';
+import { t } from '../../locales/index.js';
 
 // Import tools to re-execute them
 import { polliGenImageTool } from './gen_image.js';
@@ -10,12 +11,11 @@ import { polliWebSearchTool } from './polli_web_search.js';
 import { formatCost } from './shared.js';
 
 export const polliGenConfirmTool: ToolDefinition = tool({
-    description: `Valide et exécute (ou annule) une requête Pollinations précédemment suspendue par le Cost Guard.
-Cet outil doit être appelé lorsque l'utilisateur a explicitement donné son accord (ou refusé) pour dépenser le montant estimé.`,
+    description: t('tools.polli_gen_confirm.desc'),
 
     args: {
-        request_id: tool.schema.string().describe('L\'identifiant de la requête (req_xxxx) retourné par l\'outil bloqué.'),
-        action: tool.schema.enum(['confirm', 'cancel']).describe('L\'action à effectuer : confirm pour lancer la génération, cancel pour l\'annuler définitivement.'),
+        request_id: tool.schema.string().describe(t('tools.polli_gen_confirm.arg_request_id')),
+        action: tool.schema.enum(['confirm', 'cancel']).describe(t('tools.polli_gen_confirm.arg_action')),
     },
 
     async execute(args, context) {
@@ -24,12 +24,12 @@ Cet outil doit être appelé lorsque l'utilisateur a explicitement donné son ac
         const pendingReq = getPendingRequest(reqId);
 
         if (!pendingReq) {
-            return `❌ Session introuvable ou expirée pour l'ID: ${reqId}. Veuillez relancer la génération initiale.`;
+            return t('tools.polli_gen_confirm.not_found', { reqId });
         }
 
         if (action === 'cancel') {
             removePendingRequest(reqId);
-            return `✅ La requête ${reqId} a été annulée et supprimée de la file d'attente. Action abandonnée.`;
+            return t('tools.polli_gen_confirm.cancelled', { reqId });
         }
 
         const toolRegistry: Record<string, any> = {
@@ -42,7 +42,7 @@ Cet outil doit être appelé lorsque l'utilisateur a explicitement donné son ac
 
         const targetTool = toolRegistry[pendingReq.toolName];
         if (!targetTool) {
-            return `❌ Outil cible inconnu: ${pendingReq.toolName}`;
+            return t('tools.polli_gen_confirm.unknown_tool', { toolName: pendingReq.toolName });
         }
 
         // Add a bypass flag to arguments
@@ -50,7 +50,7 @@ Cet outil doit être appelé lorsque l'utilisateur a explicitement donné son ac
         const CONFIRM_SYMBOL = Symbol.for('polli_confirmed');
         (executionArgs as any)[CONFIRM_SYMBOL] = true;
 
-        context.metadata({ title: `✅ Confirmed: ${pendingReq.toolName} (${formatCost(pendingReq.estimatedCost)})` });
+        context.metadata({ title: t('tools.polli_gen_confirm.toast_confirmed', { toolName: pendingReq.toolName, cost: formatCost(pendingReq.estimatedCost) }) });
 
         // Execute original tool and clean up
         removePendingRequest(reqId);

@@ -98,6 +98,7 @@ export interface PollinationsConfigV5 {
     costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
     statusBar: boolean;
     costEstimator: boolean; // Show cost estimates in tool outputs (default: true)
+    lang?: string; // Interface language (en, fr, etc.)
 }
 
 // LOAD PACKAGE VERSION
@@ -108,7 +109,7 @@ try {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
         PKG_VERSION = pkg.version;
     }
-} catch (e) { }
+} catch (e) { logSystem(`[Config] Error loading package version: ${e}`); }
 
 const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     version: PKG_VERSION,
@@ -125,6 +126,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     keyHasAccessToProfile: true, // Default true for legacy keys
     statusBar: true,
     costEstimator: true, // Show cost estimates by default
+    lang: 'en', // Default language is English
 };
 
 import { log as logSystem } from './logger.js';
@@ -150,15 +152,15 @@ function readConfigFromDisk(): PollinationsConfigV5 {
     let configTime = 0;
     let authTime = 0;
 
-    try { if (fs.existsSync(CONFIG_FILE)) configTime = fs.statSync(CONFIG_FILE).mtime.getTime(); } catch (e) { }
-    try { if (fs.existsSync(CONFIG_FILE)) configTime = fs.statSync(CONFIG_FILE).mtime.getTime(); } catch (e) { }
+    try { if (fs.existsSync(CONFIG_FILE)) configTime = fs.statSync(CONFIG_FILE).mtime.getTime(); } catch (e) { logSystem(`[Config] Error stat config: ${e}`); }
+    try { if (fs.existsSync(CONFIG_FILE)) configTime = fs.statSync(CONFIG_FILE).mtime.getTime(); } catch (e) { logSystem(`[Config] Error stat config: ${e}`); }
     try {
         for (const f of EXTERNAL_PATHS.auth) {
             if (fs.existsSync(f)) {
                 authTime = Math.max(authTime, fs.statSync(f).mtime.getTime());
             }
         }
-    } catch (e) { }
+    } catch (e) { logSystem(`[Config] Error stat auth candidates: ${e}`); }
 
     // 1. EXTRACT KEYS
     // 1. EXTRACT KEYS
@@ -172,7 +174,7 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         } catch (e) {
             logConfig(`ERROR reading config.json: ${e}`);
             // Backup corrupt file to avoid overwrite loop
-            try { fs.copyFileSync(CONFIG_FILE, CONFIG_FILE + '.corrupt'); } catch { }
+            try { fs.copyFileSync(CONFIG_FILE, CONFIG_FILE + '.corrupt'); } catch (e) { logSystem(`[Config] Error copying corrupt config: ${e}`); }
         }
     }
 
@@ -233,7 +235,7 @@ function readConfigFromDisk(): PollinationsConfigV5 {
                     }
                 }
             }
-        } catch (e) { }
+        } catch (e) { logSystem(`[Config] Error reading global override config: ${e}`); }
     }
 
     // 4. APPLY

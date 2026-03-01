@@ -128,6 +128,7 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
     ];
 
     const statsPromise = fetchJson('https://enter.pollinations.ai/api/model-stats', headers).catch(() => ({ data: [] }));
+    const openapiPromise = fetchJson('https://enter.pollinations.ai/api/docs/open-api/generate-schema', headers).catch(() => ({}));
 
     const fetches = endpoints.map(async ({ url, fallbackCategory }) => {
         try {
@@ -139,9 +140,9 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
         }
     });
 
-    const resultsRaw = await Promise.all([...fetches, statsPromise]);
+    const resultsRaw = await Promise.all([...fetches, statsPromise, openapiPromise]);
 
-    // Le dernier élément du Promise.all est model-stats
+    const openapiRaw: any = resultsRaw.pop();
     const statsRaw: any = resultsRaw.pop();
     const statsList = Array.isArray(statsRaw?.data) ? statsRaw.data : [];
     const statsMap = new Map<string, number>();
@@ -168,6 +169,46 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
     }
 
     log(`[ModelFetcher] Total: ${results.length} models (${results.filter(m => m.category === 'image').length} image, ${results.filter(m => m.category === 'video').length} video, ${results.filter(m => m.category === 'audio').length} audio, ${results.filter(m => m.category === 'text').length} text)`);
+
+    // --- ENRICH MODELS WITH OPENAPI CONSTRAINTS ---
+    try {
+        const videoParams = openapiRaw?.paths?.['/video/{prompt}']?.get?.parameters || [];
+        const durationParam = videoParams.find((p: any) => p.name === 'duration');
+        const durationDesc = durationParam?.description || '';
+
+        const audioParams = openapiRaw?.paths?.['/audio/{text}']?.get?.parameters || [];
+        const musicParam = audioParams.find((p: any) => p.name === 'duration');
+        const musicDesc = musicParam?.description || '';
+
+        for (const model of results) {
+            if (model.category === 'video' && durationDesc) {
+                const regex = new RegExp(`${model.name}:\\s*([^.]+)s`, 'i');
+                const match = durationDesc.match(regex);
+                if (match) {
+                    const constraint = match[1].toLowerCase();
+                    if (constraint.includes('or')) {
+                        const numbers = constraint.match(/\d+/g)?.map(Number) || [];
+                        if (numbers.length > 0) model.durationRange = [Math.min(...numbers), Math.max(...numbers)];
+                    } else if (constraint.match(/(\d+)\s*(?:-|to)\s*(\d+)/)) {
+                        const m = constraint.match(/(\d+)\s*(?:-|to)\s*(\d+)/);
+                        if (m) model.durationRange = [Number(m[1]), Number(m[2])];
+                    } else if (constraint.match(/(?:up to\s*~?|max\s*)\s*(\d+)/)) {
+                        const m = constraint.match(/(?:up to\s*~?|max\s*)\s*(\d+)/);
+                        if (m) model.durationRange = [1, Number(m[1])];
+                    }
+                }
+            }
+            if (model.name === 'elevenmusic' && musicDesc) {
+                const boundsMatch = musicDesc.match(/(\d+)\s*-\s*(\d+)/);
+                if (boundsMatch) {
+                    model.durationRange = [Number(boundsMatch[1]), Number(boundsMatch[2])];
+                }
+            }
+        }
+    } catch (e) {
+        log(`[ModelFetcher] Failed to parse OpenAPI constraints: ${e}`);
+    }
+    // ----------------------------------------------
 
     return results;
 }

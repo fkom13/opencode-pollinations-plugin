@@ -6,6 +6,7 @@ import { DetailedUsageEntry } from './pollinations-api.js';
 import { generatePollinationsConfig } from './generate-config.js';
 import { ModelRegistry } from './models/index.js';
 import type { PollinationsModel, ModelCategory } from './models/types.js';
+import { t } from '../locales/index.js';
 
 // --- HELPER: STRICT PERMISSION CHECK ---
 interface CheckResult { ok: boolean; status?: number | string; reason?: string; }
@@ -50,14 +51,10 @@ function checkEndpoint(ep: string, key: string): Promise<CheckResult> {
 }
 
 export async function checkKeyPermissions(key: string): Promise<CheckResult> {
-    // SEQUENTIAL CHECK (Avoid Rate Limits on Key Verification)
-    const endpoints = ['/account/profile', '/account/balance', '/account/usage'];
-
-    for (const ep of endpoints) {
-        const res = await checkEndpoint(ep, key);
-        if (!res.ok) {
-            return { ok: false, reason: `${ep} (${res.status})` };
-        }
+    // SINGLE CHECK to reduce latency and avoid rate-limits (HIGH-01)
+    const res = await checkEndpoint('/account/profile', key);
+    if (!res.ok) {
+        return { ok: false, reason: `/account/profile (${res.status})` };
     }
     return { ok: true };
 }
@@ -211,12 +208,12 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             // Just return a message telling them to use the tool.
             return {
                 handled: true,
-                response: "💡 Pour ajouter une clé : Utilisez l'outil `rmbg_keys`\nExemple : `rmbg_keys action=add key=bkgc_...`"
+                response: t('commands.generic.add_key_hint')
             };
         default:
             return {
                 handled: true,
-                error: `Commande inconnue: ${subCommand}. Utilisez /pollinations help`
+                response: t('commands.generic.unknown_command', { cmd: subCommand })
             };
     }
 }
@@ -230,14 +227,14 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
         const config = loadConfig();
         return {
             handled: true,
-            response: `Mode actuel: ${config.mode}`
+            response: t('commands.mode.current', { mode: config.mode })
         };
     }
 
     if (!['manual', 'alwaysfree', 'pro'].includes(mode)) {
         return {
             handled: true,
-            error: `Mode invalide: ${mode}. Valeurs: manual, alwaysfree, pro`
+            error: t('commands.mode.invalid', { mode })
         };
     }
 
@@ -251,10 +248,10 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
         if (!key) {
             // If NO key, allow alwaysfree? Yes.
             // If HAS key, verify it? Yes.
-            if (mode === 'pro') return { handled: true, error: "❌ Mode Pro nécessite une Clé API configurée." };
+            if (mode === 'pro') return { handled: true, error: t('commands.mode.pro_requires_key') };
         }
 
-        emitStatusToast('info', 'Vérification des droits...', 'Mode Pro');
+        emitStatusToast('info', t('commands.mode.verifying'), 'Mode Pro');
         try {
             // Force verify permissions NOW
             const check = await checkKeyPermissions(key as string);
@@ -262,13 +259,13 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
                 saveConfig({ mode: 'manual', keyHasAccessToProfile: false });
                 return {
                     handled: true,
-                    error: `❌ **Mode Refusé**\nVotre clé est limitée (Code ${check.status}: ${check.reason}).\nPassage en mode **manual**.`
+                    error: t('commands.mode.denied', { status: check.status || '?', reason: check.reason || '?' })
                 };
             }
             // Valid -> Ensure flag is true
             saveConfig({ keyHasAccessToProfile: true });
         } catch (e: any) {
-            return { handled: true, error: `❌ Erreur de vérification: ${e.message}` };
+            return { handled: true, error: t('commands.mode.verify_error', { error: e.message }) };
         }
     }
 
@@ -276,12 +273,12 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
     saveConfig({ mode: mode as PollinationsConfigV5['mode'] });
     const config = loadConfig();
     if (config.gui.status !== 'none') {
-        emitStatusToast('success', `Mode changé vers: ${mode}`, 'Pollinations Config');
+        emitStatusToast('success', t('commands.mode.success', { mode }), 'Pollinations Config');
     }
 
     return {
         handled: true,
-        response: `✅ Mode changé: ${mode}`
+        response: t('commands.mode.success', { mode })
     };
 }
 
@@ -295,42 +292,42 @@ export async function handleUsageCommand(args: string[]): Promise<CommandResult>
         const timeUntilReset = quota.nextResetAt.getTime() - Date.now();
         const durationStr = formatDuration(Math.max(0, timeUntilReset));
 
-        let response = `### 🌸 Dashboard Pollinations (${config.mode.toUpperCase()})\n\n`;
+        let response = t('commands.usage.title', { mode: config.mode.toUpperCase() });
 
-        response += `**Ressources**\n`;
-        response += `- **Tier**: ${quota.tierEmoji} ${quota.tier.toUpperCase()} (${quota.tierLimit} pollen/jour)\n`;
-        response += `- **Quota**: ${formatPollen(quota.tierLimit - quota.tierRemaining)} / ${formatPollen(quota.tierLimit)}\n`;
-        response += `- **Usage**: ${progressBar(quota.tierLimit - quota.tierRemaining, quota.tierLimit)}\n`;
-        response += `- **Wallet**: $${quota.walletBalance.toFixed(2)}\n`;
-        response += `- **Reset**: ${resetDate} (dans ${durationStr})\n`;
+        response += t('commands.usage.resources');
+        response += t('commands.usage.tier', { emoji: quota.tierEmoji, tier: quota.tier.toUpperCase(), limit: quota.tierLimit });
+        response += t('commands.usage.quota', { remaining: formatPollen(quota.tierLimit - quota.tierRemaining), limit: formatPollen(quota.tierLimit) });
+        response += t('commands.usage.usage_bar', { bar: progressBar(quota.tierLimit - quota.tierRemaining, quota.tierLimit) });
+        response += t('commands.usage.wallet', { balance: quota.walletBalance.toFixed(2) });
+        response += t('commands.usage.reset', { date: resetDate, duration: durationStr });
 
         if (isFull && config.apiKey) {
             if (config.keyHasAccessToProfile === false) {
-                response += `\n> ⚠️ *Votre clé API ne permet pas l'accès aux détails d'usage (Restriction).*`;
+                response += t('commands.usage.restricted_key');
             } else {
                 const lastReset = calculateResetDate(quota.nextResetAt);
                 const usageData = await fetchUsageForPeriod(config.apiKey, lastReset);
                 if (usageData && usageData.length > 0) {
                     const stats = calculateCurrentPeriodStats(usageData, lastReset, quota.tierLimit);
 
-                    response += `\n### 📊 Détail Période (depuis ${lastReset.toLocaleTimeString()})\n`;
-                    response += `**Total Requêtes**: ${stats.totalRequests} | **Tokens**: In ${formatTokens(stats.inputTokens)} / Out ${formatTokens(stats.outputTokens)}\n\n`;
+                    response += t('commands.usage.period_detail', { time: lastReset.toLocaleTimeString() });
+                    response += t('commands.usage.total_reqs', { reqs: stats.totalRequests, inTok: formatTokens(stats.inputTokens), outTok: formatTokens(stats.outputTokens) });
 
-                    response += `| Modèle | Reqs | Coût | Tokens |\n`;
-                    response += `| :--- | :---: | :---: | :---: |\n`;
+                    response += t('commands.usage.table_head1');
+                    response += t('commands.usage.table_head2');
 
                     const sorted = Array.from(stats.models.entries()).sort((a, b) => b[1].cost - a[1].cost);
                     for (const [model, data] of sorted) {
                         response += `| \`${model}\` | ${data.requests} | ${formatPollen(data.cost)} | ${formatTokens(data.inputTokens + data.outputTokens)} |\n`;
                     }
                 } else {
-                    response += `\n> ⚠️ *Impossible de récupérer l'historique détaillé.*\n`;
+                    response += t('commands.usage.no_history');
                 }
             }
         } else if (isFull) {
-            response += `\n> ⚠️ *Mode Full nécessite une API Key.*\n`;
+            response += t('commands.usage.full_requires_key');
         } else {
-            response += `\n_Tapez_ \`/pollinations usage full\` _pour le détail._\n`;
+            response += t('commands.usage.hint_full');
         }
 
         return { handled: true, response: response.trim() };
@@ -349,7 +346,7 @@ function handleFallbackCommand(args: string[]): CommandResult {
         const enterConfig = `Enter: agent=${config.fallbacks.enter.agent}`;
         return {
             handled: true,
-            response: `Fallbacks actuels:\n${freeConfig}\n${enterConfig}`
+            response: t('commands.fallback.current', { free: freeConfig, enter: enterConfig })
         };
     }
 
@@ -370,7 +367,7 @@ function handleFallbackCommand(args: string[]): CommandResult {
 
     return {
         handled: true,
-        response: `✅ Fallback (Free) configuré: main=${main}, agent=${agent || config.fallbacks.free.agent}`
+        response: t('commands.fallback.success', { main, agent: agent || config.fallbacks.free.agent })
     };
 }
 
@@ -380,12 +377,12 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
     if (!key) {
         return {
             handled: true,
-            error: `Utilisation: /pollinations connect <votre_clé_api>`
+            error: t('commands.connect.usage')
         };
     }
 
     // 1. Universal Validation (No Syntax Check) - Functional Check
-    emitStatusToast('info', 'Vérification de la clé...', 'Pollinations Config');
+    emitStatusToast('info', t('commands.connect.verifying'), 'Pollinations Config');
 
     try {
         const models = await generatePollinationsConfig(key, true);
@@ -419,16 +416,16 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
             // If Limited -> FORCE MANUAL
             if (isLimited) {
                 saveConfig({ apiKey: key, mode: 'manual', keyHasAccessToProfile: false });
-                forcedModeMsg = `\n⚠️ **Clé Limitée** (Echec: ${limitReason}) -> Mode **MANUEL** forcé.\n*Requis pour mode Auto: Profile, Balance & Usage.*`;
+                forcedModeMsg = t('commands.connect.limited', { reason: limitReason });
             } else {
                 saveConfig({ apiKey: key, keyHasAccessToProfile: true }); // Let user keep current mode or default
             }
 
-            emitStatusToast('success', `Clé Valide! (${enterpriseModels.length} modèles Pro débloqués)`, 'Pollinations Config');
+            emitStatusToast('success', t('commands.connect.success_toast', { count: enterpriseModels.length }), 'Pollinations Config');
 
             return {
                 handled: true,
-                response: `✅ **Connexion Réussie! (Injection à chaud)**\n- Clé: \`${masked}\`\n- Modèles Pro Débloqués: ${enterpriseModels.length} (dont ${diamondCount} 💎 Paid)${forcedModeMsg}`
+                response: t('commands.connect.success_response', { key: masked, count: enterpriseModels.length, diamond: diamondCount, forced_msg: forcedModeMsg })
             };
         } else {
             // FAILURE (Valid JSON but no Enterprise models - likely Invalid Key or Free plan only?)
@@ -448,22 +445,22 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
             const isFallback = models.some(m => m.name.includes('(Fallback)') && m.id.startsWith('enter/'));
 
             if (isFallback) {
-                throw new Error("Clé rejetée par l'API (Accès refusé ou invalide).");
+                throw new Error(t('proxy.errors.key_rejected'));
             }
 
             // If we are here, we got no enter models, or empty list?
             // If key is valid but has no access?
-            throw new Error("Aucun modèle Enterprise détecté pour cette clé.");
+            throw new Error(t('proxy.errors.no_enter_models'));
         }
 
     } catch (e: any) {
         // 3. FAILURE HANDLING - Revert to FREE
         saveConfig({ apiKey: undefined, mode: 'manual' }); // Clear Key, Set Manual
 
-        emitStatusToast('error', `Clé Invalide. Retour au mode Gratuit.`, 'Pollinations Config');
+        emitStatusToast('error', t('toasts.invalid_key_revert'), 'Pollinations Config');
         return {
             handled: true,
-            error: `❌ **Échec Connexion**: ${e.message || e}\n\nLa configuration a été réinitialisée (Mode Gratuit/Manuel).`
+            error: t('proxy.errors.invalid_key_free_mode', { error: e.message || String(e) })
         };
     }
 }
@@ -473,33 +470,42 @@ function handleConfigCommand(args: string[]): CommandResult {
 
     if (!key) {
         const config = loadConfig();
-        const k = config.apiKey ? (config.apiKey.length > 8 ? `${config.apiKey.substring(0, 5)}****${config.apiKey.substring(config.apiKey.length - 4)}` : '****') : 'Non configurée';
+        const k = config.apiKey ? (config.apiKey.length > 8 ? `${config.apiKey.substring(0, 5)}****${config.apiKey.substring(config.apiKey.length - 4)}` : '****') : t('commands.config.not_configured');
 
-        const markdownResponse = `## ⚙️ Configuration Pollinations (v${config.version || 'inconnue'})
-*Vous pouvez utiliser indifféremment \`/pollinations\` ou son alias court \`/poll\` pour toutes ces commandes.*
-Voici l'état actuel de votre configuration locale.
+        const markdownResponse = `${t('commands.config.title', { version: config.version || 'inconnue' })}
+${t('commands.config.alias_note')}
+${t('commands.config.intro')}
 
-| Paramètre | Valeur Actuelle | Rôle | Commande |
-|-----------|-----------------|------|----------|
-| **apiKey** | \`${k}\` | Votre clé API secrète (BYOK) | \`/poll connect <key>\` |
-| **mode** | \`${config.mode}\` | Mode d'accès | \`/poll mode <manual/pro/alwaysfree>\` |
-| **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | Sécurité: Désactiver outils payants | \`/poll config enablePaidTools <true/false>\` |
-| **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | Demande confirmation si le seuil d'alerte est dépassé | \`/poll config costConfirmationRequired <true/false>\` |
-| **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | Seuil d'alerte coût Outils | \`/poll config costThreshold <X>\` |
-| **cost_estimator**| \`${config.costEstimator ?? true}\` | Afficher l'estimation de coût dans les Toasts | \`/poll config cost_estimator <true/false>\` |
-| **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | Modèle de repli Chat vers l'univers free legacy | \`/poll fallback <main> <agent>\` |
-| **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| Modèle de repli Agent vers l'univers free legacy | \`/poll fallback <main> <agent>\` |
-| **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| Modèle Agent principal (free/* ou enter/*) | *Géré automatiquement* |
-| **status_gui** | \`${config.gui?.status || 'all'}\` | Toasts de statut (all, alert, none) | \`/poll config status_gui <all/alert/none>\` |
-| **logs_gui** | \`${config.gui?.logs || 'error'}\` | Niveau de log (verbose, error) | \`/poll config logs_gui <verbose/error/none>\` |
-| **threshold_tier** | \`${config.thresholds?.tier || 80}%\` | Alerte limite Quotidienne Gratuite | \`/poll config threshold_tier <1-100>\` |
-| **threshold_wallet** | \`${config.thresholds?.wallet || 80}%\` | Alerte baisse de Wallet Premium | \`/poll config threshold_wallet <1-100>\` |
-| **status_bar** | \`${config.statusBar ?? true}\` | Affiche l'icône dans la barre de statut | \`/poll config status_bar <true/false>\` |`;
+${t('commands.config.table_headers')}
+${t('commands.config.table_divider')}
+| **apiKey** | \`${k}\` | ${t('commands.config.api_key_role')} | \`/poll connect <key>\` |
+| **mode** | \`${config.mode}\` | ${t('commands.config.mode_role')} | \`/poll mode <manual/pro/alwaysfree>\` |
+| **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | ${t('commands.config.enablePaidTools_role')} | \`/poll config enablePaidTools <true/false>\` |
+| **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | ${t('commands.config.costConfirmationRequired_role')} | \`/poll config costConfirmationRequired <true/false>\` |
+| **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | ${t('commands.config.costThreshold_role')} | \`/poll config costThreshold <X>\` |
+| **cost_estimator**| \`${config.costEstimator ?? true}\` | ${t('commands.config.cost_estimator_role')} | \`/poll config cost_estimator <true/false>\` |
+| **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | ${t('commands.config.fallback_main_role')} | \`/poll fallback <main> <agent>\` |
+| **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_agent_role')} | \`/poll fallback <main> <agent>\` |
+| **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_enter_role')} | *${t('commands.config.managed_auto')}* |
+| **status_gui** | \`${config.gui?.status || 'all'}\` | ${t('commands.config.status_gui_role')} | \`/poll config status_gui <all/alert/none>\` |
+| **logs_gui** | \`${config.gui?.logs || 'error'}\` | ${t('commands.config.logs_gui_role')} | \`/poll config logs_gui <verbose/error/none>\` |
+| **threshold_tier** | \`${config.thresholds?.tier || 80}%\` | ${t('commands.config.threshold_tier_role')} | \`/poll config threshold_tier <1-100>\` |
+| **threshold_wallet** | \`${config.thresholds?.wallet || 80}%\` | ${t('commands.config.threshold_wallet_role')} | \`/poll config threshold_wallet <1-100>\` |
+| **status_bar** | \`${config.statusBar ?? true}\` | ${t('commands.config.status_bar_role')} | \`/poll config status_bar <true/false>\` |
+| **lang** | \`${config.lang || 'en'}\` | ${t('commands.config.lang_role')} | \`/poll config lang <en/fr/es/de/it>\` |`;
 
         return {
             handled: true,
             response: markdownResponse
         };
+    }
+
+    if (key === 'lang' && value) {
+        if (!['en', 'fr', 'es', 'de', 'it'].includes(value)) {
+            return { handled: true, error: "Valeurs supportées: en, fr, es, de, it" };
+        }
+        saveConfig({ lang: value });
+        return { handled: true, response: `✅ lang = ${value} (redémarrage recommandé)` };
     }
 
     if (key === 'toast_verbosity' && value) {
@@ -585,39 +591,24 @@ Voici l'état actuel de votre configuration locale.
         return { handled: true, response: `✅ costConfirmationRequired = ${enabled}` };
     }
 
+
+
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmation`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, lang`
     };
 }
 
 function handleHelpCommand(): CommandResult {
     const help = `
-### 🌸 Pollinations Plugin - Commandes V6
-*(L'alias \`/poll\` est géré et recommandé à la place de \`/pollinations\` !)*
+${t('commands.help.title')}
+${t('commands.help.alias_note')}
 
-**Mode & Usage**
-- **\`/poll mode [mode]\`**: Change le mode (manual, alwaysfree, pro).
-- **\`/poll usage [full]\`**: Affiche le dashboard (full = détail).
-- **\`/poll fallback <main> [agent]\`**: Configure le Safety Net.
+${t('commands.help.mode_usage')}
 
-**Configuration**
-- **\`/poll config [key] [value]\`**:
-   - \`status_gui\`: none, alert, all
-  - \`logs_gui\`: none, error, verbose
-  - \`threshold_tier\` / \`threshold_wallet\`: 0-100
-  - \`status_bar\`: true/false
-  - \`cost_estimator\`: true/false (show cost in outputs)
-  - \`enablePaidTools\`: true/false (wallet protection)
-  - \`costThreshold\`: seuil en pollen (défaut: 0.15)
-  - \`costConfirmationRequired\`: true/false (confirmation coût)
+${t('commands.help.configuration')}
 
-**Modèles & Pricing**
-- **\`/poll models [type]\`**: Liste des modèles (type: image, video, audio, text)
-- **\`/poll pricing\`**: Tableau de pricing détaillé
-- **\`/poll infos\`**: Explications sur les Tiers et le Pollen
-
-> 💡 **RMBG keys**: Use the \`rmbg_keys\` tool (works with any model).
+${t('commands.help.models_pricing')}
 `.trim();
 
     return { handled: true, response: help };
@@ -640,7 +631,7 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
     if (!ModelRegistry.isReady()) {
         return {
             handled: true,
-            response: '⏳ Le registre des modèles est en cours de chargement. Réessayez dans quelques secondes.'
+            response: t('commands.models.loading')
         };
     }
 
@@ -652,10 +643,10 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
             const freeRes = await fetch('https://text.pollinations.ai/models', { signal: AbortSignal.timeout(4000) });
             if (freeRes.ok) {
                 const freeData = await freeRes.json();
-                sections.push('## 🎁 Modèles Free Universe (Communautaire / Legacy API)\n');
-                sections.push(`> *Bonus gratuit disponible sans clé via l'API \`text.pollinations.ai\`. Dédié au Chat textuel.*\n`);
-                sections.push('| Nom | Alias / ID | Description | Vision | Tools |');
-                sections.push('|-----|------------|-------------|--------|-------|');
+                sections.push(t('commands.models.free_title'));
+                sections.push(t('commands.models.free_desc'));
+                sections.push(t('commands.models.free_headers1'));
+                sections.push(t('commands.models.free_headers2'));
                 for (const m of freeData) {
                     const desc = m.description || m.name;
                     const aliases = m.aliases ? m.aliases.join(', ') : m.name;
@@ -664,17 +655,17 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
                 sections.push('');
             }
         } catch (e) {
-            sections.push('## 🎁 Modèles Free Universe\n*(⚠️ L\'API communautaire text.pollinations.ai semble temporairement indisponible)*\n');
+            sections.push(t('commands.models.free_error'));
         }
     }
 
-    sections.push('## 📋 Modèles Pollinations Enter (Principaux)\n');
+    sections.push(t('commands.models.enter_title'));
 
     const categories: { cat: ModelCategory; emoji: string; label: string }[] = [
-        { cat: 'image', emoji: '🎨', label: 'Image' },
-        { cat: 'video', emoji: '🎬', label: 'Video' },
-        { cat: 'audio', emoji: '🔊', label: 'Audio' },
-        { cat: 'text', emoji: '📝', label: 'Text' },
+        { cat: 'image', emoji: '🎨', label: t('commands.models.cats.image') },
+        { cat: 'video', emoji: '🎬', label: t('commands.models.cats.video') },
+        { cat: 'audio', emoji: '🔊', label: t('commands.models.cats.audio') },
+        { cat: 'text', emoji: '📝', label: t('commands.models.cats.text') },
     ];
 
     for (const { cat, emoji, label } of categories) {
@@ -685,9 +676,9 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
 
         const sorted = [...models].sort((a, b) => a.name.localeCompare(b.name));
 
-        sections.push(`### ${emoji} ${label} (${models.length} modèles)\n`);
-        sections.push('| Nom | ID | Description | Capabilities | Input | Output |');
-        sections.push('|-----|----|-------------|--------------|-------|--------|');
+        sections.push(t('commands.models.cat_title', { emoji, label, count: models.length }));
+        sections.push(t('commands.models.enter_headers1'));
+        sections.push(t('commands.models.enter_headers2'));
 
         for (const m of sorted) {
             const { nom, desc } = parseNameDesc(m);
@@ -699,8 +690,8 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
         sections.push('');
     }
 
-    sections.push('> **Capabilities** : 👁️ vision · 🧠 reasoning · 🎙️ audio in · 🔍 search · 🔊 audio out · 💻 code exec');
-    sections.push('> **Other** : 💎 PAID ONLY (Wallet direct) · 📏 Contexte API max');
+    sections.push(t('commands.models.capabilities'));
+    sections.push(t('commands.models.other'));
 
     return { handled: true, response: sections.join('\n') };
 }
@@ -751,18 +742,23 @@ function buildInputIcons(m: PollinationsModel): string {
 
 function buildOutputCost(m: PollinationsModel): string {
     const p = m.pricing;
+    const tokens = t('commands.pricing_units.tokens');
+    const s = t('commands.pricing_units.s');
+    const img = t('commands.pricing_units.img');
+    const tok = t('commands.pricing_units.tok');
+
     if (p.completionImageTokens) {
         return p.completionImageTokens < 0.0001
-            ? `~tokens`
-            : `${p.completionImageTokens} 🌻/img`;
+            ? tokens
+            : `${p.completionImageTokens} ${img}`;
     }
-    if (p.completionVideoSeconds) return `${p.completionVideoSeconds} 🌻/s`;
-    if (p.completionVideoTokens) return `~tokens/s`;
-    if (p.completionAudioTokens) return `${p.completionAudioTokens} 🌻/tok`;
-    if (p.completionAudioSeconds) return `${p.completionAudioSeconds} 🌻/s`;
-    if (p.promptAudioSeconds) return `${p.promptAudioSeconds} 🌻/s`;
-    if (p.completionTextTokens) return `${p.completionTextTokens} 🌻/tok`;
-    return '~tokens';
+    if (p.completionVideoSeconds) return `${p.completionVideoSeconds} ${s}`;
+    if (p.completionVideoTokens) return `${tokens}/s`;
+    if (p.completionAudioTokens) return `${p.completionAudioTokens} ${tok}`;
+    if (p.completionAudioSeconds) return `${p.completionAudioSeconds} ${s}`;
+    if (p.promptAudioSeconds) return `${p.promptAudioSeconds} ${s}`;
+    if (p.completionTextTokens) return `${p.completionTextTokens} ${tok}`;
+    return tokens;
 }
 
 export async function handleInfosCommand(): Promise<CommandResult> {
@@ -790,73 +786,27 @@ export async function handleInfosCommand(): Promise<CommandResult> {
     };
     const tierEmoji = emojis[tier] || '❓';
 
-    const response = `## 🍯💚 POLLINATIONS OPENCODE PLUGIN 💚🍯
+    const response = `${t('commands.infos.title', { name })}
+${t('commands.infos.features_title')}
+${t('commands.infos.features_free')}
 
-Bienvenue **${name}** sur le plugin Pollinations pour OpenCode !
+${t('commands.infos.features_pro')}
 
-Ce plugin vous permet de générer du code, des images, d'analyser des vidéos et interagir avec les meilleurs modèles d'Intelligence Artificielle de manière totalement transparente et intégrée à votre environnement de travail. Accédez aux capacités des LLMs de pointe, que ce soit via des requêtes de chat, la refonte de votre base de code, ou directement dans le terminal.
- 
-**Ce Que ce plugin vous apporte en plus ! :**
+${t('commands.infos.features_config')}
 
-**🛠️ Outils Gratuits Intégrés (Toujours disponibles) :**
-- \`gen_qrcode\` / \`gen_diagram\` / \`gen_palette\` : Outils visuels et dev.
-- \`remove_background\` : Détourage d'image natif.
-- \`extract_frames\` / \`extract_audio\` : Extraction rapide de contenu média.
-- \`file_to_url\` : Hébergement instantané de vos fichiers locaux en ligne.
+${t('commands.infos.tiers_title', { emoji: tierEmoji, tier: tier.toUpperCase() })}
+${t('commands.infos.about')}
 
-**💎 Outils Pollinations (Premium - Automatisés avec votre Clé) :**
-- \`polli_gen_image\` : Génération d'images (Flux, Seedream, Gemini) + support Image-to-Image.
-- \`polli_gen_video\` : Génération vidéo text-to-video / image-to-video (Veo, Wan, LTX...).
-- \`polli_gen_audio\`/\`polli_stt\` : Transcription Whisper, Text-to-Speech ElevenLabs.
-- \`polli_gen_music\` : Moteur de musique générative.
-- \`polli_web_search\` : Recherche connectée pour étendre la base de contexte de l'agent.
+${t('commands.infos.levels_title')}
+${t('commands.infos.levels_list')}
 
-- **Une configuration granulaire**, des modes de gestions de vos tokens et de vos outils, de la sécurisation des coûts des outils consommant du pollen...
+${t('commands.infos.beta_note')}
 
----
+${t('commands.infos.pollen_title')}
 
-> **Your tiers:** ${tierEmoji} ${tier.toUpperCase()}
+${t('commands.infos.pollen_get')}
 
----
-
-## 🌍 Qu'est-ce que pollinations.ai ?
-pollinations.ai est une plateforme d'IA open-source construite par et pour la communauté. Nous offrons une API unifiée pour les images, le texte, l'audio et la vidéo. Tout fonctionne de manière ouverte : notre code, notre feuille de route, nos conversations. Des centaines de développeurs construisent déjà des outils, des jeux, des bots et des expériences farfelues avec nous. Vous êtes les bienvenus !
-
-Pas de boîtes noires. Pas de dépendance exclusive (vendor lock-in). Juste une API conviviale et un Discord rempli de personnes qui s'entraident réellement.
-
----
-
-## 📈 Évoluez votre Palier (Tier)
-Pour les développeurs qui créent avec pollinations.ai. Montez de niveau pour gagner plus de Pollen quotidien.
-
-- 🦠 **Microbe** (0.1 pollen/jour) : Pour débloquer : S'inscrire
-- 🍄 **Spore** (1 pollen/jour) : Pour débloquer : Vérification automatique (Vérifié à l'inscription)
-- 🌱 **Seed** (3 pollen/jour) : Pour débloquer : 8+ points dev (Mise à niveau automatique hebdomadaire)
-- 🌸 **Flower** (10 pollen/jour) : Pour débloquer : Publier une application (🌱 Doit être Seed en premier)
-- 🍯 **Nectar** (20 pollen/jour) : Bientôt disponible 🔮
-
-✨ *Nous sommes en bêta ! Nous apprenons ce qui fonctionne le mieux pour notre communauté et pourrons ajuster les valeurs de pollen et les règles des paliers. Merci de faire partie de cette aventure !*
-
----
-
-## 💎 Qu'est-ce que le Pollen ?
-Faire tourner des modèles d'IA coûte de l'argent. Le Pollen est notre moyen de faire fonctionner les serveurs sans publicité ni revente de vos données. Un crédit simple et unique pour tous les modèles — prévisible, transparent, sans surprises. 
-
-**$1 ≈ 1 Pollen** (les prix peuvent évoluer). Vous le dépensez pour faire des appels API.
-
-## 🛒 Comment obtenir du Pollen ?
-Il y a trois moyens d'ajouter du Pollen à votre solde :
-
-1. **L'acheter** : Achetez des packs de Pollen directement par carte bancaire. Ce Pollen va dans votre portefeuille (wallet) et n'expire jamais. Des packs simples, pas d'abonnements, pas de paliers bloquants.
-2. **Pollen Quotidien** : Pendant et après la bêta, les développeurs inscrits reçoivent des subventions quotidiennes de Pollen pour soutenir leurs expérimentations, en fonction de leur palier (microbe, spore, seed, flower, nectar).
-3. **Le Gagner** : Complétez des récompenses communautaires ponctuelles (comme aider à résoudre un problème technique ou contribuer au projet). Chaque contribution vous fait gagner du Pollen. Nous le remarquons et nous partageons.
-
----
-
-### 💡 Comment le Pollen est-il dépensé ?
-1. **Les subventions quotidiennes (Tier grants)** sont utilisées en premier.
-2. **Le Pollen acheté (Wallet)** est utilisé une fois le Pollen quotidien épuisé.
-⚠️ **Exception** : 💎 Les modèles *Paid Only* (ex: claude-large, veo, seedream-pro) requièrent uniquement du Pollen acheté.`;
+${t('commands.infos.pollen_spend')}`;
 
     return { handled: true, response };
 }
@@ -877,14 +827,14 @@ export function createCommandHooks() {
 
                 if (result.handled) {
                     if (result.error) {
-                        output.error = `❌ **Erreur:** ${result.error}`;
+                        output.error = t('commands.generic.tui_error', { error: result.error });
                     } else if (result.response) {
                         output.response = result.response;
                     }
                     // If no response and no error, assume handled silently (like appendPrompt)
                 }
             } catch (err: any) {
-                output.error = `❌ **Erreur Critique:** ${err.message}`;
+                output.error = t('commands.generic.tui_critical', { error: err.message });
             }
         },
 
@@ -895,7 +845,7 @@ export function createCommandHooks() {
                 handleCommand('addKey'); // Return help message
             } else if (cmd === 'pollinations.usage') {
                 const res = await handleCommand('usage');
-                if (res.response) globalClient?.tui.showToast({ title: "Pollinations Usage", metadata: { type: 'info', message: "Voir logs pour usage détaillé" } });
+                if (res.response) globalClient?.tui.showToast({ title: "Pollinations Usage", metadata: { type: 'info', message: t('commands.generic.tui_usage_msg') } });
             } else if (cmd === 'pollinations.mode') {
                 // UI Pollution Fix: SILENCE.
                 // User explicitly requested NO messages.

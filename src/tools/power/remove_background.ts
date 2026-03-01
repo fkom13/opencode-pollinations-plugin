@@ -4,6 +4,7 @@ import * as https from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
 import { resolveOutputDir, formatFileSize, TOOL_DIRS } from '../shared.js';
+import { sanitizeFilename } from '../pollinations/shared.js';
 import { getConfigDir } from '../../server/config.js';
 
 // ─── Provider Defaults ───────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ function loadKeys(): KeyStore {
         if (fs.existsSync(KEYS_FILE)) {
             return JSON.parse(fs.readFileSync(KEYS_FILE, 'utf-8'));
         }
-    } catch { }
+    } catch (e) { console.error(`[BackgroundCut] Error loading keys: ${e}`); }
     return { keys: [], currentIndex: 0 };
 }
 
@@ -48,7 +49,7 @@ function advanceKeyIndex(): void {
         const dir = path.dirname(KEYS_FILE);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(KEYS_FILE, JSON.stringify(store, null, 2));
-    } catch { }
+    } catch (e) { console.error(`[BackgroundCut] Error saving key rotation: ${e}`); }
 }
 
 
@@ -93,12 +94,14 @@ function downloadFile(url: string): Promise<Buffer> {
 
 function getImageSize(filePath: string): { width: number; height: number } | null {
     try {
-        const { execSync } = require('child_process');
-        const output = execSync(`file "${filePath}"`).toString();
-        // Regex for "IDAT, 800 x 600," or ", 800 x 600,"
-        const match = output.match(/, (\d+) ?x ?(\d+),/);
-        if (match) {
-            return { width: parseInt(match[1], 10), height: parseInt(match[2], 10) };
+        const { spawnSync } = require('child_process');
+        const result = spawnSync('file', ['-b', filePath], { encoding: 'utf-8', shell: false });
+        if (result.stdout) {
+            // Regex for "IDAT, 800 x 600," or ", 800 x 600,"
+            const match = result.stdout.match(/, (\d+) ?x ?(\d+),/);
+            if (match) {
+                return { width: parseInt(match[1], 10), height: parseInt(match[2], 10) };
+            }
         }
     } catch (e) {
         // Fallback or silence
@@ -131,7 +134,7 @@ async function removeViaCut(imageData: Buffer, filename: string, mimeType: strin
             const data = JSON.parse(fs.readFileSync(vipPath, 'utf-8'));
             if (data.vip_key) vipKey = data.vip_key;
         }
-    } catch { }
+    } catch (e) { console.error(`[Cut VIP] Error loading vip key: ${e}`); }
 
     if (vipKey) {
         // Mode Fast-Lane (VIP) : la requête passe directement en tête de file
@@ -324,6 +327,10 @@ export const removeBackgroundTool: ToolDefinition = tool({
             }
         } else {
             finalFilename = `${path.basename(args.image_path, ext)}_nobg${targetExt}`;
+        }
+
+        if (args.filename) {
+            finalFilename = sanitizeFilename(finalFilename);
         }
 
         const outputPath = path.join(outputDir, finalFilename);
