@@ -34,15 +34,45 @@ If anyone wants to try it out, break it, or contribute on GitHub, your feedback 
 **[Showcase] Plugin OpenCode v6.2 : Moteur 100% Dynamique & Toute la puissance Unifiée de Pollinations ! 🚀**
 
 Salut à tous ! 👋
-Pour les développeurs ici qui utilisent OpenCode, je viens de publier la version 6.2 du plugin Pollinations. Si vous aviez testé l'ancienne v5.9, elle comportait quelques modèles codés en dur et des fonctionnalités limitées.
+Pour les développeurs ici qui utilisent OpenCode, je viens de publier la version 6.2 du plugin Pollinations. Si vous aviez testé l'ancienne v5.9, elle mappait déjà les modeles supportant les tools et adaptait les payloads et les variants dynamiquement pour la cli opencode.
 
-Le moteur a été entièrement réécrit pour véritablement exploiter la puissance et la générosité de l'API Unifiée de Pollinations. Le plugin dispose désormais d'un **Moteur 100% Dynamique** qui parse les endpoints `/models` à la volée.
+Le moteur a été entièrement réécrit pour véritablement exploiter la puissance et la générosité de l'API Unifiée de Pollinations. Le plugin dispose désormais d'un **Moteur 100% Dynamique** qui parse les endpoints `/models` à la volée et des erreurs et améliorations ont été apporté au gres de l'evoliution de l'api beta.
 
 Ce qui est nouveau :
-- **Accès Unifié aux Meilleurs Modèles** : Accédez à plus de 25 modèles de pointe directement dans votre IDE (**DeepSeek-R1, LLaMA-3.3-70B, GPT-4o, Mistral**) en profitant du généreux "Free Tier" de Pollinations.
-- **Le Multimodal est là** : Génération de Texte, Image (Flux), Audio, Musique et interpolation Vidéo intégrés nativement comme Outils pour l'Agent (Tools).
-- **Architecture BYOK (Bring Your Own Key)** totalement intégrée pour ceux qui souhaitent utiliser leur clé personnelle pour repousser les limites.
-- **Recherche Web** : Votre agent peut faire des recherches via `perplexity` et `nomnom` pour ancrer son code dans le réel.
+### 💎 Outils Génératifs Intégrés (aprés avoir entré votre clé API)
+- `polli_gen_image` : Modèles d'imagerie de pointe (`Flux`, `Midjourney`, `Gemini`).
+- `polli_gen_video` : Puissantes capacités Text-to-Video et Image-to-Video (`Wan`, `Veo`, `LTX`, `Reveal`).
+- `polli_gen_audio` & `polli_gen_music` : Synthèse vocale magique (ElevenLabs) et Musique Générative.
+- `polli_stt` : Transcription vocale de haute voltige (Whisper V3).
+- `polli_web_search` : Recherche Web Connectée pour du contexte sourcé.
+
+### 🧰 Outils Bonus créateur
+- `remove_background` : Détourage de fond d'image ultra-rapide intégré (Toujours Gratuit).
+- `gen_qrcode`, `extract_frames`, `extract_audio` : Utilitaires (Toujours Gratuit).
+
+### 💻 Liste Complète des Commandes du Terminal
+Utilisez l'alias **`/poll`** ou **`/pollinations`**.
+- `/poll help` : Affiche le tableau d'aide interactif.
+- `/poll connect` : Outil de configuration Bring Your Own Key (Interactif).
+- `/poll usage full` : Tableau de bord en temps réel (Stats), Freetiers actifs et Portefeuille (Wallet Balance).
+- `/poll config` : Paramétrez finement les Cost Guards, les Logs, la Langue et l'Affichage.
+- `/poll models` : Vérifiez l'état des Modèles disponibles.
+- `/poll pricing` : Affichez la tarification unifiée en temps réel (Estimation du Coût Moyen).
+- `/poll fallback` : Définissez le modèle de Chat du Filet de Sécurité ultime.
+- `/poll mode` : Changez de mode sans passer par l'API.
+- `/poll infos` : Découvrez les règles de la communauté et le système de niveaux.
+
+Les tools, commandes et les configurations du pluggin sont désormais accessibles meme si le providert du modele n'est pas un modele pollinations.
+
+### 🛡️ Le "Cost Guard" & le "Safety Net"
+Nous avons introduit des protections fondamentales pour garantir que votre flux de travail ne s'interrompe jamais et que votre portefeuille (Wallet ou free tiers) soit sous votre controle
+- **Filet de sécurité (Safety Net)** : Si vous utilisez des modèles premium et que votre quota quotidien de Pollen s'épuise en plein milieu d'une session de chat, le plugin bascule silencieusement et automatiquement sur un modèle gratuit. *Fini les erreurs de blocage (429).*
+- **Cost Guard pour les Outils** : Les Agents d'OpenCode peuvent faire preuve de zèle. Si un Agent tente de dépenser trop de Pollens pour générer une vidéo lourde ou une musique, le plugin intercepte la demande. Nous avons implémenté un flux asynchrone qui vous demande une confirmation manuelle avant d'exécuter des générations coûteuses. Vous gardez le contrôle.
+
+### 🌍 Support Multilingue Natif (i18n)
+Pollinations pour OpenCode parle votre langue nativement.
+- L'Interface Moteur, les Notifications (Toasts), les Retours d'Outils et les Commandes sont intégralement traduits en **Anglais (Défaut)**, **Français**, **Espagnol**, **Allemand**, et **Italien**.
+- Tapez `/poll config lang <fr|es|de|it>` dans le terminal pour changer instantanément.
 
 Je suis un développeur solo qui essaie de faire avancer l'écosystème. L'architecture a été sécurisée, et une suite de tests propre a été ajoutée pour les futurs contributeurs.
 Si vous souhaitez le tester, le casser ou contribuer sur GitHub, vos retours seraient incroyablement précieux ! 🙏
