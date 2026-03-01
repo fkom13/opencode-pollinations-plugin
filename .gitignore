@@ -40,3 +40,12 @@ opencode-pollinations-plugin_tree_code.md
 .gencodedoc/
 .gencodedoc.yaml
 _archs/
+
+# Scripts Scratchpads (Keep only pertinent tools for GitHub)
+scripts/test_*
+scripts/test-*
+!scripts/test-suite.cjs
+!scripts/test-regression-v4.sh
+scripts/validate*
+scripts/run*
+scripts/check_config_path.js
