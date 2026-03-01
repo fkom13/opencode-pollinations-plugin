@@ -87,7 +87,7 @@ In the past, Pollinations mainly relied on ad-funded network traffic. Today, run
 | 🌱 **Seed** | **3 Pollen/day** | Active GitHub Developer (8+ points) |
 | 🌸 **Flower** | **10 Pollen/day** | **Publish an App** (Like this Plugin!) |
 
-> 🎁 **Get your Free Personal Key (BYOK) on [Pollinations.ai](https://pollinations.ai) to boost OpenCode!**
+> 🎁 **Get your Free Personal Key (BYOK) on [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) to boost OpenCode!**
 
 *(Note: We still maintain the "Free Universe" fallback for basic chat (`openai-fast`) which requires no key, but its capacity is very limited and mainly designed as a safety net).*
 

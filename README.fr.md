@@ -83,7 +83,7 @@ Le **Pollen** est notre système de crédit unifié ($1 ≈ 1 Pollen). En connec
 | 🌱 **Seed** | **3 Pollen/jour** | Développeur GitHub Actif (8+ points) |
 | 🌸 **Flower** | **10 Pollen/jour** | **Publier une App** (Comme ce Plugin !) |
 
-> 🎁 **Obtenez votre Clé Personnelle Gratuite (BYOK) sur [Pollinations.ai](https://pollinations.ai) pour booster OpenCode !**
+> 🎁 **Obtenez votre Clé Personnelle Gratuite (BYOK) sur [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) pour booster OpenCode !**
 
 *(Note : Nous maintenons toujours le fallback "Free Universe" pour le chat de base (`openai-fast`) qui ne nécessite aucune clé, mais sa capacité est très limitée et principalement pensée comme un filet de sécurité).*
 

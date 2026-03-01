@@ -83,7 +83,7 @@ In der Vergangenheit vertraute Pollinations hauptsächlich auf werbefinanzierten
 | 🌱 **Seed** | **3 Pollen/Tag** | Aktiver GitHub-Entwickler (8+ Punkte) |
 | 🌸 **Flower** | **10 Pollen/Tag** | **Eigene App veröffentlichen** (Wie dieses Plugin!) |
 
-> 🎁 **Holen Sie sich Ihren kostenlosen persönlichen Schlüssel (BYOK) auf [Pollinations.ai](https://pollinations.ai) um OpenCode zu stärken!**
+> 🎁 **Holen Sie sich Ihren kostenlosen persönlichen Schlüssel (BYOK) auf [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) um OpenCode zu stärken!**
 
 *(Hinweis: Wir behalten weiterhin den "Free Universe" Fallback für den Basis-Chat (`openai-fast`) bei, der keinen Schlüssel erfordert, aber seine Kapazität ist sehr begrenzt und wird hauptsächlich als Sicherheitsnetz betrachtet).*
 
