@@ -28,7 +28,7 @@
     ],
     "scripts": {
         "build": "tsc",
-        "test": "node scripts/test-suite.cjs",
+        "test": "node scripts/tests/test-suite.cjs",
         "prepare": "npm run build",
         "package": "npx vsce package"
     },
