@@ -42,7 +42,7 @@ Pollinations.ai ist eine von der Community für die Community entwickelte Open-S
 
 ### 🧰 Creator Bonus Tools
 - `remove_background` : Ultraschnelle, integrierte Bildhintergrundentfernung (Immer gratis).
-- `gen_qrcode`, `extract_frames`, `extract_audio` : Dienstprogramme (Immer gratis).
+- `gen_qrcode(diagram and palettes)`, `extract_frames`, `extract_audio`, `file_to_url`: Dienstprogramme (Immer gratis).
 
 ### 💻 Komplette Liste der Terminal-Befehle
 Verwenden Sie den Alias **`/poll`** oder **`/pollinations`**.

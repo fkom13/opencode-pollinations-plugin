@@ -42,7 +42,7 @@ Más allá de la discusión textual, conectar su clave da a los Agentes de OpenC
 
 ### 🧰 Herramientas Bonus para Creadores
 - `remove_background` : Eliminación de fondo de imagen ultrarrápida integrada (Siempre Gratis).
-- `gen_qrcode`, `extract_frames`, `extract_audio` : Utilidades (Siempre Gratis).
+- `gen_qrcode(diagram and palettes)`, `extract_frames`, `extract_audio`, `file_to_url`: Utilidades (Siempre Gratis).
 
 ### 💻 Lista Completa de Comandos del Terminal
 Use el alias **`/poll`** o **`/pollinations`**.

@@ -42,7 +42,7 @@ Oltre alla discussione testuale, la connessione della tua chiave dà agli Agenti
 
 ### 🧰 Strumenti Bonus per Creatori
 - `remove_background` : Rimozione ultra-veloce integrata dello sfondo delle immagini (Sempre Gratuita).
-- `gen_qrcode`, `extract_frames`, `extract_audio` : Utilità (Sempre Gratuite).
+- `gen_qrcode(diagram and palettes)`, `extract_frames`, `extract_audio`, `file_to_url`: Utilità (Sempre Gratuite).
 
 ### 💻 Elenco Completo dei Comandi del Terminale
 Usa l'alias **`/poll`** oppure **`/pollinations`**.

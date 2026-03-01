@@ -46,7 +46,7 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 
 ### 🧰 Free Creator Bonus Tools (Always available)
 - `remove_background` : Built-in ultra-fast image background removal.
-- `gen_qrcode`, `extract_frames`, `extract_audio` : Utilities.
+- `gen_qrcode(diagram and palettes)`, `extract_frames`, `extract_audio`, `file_to_url`: Utilities.
 
 ### 💻 Complete List of Terminal Commands
 Use the alias **`/poll`** or **`/pollinations`**.

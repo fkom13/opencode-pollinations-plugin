@@ -42,7 +42,7 @@ Au-delà de la discussion textuelle, connecter votre clé donne aux Agents OpenC
 
 ### 🧰 Outils Bonus créateur
 - `remove_background` : Détourage de fond d'image ultra-rapide intégré (Toujours Gratuit).
-- `gen_qrcode`, `extract_frames`, `extract_audio` : Utilitaires (Toujours Gratuit).
+- `gen_qrcode(diagram and palettes)`, `extract_frames`, `extract_audio`, `file_to_url`: Utilitaires (Toujours Gratuit).
 
 ### 💻 Liste Complète des Commandes du Terminal
 Utilisez l'alias **`/poll`** ou **`/pollinations`**.
