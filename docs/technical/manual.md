@@ -1,4 +1,4 @@
-# 📘 Documentation Technique - OpenCode Pollinations Plugin v5.9.1 (Stable)
+# 📘 Documentation Technique - OpenCode Pollinations Plugin v6.1 (Beta)
 
 ## Table des Matières
 - [Architecture Générale](#architecture-générale)
@@ -388,69 +388,39 @@ if (baseName.includes(' - ')) {
 
 ---
 
-### 5. `src/server/quota.ts` - Suivi Quota
+### 5. `src/server/quota.ts` - QuotaManager (Local History v6.1)
+
+**Problème Résolu :**
+L'API Pollinations a deux limitations :
+1.  `/account/usage/daily` a un lag important (>15min).
+2.  `/account/usage` ne retourne que les 100 dernières transactions.
+
+**Solution v6.1 : Le Grand Livre Local**
+Le plugin maintient son propre historique de transactions dans `~/.pollinations/usage_history.json`.
+
+**Classe `QuotaManager`:**
+-   **Persistence** : Sauvegarde JSON à chaque fetch.
+-   **Dédoublonnage** : Signatures uniques basées sur `md5(timestamp + model + cost)`.
+-   **Rétention** : Auto-pruning des entrées > 48h.
+-   **Calcul** : `tierUsed = SOMME(cost)` de toutes les transactions locales depuis le dernier reset (minuit UTC).
 
 **Interface QuotaStatus:**
 ```typescript
 interface QuotaStatus {
     tierRemaining: number;      // Pollen gratuit restant
-    tierUsed: number;           // Pollen gratuit utilisé
+    tierUsed: number;           // Pollen gratuit utilisé (Calculé localement)
     tierLimit: number;          // Limite tier (1/3/10/20)
     walletBalance: number;      // Solde wallet payant
     nextResetAt: Date;
-    timeUntilReset: number;     // ms
-    canUseEnterprise: boolean;  // tier > 0 OU wallet > 0
     isUsingWallet: boolean;     // tier === 0 ET wallet > 0
-    needsAlert: boolean;        // Sous seuil configuré
     tier: string;               // 'spore', 'seed', 'flower', 'nectar'
-    tierEmoji: string;
 }
 ```
 
-**STRATÉGIE "PAID-ONLY" (v5.5+)**
-Certains modèles (ex: `gemini-large`, `veo`) sont tagués `paid_only: true`.
-- **Règle**: Ces modèles nécessitent `walletBalance > 0`. Le crédit gratuit (Tier) n'est pas utilisable.
-- **Enforcement**: Le Proxy vérifie cette condition avant d'envoyer la requête. Si Solde=0, fallback immédiat.
-
-**GESTION DES CLÉS "LIMITÉES" (v5.6.0)**
-Certaines clés API permettent la génération (chat/images) mais refusent l'accès aux endpoints de profil/quota (`/account/usage`).
-- **Détection**: Lors de la connexion, `commands.ts` tente un accès au profil.
-- **Config**: Si échec (403/401) mais modèles OK, `keyHasAccessToProfile` est mis à `false`.
-- **Comportement (Proxy Override)**:
-    - **Mode**: Bascule forcée en `manual` pour éviter les vérifications de quota tierce.
-    - **Génération**: AUTORISÉE. Le Proxy intercepte l'erreur quota 403, affiche un warning, mais laisse passer la requête vers `gen.pollinations.ai`.
-    - **Dashboard**: Affiche "Clé Limitée (Génération Seule)".
-
-**Tier Limits:**
-
-| Tier | Pollen/Jour | Emoji |
-|---|---|---|
-| spore | 1 | 🦠 |
-| seed | 3 | 🌱 |
-| flower | 10 | 🌸 |
-| nectar | 20 | 🍯 |
-
-**Cache:**
-```typescript
-const CACHE_TTL = 30000; // 30 secondes
-let cachedQuota: QuotaStatus | null = null;
-let lastQuotaFetch: number = 0;
-```
-
-**API Endpoints Utilisés:**
-
-| Endpoint | Retour |
-|---|---|
-| `/account/profile` | `{ tier, nextResetAt, ... }` |
-| `/account/balance` | `{ balance: number }` |
-| `/account/usage` | `{ usage: DetailedUsageEntry[] }` |
-
-**Calcul Reset:**
-```typescript
-// Le reset est basé sur nextResetAt de l'API (varie par utilisateur)
-const resetHour = nextResetFromAPI.getUTCHours();
-// lastReset = hier à resetHour ou aujourd'hui si déjà passé
-```
+**Cache Strategie :**
+-   `usage_history.json` est la source de vérité pour le `tierUsed`.
+-   L'API est consultée pour récupérer les nouvelles transactions (`/usage`).
+-   Sauvegarde disque asynchrone pour ne pas bloquer l'UI.
 
 ---
 

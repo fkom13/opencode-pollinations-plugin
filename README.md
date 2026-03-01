@@ -1,16 +1,16 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v5.9.0)
+# 🌸 Pollinations AI Plugin for OpenCode (v6.2.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="200">
   <br>
   <b>The Bridge between OpenCode and the Pollinations.ai Ecosystem.</b>
   <br>
-  Access unlimited free AI models or premium enterprise models directly within your editor.
+  Access a continuous universe of free basic AI models, or leverage premium enterprise models with our generous Daily Free Tiers directly from your editor.
 </div>
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-5.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-v6.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-Stable-success.svg)
 
@@ -20,144 +20,112 @@
 
 > **"No closed doors, no corporate hoops — just good tools and good people."**
 
-Pollinations.ai is an open-source platform built by and for the community. We provide a unified API for image, text, audio, and video generation.
-- **Transparent**: Our code, roadmap, and discussions are open.
-- **Community Driven**: Features are prioritized based on what *you* need.
-- **Fair**: One single currency (**Pollen**) for all models. No complex subscriptions.
+Pollinations.ai is an open-source platform created by and for the community. We offer a unified, direct API for generating images, text, audio, and video.
+- **Transparent**: Our code, roadmap, and discussions are public.
+- **Fair Economy**: A single currency (**Pollen**) for all media and models. Predictable and transparent pricing.
 
-## 📸 Gallery
+---
 
-<p align="center">
-  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/connect.png" alt="Connect Command" width="800">
-  <br>
-  <em>Easy Connection with /connect or /pollinations config apiKey</em>
-</p>
+## ✨ What's new in V6.2? (The Anti-Hallucination Update)
+- **100% Dynamic Engine**: Hardcoded model lists, default configurations, and fixed prices are gone! In V6.2, OpenCode's AI agent now fetches the latest LLM models, parameters, tags (`[💎 Paid]`, `[🌿 Free]`, limits), and cost approximations dynamically from the Pollinations APIs.
+- **Robust Security**: Protection against path traversal and strict URL verifications are fully integrated.
+- **Improved Web Search**: The `polli_web_search` component maps seamlessly to current web-enabled and specialized groundings options like Google Gemini Fast, Perplexity, and Custom specialized assistants.
 
-<p align="center">
-  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/usage_dashboard.png" alt="Usage Dashboard" width="800">
-  <br>
-  <em>Integrated Usage Dashboard (/pollinations usage)</em>
-</p>
+---
 
-<p align="center">
-  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/models.png" alt="Models" width="800">
-  <br>
-  <em>Wide Range of Models (Mistral, OpenAI, Gemini, Claude)</em>
-</p>
+## 🧰 Tools & Commands V6.2
 
-<p align="center">
-  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/free_add.png" alt="Free Chat Example" width="800">
-  <br>
-  <em>Free Universe Chat (Supported by Pollinations Ads)</em>
-</p>
+Beyond text discussion, connecting your key gives OpenCode Agents access to our AI Media Tools powered by Pollinations models:
 
-<p align="center">
-  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/plan_1.png" alt="Plan Build Step 1" width="400">
-  <img src="https://github.com/fkom13/opencode-pollinations-plugin/raw/main/docs/images/plan_2.png" alt="Plan Build Step 2" width="400">
-  <br>
-  <em>Integrated Plan Building Workflow</em>
-</p>
+### 💎 Integrated Generative Tools (ENTER ONLY - requires API key)
+- `polli_gen_image` : State-of-the-art imagery models (`Flux`, `Sana`, `Gemini`).
+- `polli_gen_video` : Powerful Text-to-Video and Image-to-Video capabilities (`Wan`, `Veo`, `LTX`, `Reveal`).
+- `polli_gen_audio` & `polli_gen_music` : Magical voice synthesis (ElevenLabs, TTS) and Generative Music.
+- `polli_stt` : High-flying voice transcription (Whisper V3).
+- `polli_web_search` : Connected Web & Specialized Search context (`gemini-search`, `perplexity...`).
 
-## ✨ Features
+### 🧰 Free Creator Bonus Tools (Always available)
+- `remove_background` : Built-in ultra-fast image background removal.
+- `gen_qrcode`, `extract_frames`, `extract_audio` : Utilities.
 
-- **🌍 Free Universe**: Access generic models (`openai`, `mistral`, `gemini`) for **FREE**, unlimited time, no API key required.
-- **🚀 Pro Mode**: Connect your Pollinations API Key to access Premium Models (`claude-3-opus`, `gpt-4o`, `deepseek-coder`).
-- **🔐 Limited Key Support (v5.6.0)**: Use keys restricted to "Generation Only". The plugin automatically disables Advanced Features (Dashboard/Quota) but allows full generation in Manual Mode.
-- **🛡️ Safety Net V5**: never get blocked.
-    - **Transparent Fallback**: If your Pro quota runs out mid-chat, the plugin automatically switches to a free model instantly. No errors, just a seamless experience.
-    - **Smart Mode Switching**: Prevents Limited Keys from entering "Pro" mode to avoid confusing errors.
-- **📊 Real-time Dashboard**: Track your **Pollen** usage, Tier Status, and Wallet Balance inside OpenCode.
-- **🔇 Stealth Mode (v5.4.7)**: Status notifications are now strictly limited to Pollinations Enter (Paid) sessions. No more cluttered notifications when using other providers like Nvidia or Google AI.
+### 💻 Complete List of Terminal Commands
+Use the alias **`/poll`** or **`/pollinations`**.
+- `/poll help` : Displays the interactive help table.
+- `/poll connect` : Bring Your Own Key configuration tool (Interactive).
+- `/poll usage full` : Real-time dashboard (Stats), active Freetiers, and Wallet Balance.
+- `/poll config` : Finely adjust Cost Guards, Logs, Language, and Display.
+- `/poll models` : Check the status of available Models.
+- `/poll pricing` : View real-time unified pricing (Average Cost Estimate).
+- `/poll fallback` : Define the ultimate Safety Net Chat model.
+- `/poll mode` : Change mode without going through the API.
+- `/poll infos` : Discover community rules and the leveling system.
 
-## 🐝 Understanding Pollen & Tiers
+### 🛡️ The "Cost Guard" & the "Safety Net"
+We have introduced fundamental protections to ensure your workflow never interrupts and your wallet (Wallet or free tiers) is under your control.
+- **Safety Net**: If you use premium models and your daily Pollen quota runs out in the middle of a chat session, the plugin silently and automatically switches to a free model. *No more blocking errors (429).*
+- **Cost Guard for Tools**: OpenCode Agents can be zealous. If an Agent tries to spend too many Pollens to generate a heavy video or music, the plugin intercepts the request. We have implemented an asynchronous flow that asks for your manual confirmation before executing costly generations. You stay in control.
 
-**Pollen** is our unified credit system. $1 ≈ 1 Pollen.
-You spend it to verify API calls on premium models.
+### 🌍 Native Multilingual Support (i18n)
+Pollinations for OpenCode natively speaks your language.
+- The Engine Interface, Notifications (Toasts), Tool Returns, and Commands are fully translated into **English (Default)**, **French**, **Spanish**, **German**, and **Italian**.
+- Type `/poll config lang <fr|es|de|it>` in the terminal to switch instantly.
 
-### Tiers (Free Daily Grants during Beta)
+---
 
-| Tier | Grant | Requirement |
+## 🐝 Understanding Pollens & "Free Tiers"
+
+In the past, Pollinations mainly relied on ad-funded network traffic. Today, running massive models (like Claude 4.5, Flux Pro, Wan Video) costs money. Pollinations therefore introduces the **Enter Universe** which requires an API key and unlocks cutting-edge models.
+
+**But wait, you don't need a credit card!**
+
+**Pollen** is our unified credit system ($1 ≈ 1 Pollen). By connecting a simple Free API Key, you unlock daily Pollen reloads according to your Developer Tier:
+
+| Tier | Daily Reload | Condition |
 | :--- | :--- | :--- |
-| **🦠 Spore** | **1 Pollen/day** | Just Sign Up! |
-| **🌱 Seed** | **3 Pollen/day** | Active GitHub Developer (8+ points) |
-| **🌸 Flower** | **10 Pollen/day** | **Publish an App** (Like this Plugin!) |
-| **🍯 Nectar** | **20 Pollen/day** | Major Contributors (Coming Soon) |
+| 🦠 **Microbe** | **0.1 Pollen/day** | Just register! |
+| 🍄 **Spore** | **1 Pollen/day** | Automatic verification |
+| 🌱 **Seed** | **3 Pollen/day** | Active GitHub Developer (8+ points) |
+| 🌸 **Flower** | **10 Pollen/day** | **Publish an App** (Like this Plugin!) |
 
-> 🎁 **Beta Bonus**: Buy one Pollen pack, get one free!
+> 🎁 **Get your Free Personal Key (BYOK) on [Pollinations.ai](https://pollinations.ai) to boost OpenCode!**
 
-### 🐧 Platform Support & Dynamic Ports (v5.4.6+)
-This plugin is **true Cross-Platform** (Windows, macOS, Linux).
-- **Dynamic Port Allocation**: No more port conflicts! The plugin automatically finds an available port on startup.
-- **Tools Support**: Using tools with Gemini (Free) triggers an **Automatic Intelligent Fallback** to OpenAI to ensure your workflow never breaks.
+*(Note: We still maintain the "Free Universe" fallback for basic chat (`openai-fast`) which requires no key, but its capacity is very limited and mainly designed as a safety net).*
 
-> **Note**: Legacy static port (10001) logic has been replaced with system-assigned ports (0). This eliminates "Address in use" errors and effectively removes the need for Linux-specific `fuser` commands, making the plugin fully **Cross-Platform**.
+Paid pollens allow you to access even more powerful and premium models.
 
-This plugin is part of the **OpenCode Ecosystem**.
+Daily free tier pollen credits are consumed before touching the wallet (purchased pollen) except for paid models.
 
-### Option 1: NPM (Instant Setup) (Recommended)
-This method automatically configures OpenCode to load the plugin.
+---
 
-1. Install global:
+## 🚀 Getting Started & Onboarding
+
+### 🐧 1. Cross-Platform Configuration (NPM Installation)
+This plugin is **fully cross-platform** (Windows, macOS, Linux) and detects its ports dynamically.
+
+1. Global installation:
    ```bash
    npm install -g opencode-pollinations-plugin
    ```
-2. Run the Auto-Setup (Magic):
+2. Auto-Configuration:
    ```bash
    npx opencode-pollinations-plugin
    ```
-   *This detects your OpenCode config and injects the plugin path automatically.*
+   *(Or inject it manually into `~/.config/opencode/opencode.json`)*
 
-### Option 2: Manual Configuration
-1. Install globally as above.
-2. Edit `~/.config/opencode/opencode.json`:
-   ```json
-   {
-     "plugin": [
-       "opencode-pollinations-plugin"
-     ]
-   }
-   ```
-   *Note: If OpenCode fails to find it, use the absolute path to the global install.*
+### 🔑 2. Interactive Onboarding
+Once in OpenCode, simply type the following command in the Agent Terminal:
+```bash
+/poll connect
+```
+An interactive conversational assistant will guide you to inject your Pollinations Key and configure your space. *Restart OpenCode to update the list of models in the UI interface.*
 
-## 🚀 Publication (The "Registry")
-OpenCode uses NPM as its registry. To publish:
 
-1. **Publish to NPM**:
-   ```bash
-   npm login
-   npm publish
-   ```
-2. **Join Ecosystem**: Submit a Pull Request to [OpenCode Ecosystem](https://github.com/opencode-ai/ecosystem) to list your plugin officially.
-   *Once accepted, users can find it via documentation or future registry commands.*
 
-## 🚀 Getting Started
-
-### 1. The Basics (Free Mode)
-Just type in the chat. You are in **Manual Mode** by default.
-- Model: `openai-fast` (GPT-OSS 20b)
-- Model: `mistral` (Mistral Small 3.1)
-- ...
-
-### 🔑 Configuration (API Key)
-
-1.  Run the setup command:
-    ```bash
-    /connect
-    ```
-2.  Choose "pollinations" and enter your key if you have one (or leave blank for free tier).
-3.  **IMPORTANT**: You must **restart OpenCode** for the model list to update with your new tier (e.g. to see Paid models).
-
-### 🤖 Models
-
-### 🔑 Types de Clés Supportés
-- **Clés Standard (`sk-...`)**: Accès complet (Modèles + Dashboard Usage + Quota).
-- **Clés Limitées**: Accès Génération uniquement. Le dashboard affichera une alerte de restriction (v5.4.11).
-- **Support Legacy**: Les anciennes clés (`sk_...`) sont aussi acceptées.
+---
 
 ## 🔗 Links
 
-- **Sign up Pollinations Beta (more and best free tiers access and paids models)**: [pollinations.ai](https://enter.pollinations.ai)
-- **Pollinations Website**: [pollinations.ai](https://pollinations.ai)
+- **Create your Pollen API Key**: [pollinations.ai](https://pollinations.ai)
 - **Discord Community**: [Join us!](https://discord.gg/pollinations-ai-885844321461485618)
 - **OpenCode Ecosystem**: [opencode.ai](https://opencode.ai/docs/ecosystem#plugins)
 

@@ -3,10 +3,7 @@ import * as https from 'https';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { loadConfig } from './config.js';
-const HOMEDIR = os.homedir();
-const CONFIG_DIR_POLLI = path.join(HOMEDIR, '.pollinations');
-const CONFIG_FILE = path.join(CONFIG_DIR_POLLI, 'config.json');
+import { loadConfig, CONFIG_FILE } from './config.js';
 
 // --- INTERFACES SCRICT ---
 
@@ -47,15 +44,11 @@ interface OpenCodeModel {
     };
 }
 
+import { log as logSystem } from './logger.js';
+
 // --- LOGGING ---
-const LOG_FILE = '/tmp/opencode_pollinations_config.log';
 function log(msg: string) {
-    try {
-        const ts = new Date().toISOString();
-        if (!fs.existsSync(LOG_FILE)) fs.writeFileSync(LOG_FILE, '');
-        fs.appendFileSync(LOG_FILE, `[ConfigGen] ${ts} ${msg}\n`);
-    } catch (e) { }
-    // Force output to stderr for CLI visibility if needed, but clean.
+    logSystem(`[ConfigGen] ${msg}`);
 }
 
 // Fetch Helper
@@ -105,6 +98,14 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     // Use forced key (from Hook) or cached key
     const effectiveKey = forceApiKey || config.apiKey;
 
+    // 0. CONNECT MODEL (Always present, first in list)
+    modelsOutput.push({
+        id: 'pollinations/connect',
+        name: '🌸 Pollinations — Guide & Connexion',
+        object: 'model',
+        variants: {}
+    });
+
     // 1. FREE UNIVERSE
     try {
         // Switch to main models endpoint (User provided curl confirms it has 'description')
@@ -112,24 +113,16 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
         const list = Array.isArray(freeList) ? freeList : (freeList.data || []);
 
         list.forEach((m: any) => {
-            const mapped = mapModel(m, 'free/', '[Free] ');
+            const mapped = mapModel(m, 'free/', '');
             modelsOutput.push(mapped);
         });
         log(`Fetched ${modelsOutput.length} Free models.`);
     } catch (e) {
         log(`Error fetching Free models: ${e}`);
         // Fallback Robust (Offline support)
-        modelsOutput.push({ id: "free/mistral", name: "[Free] Mistral Nemo (Fallback)", object: "model", variants: {} });
-        modelsOutput.push({ id: "free/openai", name: "[Free] OpenAI (Fallback)", object: "model", variants: {} });
-        modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Fallback)", object: "model", variants: {} });
-    }
-
-    // 1.5 FORCE ENSURE CRITICAL MODELS
-    // Sometimes the API list changes or is cached weirdly. We force vital models.
-    const hasGemini = modelsOutput.find(m => m.id === 'free/gemini');
-    if (!hasGemini) {
-        log(`[ConfigGen] Force-injecting free/gemini.`);
-        modelsOutput.push({ id: "free/gemini", name: "[Free] Gemini Flash (Force)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/mistral", name: "Mistral Nemo (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/openai", name: "OpenAI (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/gemini", name: "Gemini Flash (Fallback)", object: "model", variants: {} });
     }
 
     // ALIAS Removed for Clean Config
@@ -150,7 +143,7 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
                 if (m.tools === false) return;
-                const mapped = mapModel(m, 'enter/', '[Enter] ');
+                const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {
                     paidModels.push(mapped.id.replace('enter/', '')); // Store bare ID "gemini-large"
@@ -174,10 +167,10 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
             if (forceStrict) throw e;
 
             // Fallback Robust for Enterprise (User has Key but discovery failed)
-            modelsOutput.push({ id: "enter/gpt-4o", name: "[Enter] GPT-4o (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/gpt-4o", name: "GPT-4o (Fallback)", object: "model", variants: {} });
             // ...
-            modelsOutput.push({ id: "enter/claude-3-5-sonnet", name: "[Enter] Claude 3.5 Sonnet (Fallback)", object: "model", variants: {} });
-            modelsOutput.push({ id: "enter/deepseek-reasoner", name: "[Enter] DeepSeek R1 (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/claude-3-5-sonnet", name: "Claude 3.5 Sonnet (Fallback)", object: "model", variants: {} });
+            modelsOutput.push({ id: "enter/deepseek-reasoner", name: "DeepSeek R1 (Fallback)", object: "model", variants: {} });
         }
     }
 
@@ -231,14 +224,21 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         baseName = baseName.split(' - ')[0].trim();
     }
 
-    let namePrefixFinal = namePrefix;
+    // Gérer les icônes pour paid_only et modèles FREE
+    let paidPrefix = '';
+    let freeSuffix = '';
+
     if (raw.paid_only) {
-        namePrefixFinal = namePrefix.replace('[Enter]', '[💎 Paid]');
+        paidPrefix = '💎 '; // Icône diamant devant les modèles payants
+    }
+
+    if (prefix === 'free/') {
+        freeSuffix = ' (free)'; // Suffixe pour l'univers FREE
     }
 
     // Get capability icons from API metadata
     const capabilityIcons = getCapabilityIcons(raw);
-    const finalName = `${namePrefixFinal}${baseName}${capabilityIcons}`;
+    const finalName = `${paidPrefix}${baseName}${capabilityIcons}${freeSuffix}`;
 
     const modelObj: OpenCodeModel = {
         id: fullId,
@@ -274,12 +274,12 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         // Also keep variant just in case
         modelObj.variants.bedrock_safe = { options: { maxTokens: 8000 } };
     }
-    
+
     // BEDROCK/ENTERPRISE LIMITS (Chickytutor only)
     if (rawId.includes('chickytutor')) {
         modelObj.limit = {
             output: 8192,
-            context: 128000 
+            context: 128000
         };
     }
 

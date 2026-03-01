@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { loadConfig } from './config.js';
 
 // === QUEUE GLOBALE & CLIENT ===
@@ -45,17 +47,39 @@ export function emitLogToast(
 export function emitStatusToast(
     type: 'info' | 'warning' | 'error' | 'success',
     message: string,
-    title?: string
+    title?: string,
+    metadata?: { filePath?: string; params?: Record<string, any> }
 ) {
     const config = loadConfig();
     const verbosity = config.gui.status;
 
     if (verbosity === 'none') return;
-    // 'alert' logic handled by caller (proxy.ts) usually, but we can filter here too? 
-    // Actually, 'all' sends everything. 'alert' sends only warnings/errors.
     if (verbosity === 'alert' && type !== 'error' && type !== 'warning') return;
 
-    dispatchToast('status', type, message, title || 'Pollinations Status');
+    let finalMessage = message;
+
+    if (metadata?.filePath) {
+        finalMessage += `\n📁 ${metadata.filePath}`;
+    }
+
+    if (type === 'success' || type === 'error') {
+        // En arrière-plan, essaye de récupérer le quota localement sans bloquer l'appel
+        import('./quota.js').then(({ getQuotaStatus, formatQuotaForToast }) => {
+            getQuotaStatus(false).then(quota => {
+                const quotaMsg = formatQuotaForToast
+                    ? formatQuotaForToast(quota)
+                    : `🌻 Freetier: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} | Wallet: $${quota.walletBalance.toFixed(2)}`;
+                finalMessage += `\n${quotaMsg}`;
+                dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+            }).catch(() => {
+                dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+            });
+        }).catch(() => {
+            dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+        });
+    } else {
+        dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+    }
 }
 
 // INTERNAL DISPATCHER
@@ -98,19 +122,36 @@ function dispatchToast(
 
 // === HELPERS ===
 
-function logToastToFile(toast: ToastMessage) {
-    try {
-        const logLine = `[${new Date(toast.timestamp).toISOString()}] [${toast.channel.toUpperCase()}] [${toast.type.toUpperCase()}] ${toast.message}`;
-        fs.appendFileSync('/tmp/pollinations-toasts.log', logLine + '\n');
-    } catch (e) { }
-}
+import { logToast } from './logger.js';
 
+function logToastToFile(toast: ToastMessage) {
+    const logLine = `[${new Date(toast.timestamp).toISOString()}] [${toast.channel.toUpperCase()}] [${toast.type.toUpperCase()}] ${toast.message}`;
+    logToast(logLine);
+}
 
 export function createToastHooks(client: any) {
     return {
         'session.idle': async ({ event }: any) => {
             // Deprecated: We use immediate dispatch now. 
             // Kept for backward compat if needed or legacy queued items.
+        }
+    };
+}
+
+// 3. CANAL TOOLS (Natif)
+export function createToolHooks(client: any) {
+    return {
+        'tool.execute.after': async (input: any, output: any) => {
+            // Check for metadata in the output
+            if (output.metadata && output.metadata.message) {
+                const meta = output.metadata;
+                const type = meta.type || 'info';
+                // If title is not in metadata, try to use the one from output or default
+                const title = meta.title || output.title || 'Pollinations Tool';
+
+                // Emit the toast
+                emitStatusToast(type, meta.message, title);
+            }
         }
     };
 }

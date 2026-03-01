@@ -4,27 +4,22 @@ import * as path from 'path';
 import { loadConfig, saveConfig } from './config.js';
 import { handleCommand } from './commands.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
+import { buildConnectResponse } from './connect-response.js';
+
+import { log } from './logger.js';
+import { getConfigDir } from './config.js';
+import { t } from '../locales/index.js';
 
 // --- PERSISTENCE: SIGNATURE MAP (Multi-Round Support) ---
-const SIG_FILE = path.join(process.env.HOME || '/tmp', '.config/opencode/pollinations-signature.json');
+const SIG_FILE = path.join(getConfigDir(), 'pollinations-signature.json');
 let signatureMap: Record<string, string> = {};
 let lastSignature: string | null = null; // V1 Fallback Global
-
-function log(msg: string) {
-    try {
-        const ts = new Date().toISOString();
-        if (!fs.existsSync('/tmp/opencode_pollinations_debug.log')) {
-            fs.writeFileSync('/tmp/opencode_pollinations_debug.log', '');
-        }
-        fs.appendFileSync('/tmp/opencode_pollinations_debug.log', `[Proxy] ${ts} ${msg}\n`);
-    } catch (e) { }
-}
 
 try {
     if (fs.existsSync(SIG_FILE)) {
         signatureMap = JSON.parse(fs.readFileSync(SIG_FILE, 'utf-8'));
     }
-} catch (e) { }
+} catch (e) { log(`[Proxy Signature] Error loading: ${e}`); }
 
 function saveSignatureMap() {
     try {
@@ -144,10 +139,10 @@ function sanitizeToolsForBedrock(tools: any[]): any[] {
 
 function sanitizeSchemaForKimi(schema: any): any {
     if (!schema || typeof schema !== 'object') return schema;
-    
+
     // Kimi Fixes
     if (schema.title) delete schema.title;
-    
+
     // Fix empty objects "{}" which Kimi hates.
     // If it's an empty object without type, assume string or object?
     // Often happens with "additionalProperties: {}"
@@ -194,7 +189,7 @@ async function fetchWithRetry(url: string, options: any, retries: number = MAX_R
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-        
+
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(timeoutId);
 
@@ -290,6 +285,35 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         log(`Incoming Model (OpenCode ID): ${body.model}`);
 
+        // 0. SPECIAL: pollinations/connect (Guide & Status)
+        const CONNECT_MODEL_IDS = ['pollinations/connect', 'free/pollinations/connect', 'enter/pollinations/connect', 'connect-pollinations'];
+        if (CONNECT_MODEL_IDS.includes(body.model)) {
+            const guideContent = await buildConnectResponse(config);
+
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive'
+            });
+
+            const chunk = JSON.stringify({
+                id: 'connect-' + Date.now(),
+                object: 'chat.completion.chunk',
+                created: Math.floor(Date.now() / 1000),
+                model: 'pollinations/connect',
+                choices: [{
+                    index: 0,
+                    delta: { role: 'assistant', content: guideContent },
+                    finish_reason: 'stop' // Instant finish
+                }]
+            });
+
+            res.write(`data: ${chunk}\n\n`);
+            res.write(`data: [DONE]\n\n`);
+            res.end();
+            return;
+        }
+
         // 1. STRICT ROUTING & SAFETY NET LOGIC (V5)
         let actualModel = body.model || "openai";
         let isEnterprise = false;
@@ -368,37 +392,56 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         if (config.mode === 'alwaysfree') {
             if (isEnterprise) {
-                // NEW: Paid Only Check for Always Free
+                // Paid Only Check: BLOCK (not fallback) in AlwaysFree mode
                 try {
                     const homedir = process.env.HOME || '/tmp';
                     const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
                     if (fs.existsSync(standardPaidPath)) {
                         const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
                         if (paidModels.includes(actualModel)) {
-                            log(`[SafetyNet] alwaysfree Mode: Request for Paid Only Model (${actualModel}). FALLBACK.`);
-                            actualModel = config.fallbacks.free.main.replace('free/', '');
-                            isEnterprise = false;
-                            isFallbackActive = true;
-                            fallbackReason = "Mode AlwaysFree actif: Ce modèle payant consomme du wallet. Passez en mode PRO.";
+                            log(`[AlwaysFree] BLOCKED: Paid Only Model (${actualModel}).`);
+                            emitStatusToast('warning', t('proxy.warnings.paid_blocked_alwaysfree_title', { model: actualModel }), 'AlwaysFree Mode');
+
+                            const blockMsg = {
+                                id: `chatcmpl-block-${Date.now()}`,
+                                object: 'chat.completion',
+                                created: Math.floor(Date.now() / 1000),
+                                model: actualModel,
+                                choices: [{
+                                    index: 0,
+                                    message: {
+                                        role: 'assistant',
+                                        content: t('proxy.warnings.paid_blocked_alwaysfree_msg', { model: actualModel })
+                                    },
+                                    finish_reason: 'stop'
+                                }],
+                                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+                            };
+
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(blockMsg));
+                            return;
                         }
                     }
-                } catch (e) { }
+                } catch (e) { log(`[Proxy AlwaysFree] Error checking paid models: ${e}`); }
 
                 if (!isFallbackActive && quota.tier === 'error') {
                     // Network error or unknown error (but NOT auth_limited, handled above)
                     log(`[SafetyNet] AlwaysFree Mode: Quota Check Failed. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'AlwaysFree Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = "Quota Unreachable (Safety)";
+                    fallbackReason = t('proxy.warnings.quota_unreachable_msg');
                 } else {
                     const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
                     if (tierRatio <= (config.thresholds.tier / 100)) {
                         log(`[SafetyNet] AlwaysFree Mode: Tier (${(tierRatio * 100).toFixed(1)}%) <= Threshold (${config.thresholds.tier}%). Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'AlwaysFree Mode');
                         actualModel = config.fallbacks.free.main.replace('free/', '');
                         isEnterprise = false;
                         isFallbackActive = true;
-                        fallbackReason = `Daily Tier < ${config.thresholds.tier}% (Wallet Protected)`;
+                        fallbackReason = t('proxy.warnings.tier_limit_msg', { threshold: config.thresholds.tier });
                     }
                 }
             }
@@ -408,18 +451,34 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 if (quota.tier === 'error') {
                     // Network error or unknown
                     log(`[SafetyNet] Pro Mode: Quota Unreachable. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'Pro Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = "Quota Unreachable (Safety)";
+                    fallbackReason = t('proxy.warnings.quota_unreachable_msg');
                 } else {
                     const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
                     if (quota.walletBalance < config.thresholds.wallet && tierRatio <= (config.thresholds.tier / 100)) {
                         log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet} AND Tier < ${config.thresholds.tier}%. Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.wallet_tier_critical_title', { wallet: config.thresholds.wallet, tier: config.thresholds.tier }), 'Pro Mode');
                         actualModel = config.fallbacks.free.main.replace('free/', '');
                         isEnterprise = false;
                         isFallbackActive = true;
-                        fallbackReason = `Wallet & Tier Critical`;
+                        fallbackReason = t('proxy.warnings.wallet_tier_critical_msg', { wallet: config.thresholds.wallet, tier: config.thresholds.tier });
+                    } else if (quota.walletBalance < config.thresholds.wallet) {
+                        log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet}. Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.wallet_limit_title', { wallet: config.thresholds.wallet }), 'Pro Mode');
+                        actualModel = config.fallbacks.free.main.replace('free/', '');
+                        isEnterprise = false;
+                        isFallbackActive = true;
+                        fallbackReason = t('proxy.warnings.wallet_limit_msg', { threshold: config.thresholds.wallet });
+                    } else if (tierRatio <= (config.thresholds.tier / 100)) {
+                        log(`[SafetyNet] Pro Mode: Tier < ${config.thresholds.tier}%. Switching.`);
+                        emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'Pro Mode');
+                        actualModel = config.fallbacks.free.main.replace('free/', '');
+                        isEnterprise = false;
+                        isFallbackActive = true;
+                        fallbackReason = t('proxy.warnings.tier_limit_msg', { threshold: config.thresholds.tier });
                     }
                 }
             }
@@ -486,7 +545,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 proxyBody.frequency_penalty = 1.1;
                 proxyBody.presence_penalty = 0.4;
                 proxyBody.stop = ["<|endoftext|>", "User:", "\nUser", "User :"];
-                
+
                 // KIMI FIX: Remove 'title' from schema
                 proxyBody.tools = proxyBody.tools.map((t: any) => {
                     if (t.function && t.function.parameters) {
@@ -542,6 +601,9 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                         const name = t.function?.name || t.name;
                         return isFunc && name !== 'google_search';
                     });
+
+
+
 
                     // 2. Sanitize & RESTORE GROUNDING CONFIG (Essential for Vertex Auth)
                     if (proxyBody.tools.length > 0) {
@@ -660,7 +722,11 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
 
-                    if (fetchRes.status === 402) fallbackReason = "Insufficient Funds (Upstream 402)";
+                    if (fetchRes.status === 402) {
+                        fallbackReason = "Insufficient Funds (Upstream 402)";
+                        // Force refresh quota cache so next pre-flight check is accurate
+                        try { await getQuotaStatus(true); } catch (e) { log(`[Proxy Quota] Silent refresh error: ${e}`); }
+                    }
                     else if (fetchRes.status === 429) fallbackReason = "Rate Limit (Upstream 429)";
                     else if (fetchRes.status === 401) fallbackReason = "Invalid API Key (Upstream 401)";
                     else fallbackReason = `Access Denied (${fetchRes.status})`;

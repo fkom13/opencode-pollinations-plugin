@@ -1,6 +1,8 @@
 
 import { loadConfig } from './config.js';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 // Internal Types
 interface OpenAIModel {
@@ -16,12 +18,7 @@ interface OpenAIModel {
     modalities?: { input: string[], output: string[] };
 }
 
-// Debug Helper
-function logDebug(msg: string) {
-    try {
-        fs.appendFileSync('/tmp/pollinations-api-debug.log', `[${new Date().toISOString()}] ${msg}\n`);
-    } catch (e) { }
-}
+import { logApi as logDebug } from './logger.js';
 
 const HEADERS = {
     'User-Agent': 'curl/8.5.0',
@@ -182,6 +179,42 @@ export async function getDetailedUsage(apiKey: string): Promise<DetailedUsageRes
         return data as DetailedUsageResponse;
     } catch (e) {
         logDebug(`Error Usage: ${e}`);
+        return null;
+    }
+}
+
+// === DAILY USAGE API (Server-side aggregated, no 100-entry limit) ===
+
+export interface DailyUsageEntry {
+    date: string;       // Format "YYYY-MM-DD"
+    model: string;
+    meter_source: 'tier' | 'pack' | 'combined';
+    requests: number;
+    cost_usd: number;
+}
+
+export interface DailyUsageResponse {
+    usage: DailyUsageEntry[];
+}
+
+export async function getDailyUsage(apiKey: string): Promise<DailyUsageResponse | null> {
+    if (!apiKey || apiKey.length < 10) return null;
+
+    try {
+        logDebug("Fetching Daily Usage (aggregated)...");
+        const response = await fetch('https://gen.pollinations.ai/account/usage/daily', {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+
+        if (!response.ok) {
+            logDebug(`Daily Usage API Error: ${response.status}`);
+            return null;
+        }
+
+        const data: any = await response.json();
+        return data as DailyUsageResponse;
+    } catch (e) {
+        logDebug(`Error Daily Usage: ${e}`);
         return null;
     }
 }
