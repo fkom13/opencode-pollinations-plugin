@@ -216,6 +216,39 @@ async function fetchWithRetry(url: string, options: any, retries: number = MAX_R
     }
 }
 
+// --- MEDIA UPLOAD HELPER (Vision Support) ---
+// Uploads a base64 data URL to media.pollinations.ai and returns a public URL.
+// This is needed because gen.pollinations.ai does not support OpenAI multimodal format
+// but auto-detects image URLs in plain text.
+async function uploadToPollinationsMedia(dataUrl: string, authHeader?: string): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+        const res = await fetch('https://media.pollinations.ai/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(authHeader ? { 'Authorization': authHeader } : {}),
+            },
+            body: JSON.stringify({ data: dataUrl }),
+            signal: controller.signal,
+        });
+
+        if (!res.ok) {
+            const errText = await res.text().catch(() => '');
+            throw new Error(`HTTP ${res.status}: ${errText.substring(0, 100)}`);
+        }
+
+        const json = await res.json() as { url?: string; id?: string };
+        if (json.url) return json.url;
+        if (json.id) return `https://media.pollinations.ai/${json.id}`;
+        throw new Error('No URL in response');
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 // --- MAIN HANDLER ---
 
 export async function handleChatCompletion(req: http.IncomingMessage, res: http.ServerResponse, bodyRaw: string) {
@@ -228,6 +261,21 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
         // DEBUG: Trace Config State for Hot Reload verification
         log(`[Proxy Request] Config Loaded. Mode: ${config.mode}, HasKey: ${!!config.apiKey}, KeyLength: ${config.apiKey ? config.apiKey.length : 0}`);
+
+        // TEMPORARY DIAGNOSTIC: Capture multimodal content format from OpenCode
+        if (body.messages && body.messages.length > 0) {
+            const lastUserMsg = [...body.messages].reverse().find((m: any) => m.role === 'user');
+            if (lastUserMsg) {
+                const contentType = typeof lastUserMsg.content;
+                const isArray = Array.isArray(lastUserMsg.content);
+                log(`[VISION DEBUG] Last user msg content type: ${contentType}, isArray: ${isArray}`);
+                if (isArray) {
+                    log(`[VISION DEBUG] Content parts: ${JSON.stringify(lastUserMsg.content.map((c: any) => ({ type: c.type, hasText: !!c.text, hasImageUrl: !!c.image_url, hasImage: !!c.image })))}`);
+                } else if (contentType === 'string') {
+                    log(`[VISION DEBUG] String content (first 200 chars): ${lastUserMsg.content.substring(0, 200)}`);
+                }
+            }
+        }
 
         // 0. COMMAND HANDLING
         if (body.messages && body.messages.length > 0) {
@@ -512,6 +560,13 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             ...body,
             model: actualModel
         };
+
+        // === SECTION 2.1 — MULTIMODAL PASSTHROUGH ===
+        // The native OpenAI multimodal format [{type:"image_url",...}] is passed through as-is.
+        // Bug: Pollinations issue #8705 (opened 2026-03-01) — server does String(content)
+        // on array content, breaking vision. When fixed server-side, vision will work natively.
+        // The uploadToPollinationsMedia() helper is kept in stand-by for future fallback use.
+        // No transformation is applied — we send what OpenCode gives us.
 
         // 3. Global Hygiene
         if (!isEnterprise && !proxyBody.seed) {

@@ -132,7 +132,9 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
 
     const fetches = endpoints.map(async ({ url, fallbackCategory }) => {
         try {
-            const raw = await fetchJson(url, headers);
+            // Fetch model lists anonymously (no headers) to bypass API-side model filtering
+            // which currently hides models like claude-airforce to authenticated users.
+            const raw = await fetchJson(url, {});
             return { url, fallbackCategory, raw };
         } catch (e) {
             log(`[ModelFetcher] Failed to fetch ${url}: ${e}`);

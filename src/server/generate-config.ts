@@ -42,6 +42,11 @@ interface OpenCodeModel {
         input?: string[];
         output?: string[];
     };
+    // Champs requis par OpenCode (ModelsDev.Model schema)
+    attachment?: boolean;
+    tool_call?: boolean;
+    reasoning?: boolean;
+    temperature?: boolean;
 }
 
 import { log as logSystem } from './logger.js';
@@ -135,14 +140,14 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {
             // Use /text/models for full metadata (input_modalities, tools, reasoning, pricing)
-            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {
-                'Authorization': `Bearer ${effectiveKey}`
-            });
+            // We fetch WITHOUT the Authorization header because the authenticated API currently filters out some models
+            // like claude-airforce and step-3.5-flash. By fetching anonymously, we get the full list of 28 models.
+            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {});
             const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
 
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
-                if (m.tools === false) return;
+                // All models exposed — no tool-based filtering
                 const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {
@@ -240,11 +245,19 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
     const capabilityIcons = getCapabilityIcons(raw);
     const finalName = `${paidPrefix}${baseName}${capabilityIcons}${freeSuffix}`;
 
+    // Context length: from API (dynamic), fallback 128K
+    const contextLength = raw.context_length || raw.context_window || 128000;
+
     const modelObj: OpenCodeModel = {
         id: fullId,
         name: finalName,
         object: 'model',
         variants: {},
+        // Limits: context from API, output default 16384 (overridden per-model below)
+        limit: {
+            context: contextLength,
+            output: 16384
+        },
         // Declare modalities for OpenCode vision support
         modalities: {
             input: raw.input_modalities || ['text'],
@@ -252,27 +265,53 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         }
     };
 
+    // --- CHAMPS DE CAPACITÉS REQUIS PAR OPENCODE (ModelsDev.Model schema) ---
+    const supportsVision = (raw.input_modalities && raw.input_modalities.includes('image')) || raw.vision === true;
+    modelObj.attachment = supportsVision;  // Active le bouton d'attachement d'images dans l'IDE
+    modelObj.tool_call = raw.tools === true;
+    modelObj.reasoning = raw.reasoning === true;
+    modelObj.temperature = true; // Tous les modèles Pollinations supportent temperature
+
     // --- ENRICHISSEMENT ---
-    if (raw.reasoning === true || rawId.includes('thinking') || rawId.includes('reasoning')) {
-        modelObj.variants = { ...modelObj.variants, high_reasoning: { options: { reasoningEffort: "high", budgetTokens: 16000 } } };
-    }
-    if (rawId.includes('gemini') && !rawId.includes('fast')) {
-        if (!modelObj.variants.high_reasoning && (rawId === 'gemini' || rawId === 'gemini-large')) {
-            modelObj.variants.high_reasoning = { options: { reasoningEffort: "high", budgetTokens: 16000 } };
+    // 1. DÉTECTION ET CONFIGURATION DE LA VISION
+    // OpenCode uses attachment + modalities.input to determine vision support.
+    // No variant needed — a "chat" variant would OVERWRITE existing variants.
+    if (supportsVision) {
+        if (!modelObj.modalities!.input!.includes('image')) {
+            modelObj.modalities!.input!.push('image');
         }
     }
+
+    // 2. REASONING VARIANTS — format @ai-sdk/openai-compatible: { reasoningEffort: "level" }
+    if (raw.reasoning === true || rawId.includes('thinking') || rawId.includes('reasoning')) {
+        modelObj.variants = {
+            ...modelObj.variants,
+            low: { reasoningEffort: 'low' },
+            high: { reasoningEffort: 'high' }
+        };
+    }
+    // Gemini models without explicit reasoning flag: add reasoning variants based on name
+    if (rawId.includes('gemini') && !rawId.includes('fast') && !modelObj.variants.high) {
+        if (rawId === 'gemini' || rawId === 'gemini-large') {
+            modelObj.variants = {
+                ...modelObj.variants,
+                low: { reasoningEffort: 'low' },
+                high: { reasoningEffort: 'high' }
+            };
+        }
+    }
+
+    // 3. SAFETY VARIANTS — maxTokens for models with known limits
     if (rawId.includes('claude') || rawId.includes('mistral') || rawId.includes('llama')) {
-        modelObj.variants.safe_tokens = { options: { maxTokens: 8000 } };
+        modelObj.variants.safe_tokens = { maxTokens: 8000 };
     }
     // NOVA FIX: Bedrock limit ~10k (User reported error > 10000)
-    // We MUST set the limit on the model object itself so OpenCode respects it by default.
     if (rawId.includes('nova')) {
         modelObj.limit = {
             output: 8000,
-            context: 128000 // Nova Micro/Lite/Pro usually 128k
+            context: 128000
         };
-        // Also keep variant just in case
-        modelObj.variants.bedrock_safe = { options: { maxTokens: 8000 } };
+        modelObj.variants.bedrock_safe = { maxTokens: 8000 };
     }
 
     // BEDROCK/ENTERPRISE LIMITS (Chickytutor only)
@@ -284,16 +323,17 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
     }
 
     // NOMNOM FIX: User reported error if max_tokens is missing.
-    // Also it is a 'Gemini-scrape' model, so we treat it similar to Gemini but with strict limit.
     if (rawId.includes('nomnom') || rawId.includes('scrape')) {
         modelObj.limit = {
-            output: 2048, // User used 1500 successfully
+            output: 2048,
             context: 32768
         };
     }
+
+    // 4. SPEED VARIANT — disable thinking for fast models
     if (rawId.includes('fast') || rawId.includes('flash') || rawId.includes('lite')) {
         if (!rawId.includes('gemini')) {
-            modelObj.variants.speed = { options: { thinking: { disabled: true } } };
+            modelObj.variants.speed = { thinking: { disabled: true } };
         }
     }
 
