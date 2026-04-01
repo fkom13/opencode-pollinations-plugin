@@ -140,14 +140,14 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {
             // Use /text/models for full metadata (input_modalities, tools, reasoning, pricing)
-            // We fetch WITHOUT the Authorization header because the authenticated API currently filters out some models
-            // like claude-airforce and step-3.5-flash. By fetching anonymously, we get the full list of 28 models.
-            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {});
+            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {
+                'Authorization': `Bearer ${effectiveKey}`
+            });
             const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
 
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
-                // All models exposed — no tool-based filtering
+                if (m.tools === false) return;
                 const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {

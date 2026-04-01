@@ -52,17 +52,18 @@ const CACHE_TTL = 30000; // 30 secondes
 let cachedQuota: QuotaStatus | null = null;
 let lastQuotaFetch: number = 0;
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const ONE_HOUR_MS = 60 * 60 * 1000;
 const HISTORY_RETENTION_MS = 48 * 60 * 60 * 1000; // 48h history
 
-// === TIER LIMITS ===
+// === TIER LIMITS (HOURLY) ===
+// https://pollinations.ai/pricing - Quotas refreshed every hour
 
 const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
-    microbe: { pollen: 0.1, emoji: '🦠' },
-    spore: { pollen: 1, emoji: '🦠' },
-    seed: { pollen: 3, emoji: '🌱' },
-    flower: { pollen: 10, emoji: '🌸' },
-    nectar: { pollen: 20, emoji: '🍯' },
+  microbe: { pollen: 0.01, emoji: '🦠' },
+  spore: { pollen: 0.01, emoji: '🍄' },
+  seed: { pollen: 0.15, emoji: '🌱' },
+  flower: { pollen: 0.4, emoji: '🌸' },
+  nectar: { pollen: 0.8, emoji: '🍯' },
 };
 
 // === LOGGING ===
@@ -253,24 +254,24 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
 }
 
 function calculateResetInfo(nextResetAt: string): ResetInfo {
-    const nextReset = new Date(nextResetAt);
-    const lastReset = new Date(nextReset.getTime() - ONE_DAY_MS);
-    const now = new Date();
+  const nextReset = new Date(nextResetAt);
+  const lastReset = new Date(nextReset.getTime() - ONE_HOUR_MS);
+  const now = new Date();
 
-    const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
-    const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());
-    const progressPercent = Math.min(100, (timeSinceReset / ONE_DAY_MS) * 100);
+  const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
+  const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());
+  const progressPercent = Math.min(100, (timeSinceReset / ONE_HOUR_MS) * 100);
 
-    return {
-        nextReset,
-        lastReset,
-        timeUntilReset,
-        timeSinceReset,
-        resetHour: nextReset.getUTCHours(),
-        resetMinute: nextReset.getUTCMinutes(),
-        resetSecond: nextReset.getUTCSeconds(),
-        progressPercent
-    };
+  return {
+    nextReset,
+    lastReset,
+    timeUntilReset,
+    timeSinceReset,
+    resetHour: nextReset.getUTCHours(),
+    resetMinute: nextReset.getUTCMinutes(),
+    resetSecond: nextReset.getUTCSeconds(),
+    progressPercent
+  };
 }
 
 function calculateCurrentPeriodUsage(

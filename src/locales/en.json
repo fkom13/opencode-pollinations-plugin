@@ -104,7 +104,7 @@
       "tiers_title": "> **Your tiers:** {emoji} {tier}",
       "about": "## 🌍 What is pollinations.ai ?\npollinations.ai is an open-source AI platform built by and for the community. We provide a unified API for Image, Text, Audio, and Video. Everything is open: our code, roadmap, conversations. Hundreds of devs are already building apps, games, bots, and crazy experiments with us. Join us!\n\nNo black boxes. No vendor lock-in. Just a friendly API and a Discord full of helpful people.",
       "levels_title": "## 📈 Upgrade Your Tier",
-      "levels_list": "For developers creating with pollinations.ai. Level up to earn more daily Pollen.\n\n- 🦠 **Microbe** (0.1 pollen/day) : Sign up\n- 🍄 **Spore** (1 pollen/day) : Automatic verification\n- 🌱 **Seed** (3 pollen/day) : 8+ dev points\n- 🌸 **Flower** (10 pollen/day) : Publish an app\n- 🍯 **Nectar** (20 pollen/day) : Coming soon 🔮",
+      "levels_list": "For developers creating with pollinations.ai. Level up to earn more Pollen.\n\n{tier_table}\n\n> ⚠️ **v6.2.4+**: Quotas are now **hourly** (reset at :00). Daily quota is an estimate (~24h × hourly rate).",
       "beta_note": "✨ *We are in beta! Learning what works best for our community.*",
       "pollen_title": "## 💎 What is Pollen ?",
       "pollen_get": "Running AI models costs money. Pollen is our way to keep servers running without ads or selling data. A simple, unified credit for all models — predictable, transparent, no surprises.\n\n**$1 ≈ 1 Pollen** (prices subject to change). You spend it on API calls.",

@@ -7,6 +7,7 @@ import { generatePollinationsConfig } from './generate-config.js';
 import { ModelRegistry } from './models/index.js';
 import type { PollinationsModel, ModelCategory } from './models/types.js';
 import { t } from '../locales/index.js';
+import { getTierInfo, formatTierTable, getTierDescription } from './tier-info.js';
 
 // --- HELPER: STRICT PERMISSION CHECK ---
 interface CheckResult { ok: boolean; status?: number | string; reason?: string; }
@@ -786,7 +787,11 @@ export async function handleInfosCommand(): Promise<CommandResult> {
     };
     const tierEmoji = emojis[tier] || '❓';
 
-    const response = `${t('commands.infos.title', { name })}
+    // Get dynamic tier table based on user's language
+const userLang = (config.lang || 'en') as 'en' | 'fr' | 'es' | 'de' | 'it';
+const tierTable = formatTierTable(userLang);
+
+const response = `${t('commands.infos.title', { name })}
 ${t('commands.infos.features_title')}
 ${t('commands.infos.features_free')}
 
@@ -798,7 +803,10 @@ ${t('commands.infos.tiers_title', { emoji: tierEmoji, tier: tier.toUpperCase() }
 ${t('commands.infos.about')}
 
 ${t('commands.infos.levels_title')}
-${t('commands.infos.levels_list')}
+
+${tierTable}
+
+> ⚠️ **v6.2.4+** : Les quotas sont **horaires** (reset à :00). Le quota journalier est une estimation (~24h × taux horaire).
 
 ${t('commands.infos.beta_note')}
 

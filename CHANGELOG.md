@@ -1,7 +1,47 @@
 # 📋 Changelog — OpenCode Pollinations Plugin
 
-All notable changes to this project are documented here.  
+All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [SemVer](https://semver.org/).
+
+---
+
+## [6.2.4] — 2026-03-28
+
+### 🔄 Major Change — Hourly Quota System (Pollinations API Update)
+
+**Breaking Change**: Pollinations.ai has migrated from a **daily** to an **hourly** quota reset system. This update adapts the plugin to the new economic model.
+
+#### 📊 New Tier Limits (Hourly Reset)
+
+| Tier | Old (Daily) | **New (Hourly)** | Factor |
+|------|-------------|------------------|--------|
+| 🦠 Microbe | 0.1/day | **0.01/hour** | ×0.024 |
+| 🍄 Spore | 1/day | **0.01/hour** | ×0.024 |
+| 🌱 Seed | 3/day | **0.15/hour** | ×0.075 |
+| 🌸 Flower | 10/day | **0.40/hour** | ×0.04 |
+| 🍯 Nectar | 20/day | **0.80/hour** | ×0.04 |
+
+#### 🛠 Technical Changes
+
+- **`src/server/quota.ts`**: 
+  - Replaced `ONE_DAY_MS` constant with `ONE_HOUR_MS` (60 * 60 * 1000)
+  - Updated `TIER_LIMITS` to reflect new hourly quotas
+  - `calculateResetInfo()` now computes time since last hour reset instead of daily reset
+  
+- **`src/server/quota.ts` Line 262**: Progress percentage now calculated against 1-hour window instead of 24-hour window
+
+#### 📈 Impact on Users
+
+- **More Frequent Resets**: Quotas now refresh every hour at :00 (visible via `/poll usage`)
+- **Better Distribution**: Prevents quota exhaustion spikes; smoother usage throughout the day
+- **SafetyNet Adaptation**: The `alwaysfree` mode automatically switches to free tier when >10% of hourly quota is consumed
+- **Wallet Usage**: Free tier quota is consumed first; wallet balance used only when quota is insufficient
+
+#### 📝 Documentation Updates
+
+- Updated README.md with new tier table and hourly reset explanations
+- Added warnings about hourly reset system
+- Clarified distinction between free tier (hourly) and wallet (persistent)
 
 ---
 

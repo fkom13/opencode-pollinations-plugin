@@ -100,26 +100,24 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     const port = await startProxy();
     const localBaseUrl = `http://127.0.0.1:${port}/v1`;
 
-    // INIT MODEL REGISTRY (blocking now, so tools get patched BEFORE OpenCode registers them)
-    try {
-        await ModelRegistry.refresh();
+    // INIT MODEL REGISTRY (non-blocking, fire-and-forget)
+    ModelRegistry.refresh().then(() => {
         const stats = ModelRegistry.stats();
         log(`[ModelRegistry] Ready: ${stats.image} image, ${stats.video} video, ${stats.audio} audio, ${stats.text} text`);
 
-        // Démarrage du patcher synchrone/asynchrone des descriptions des Outils (Phase 1.5)
-        const workerModule = await import('./server/models/worker.js');
-        workerModule.ToolRegistryWorker.start();
-        log(`[ToolWorker] Started and patched tools for OpenCode.`);
-    } catch (e) {
-        log(`[ModelRegistry] Init failed (will use fallback): ${e}`);
-    }
+        // Démarrage du patcher asynchrone des descriptions des Outils (Phase 1.5)
+        import('./server/models/worker.js').then(module => {
+            module.ToolRegistryWorker.start();
+        }).catch(e => log(`[ToolWorker] Failed to load worker: ${e}`));
+
+    }).catch(e => log(`[ModelRegistry] Init failed (will use fallback): ${e}`));
 
     setGlobalClient(ctx.client);
     setClientForCommands(ctx.client);
     const toastHooks = createToastHooks(ctx.client);
     const commandHooks = createCommandHooks();
 
-    // Build tool registry (conditional on API key presence) AFTER tools have been patched
+    // Build tool registry (conditional on API key presence)
     const toolRegistry = createToolRegistry();
     log(`[Tools] ${Object.keys(toolRegistry).length} tools registered`);
 
