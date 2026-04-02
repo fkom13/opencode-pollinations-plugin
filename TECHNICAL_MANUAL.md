@@ -1,5 +1,5 @@
-# 📘 Technical Manual — OpenCode Pollinations Plugin v6.1-beta
-> **Version**: 6.1.0-beta.33 | **Status**: Beta | **Last Updated**: 2026-02-28
+# 📘 Technical Manual — OpenCode Pollinations Plugin v6.2.7
+> **Version**: 6.2.7.1 | **Status**: Stable | **Last Updated**: 2026-04-02
 
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
@@ -525,6 +525,7 @@ Located in `src/tools/pollinations/`.
 | `gen_video.ts` | `gen_video` | Generate short video clips |
 | `transcribe_audio.ts` | `transcribe_audio` | Transcribe a local audio file to text |
 | `polli_web_search.ts` | `polli_web_search` | Connected Web Search for sourced context |
+| `beta_discovery.ts` | `beta_discovery` | API Explorer V4 (Defense-in-Depth) offering safe exploration of endpoints with built-in parameter fuzzing. |
 
 ---
 
@@ -828,8 +829,8 @@ Open an [issue](https://github.com/fkom13/opencode-pollinations-plugin/issues) t
 |---------|--------|-------|
 | ~~v5.3~~ | ~~Q1 2026~~ | ~~Stabilization~~ → merged into v5.9 |
 | ~~v5.4~~ | ~~Q2 2026~~ | ~~UX~~ → merged into v5.9 |
-| **v6.1.0-beta.33** | **Now** | **Multimodal Tools, Cost Guards, Deep Cleanup** |
-| v6.2 – v6.5 | Q2 2026 | Tests, hot-reload, logging |
+| **v6.2.7.1** | **Now** | **Media Fallback, Hourly Quotas, API Explorer V4** |
+| v6.3 – v6.5 | Q2 2026 | Tests, hot-reload, logging |
 | v7.0 | Q4 2026 | Smart Routing |
 | v8.0 | 2027 | Platform |
 

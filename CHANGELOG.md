@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.2.7.1] — 2026-04-02
+
+### ✨ Nouvelles Fonctionnalités & Refontes
+- **API Explorer V4 (Defense-in-Depth)** : Refonte complète de `beta_discovery.ts` avec 4 niveaux de sécurité anti-facturation. Introduction de `search_schema` (recherche OpenAPI full-text locale), `list_models_registry` (introspection 100% locale silencieuse), `fuzz_parameter` (whitelist + injection de valeurs corrompues/sabotage) et `probe_missing` (retrait strict de payloads pour discovery d'erreurs d'API contrôlées).
+- **Merge V1 OpenAPI Haute Fidélité** : Intégration de l'Endpoint `/v1/models` au sein du `fetcher.ts`, injectant et superposant dynamiquement les métadonnées `input_modalities`, `context_length` et support multimodal réel plutôt que des fallbacks statiques hasardeux.
+
+### 🛠 Fixes & Optimisations
+- **Sécurisation de l'Hydratation Asynchrone** : Le chargement `ModelRegistry.refresh()` est désormais unitairement bloquant au startup, garantissant que 100% des modèles médias et textes soient provisionnés avant que OpenCode ne monte la Dropdown de modèles ou exécute les agents.
+- **Fallback Universel et Résilience** : Sécurisation absolue sur le endpoint gratuit `text.pollinations.ai` pour les chutes sans quota, et rafraîchissement d'isolation sur `cache.ts` pour une meilleure bascule hors ligne.
+
+---
+
 ## [6.2.4] — 2026-03-28
 
 ### 🔄 Major Change — Hourly Quota System (Pollinations API Update)
