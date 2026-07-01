@@ -1,4 +1,12 @@
-# 🌸 Pollinations AI 插件 - OpenCode版 (v6.2.7)
+# 🌸 Pollinations AI 插件 - OpenCode版 (v6.3.0)
+
+## ✨ v6.3.0 新功能
+
+- 🎯 **任务与游戏化** ：`polli_quests` + `/poll quests` — 查看你的任务和**可领取的免费 Pollen**。使用本插件会追溯性地完成多个任务！
+- 🆓 **免费图像和视频 (无需密钥！)** ：`gen_edit_image_free` (生成 + 编辑，约 20/天) 和 `gen_video_free` (文本→视频 + 图像/音频，约 5/天)，适用于任何模型。
+- 🔐 **一键登录** ：`/poll login` + `polli_login` (设备流程，类似 `gh auth login`)，浏览器自动打开。`/poll connect sk_...` 仍可用于永久密钥。
+- 🇨🇳 **新增中文** ：界面支持 6 种语言 (en, fr, es, de, it, zh)。
+
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">

@@ -3,6 +3,7 @@ import fr from './fr.json' with { type: 'json' };
 import es from './es.json' with { type: 'json' };
 import de from './de.json' with { type: 'json' };
 import it from './it.json' with { type: 'json' };
+import zh from './zh.json' with { type: 'json' };
 import { loadConfig } from '../server/config.js';
 
 type TranslationDictionary = Record<string, any>;
@@ -12,7 +13,8 @@ const dictionaries: Record<string, TranslationDictionary> = {
     fr,
     es,
     de,
-    it
+    it,
+    zh
 };
 
 export function t(keyPath: string, params?: Record<string, string | number>): string {

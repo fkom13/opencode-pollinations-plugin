@@ -5,7 +5,7 @@
       "alias_note": "*(L'alias `/poll` est géré et recommandé à la place de `/pollinations` !)*",
       "mode_usage": "**Mode & Usage**\n- **`/poll mode [mode]`**: Change le mode (manual, alwaysfree, pro).\n- **`/poll usage [full]`**: Affiche le dashboard (full = détail).\n- **`/poll fallback <main> [agent]`**: Configure le Safety Net.",
       "configuration": "**Configuration**\n- **`/poll config [key] [value]`**:\n   - `lang`: en, fr, etc.\n   - `status_gui`: none, alert, all\n   - `logs_gui`: none, error, verbose\n   - `threshold_tier` / `threshold_wallet`: 0-100\n   - `status_bar`: true/false\n   - `cost_estimator`: true/false (show cost in outputs)\n   - `enablePaidTools`: true/false (wallet protection)\n   - `costThreshold`: seuil en pollen (défaut: 0.15)\n   - `costConfirmationRequired`: true/false (confirmation coût)",
-      "models_pricing": "**Modèles & Pricing**\n- **`/poll models [type]`**: Liste des modèles (type: image, video, audio, text)\n- **`/poll pricing`**: Tableau de pricing détaillé\n- **`/poll infos`**: Explications sur les Tiers et le Pollen\n\n> 💡 **RMBG keys**: Use the `rmbg_keys` tool (works with any model)."
+      "models_pricing": "**Modèles & Pricing**\n- **`/poll models [type]`**: Liste des modèles (type: image, video, audio, text)\n- **`/poll pricing`**: Tableau de pricing détaillé\n- **`/poll infos`**: Explications sur les Tiers et le Pollen\n- **`/poll quests`**: Voir vos quêtes & le Pollen gratuit à réclamer\n\n> 💡 **RMBG keys**: Use the `rmbg_keys` tool (works with any model)."
     },
     "config": {
       "title": "## ⚙️ Configuration Pollinations (v{version})",
@@ -53,7 +53,7 @@
       "tier": "- **Niveau:** {emoji} {tier} (Limite: {limit} 🌻)\n",
       "quota": "- **Période:** {remaining} dépensés / {limit} total limités\n",
       "usage_bar": "- **Utilisation:** {bar}\n",
-      "wallet": "- **Portefeuille:** {balance} 🌻 restants\n\n",
+      "wallet": "- **Solde (Payé + Quêtes):** {balance} 🌻\n\n",
       "reset": "### 🕒 Infos de Réinitialisation\n- **Prochain Reset:** {date} (dans {duration})\n\n",
       "restricted_key": "⚠️ Clé API restreinte. Détails non disponibles.\n",
       "period_detail": "### 📈 Détail de la période (depuis {time})\n",
@@ -101,20 +101,34 @@
       "features_free": "**🛠️ Outils Gratuits Intégrés (Toujours disponibles) :**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : Outils visuels et dev.\n- `remove_background` : Détourage d'image natif.\n- `extract_frames` / `extract_audio` : Extraction rapide de contenu média.\n- `file_to_url` : Hébergement instantané de vos fichiers locaux en ligne.",
       "features_pro": "**💎 Outils Pollinations (Premium - Automatisés avec votre Clé) :**\n- `polli_gen_image` : Génération d'images (Flux, Seedream, Gemini) + support Image-to-Image.\n- `polli_gen_video` : Génération vidéo text-to-video / image-to-video (Veo, Wan, LTX...).\n- `polli_gen_audio`/`polli_stt` : Transcription Whisper, Text-to-Speech ElevenLabs.\n- `polli_gen_music` : Moteur de musique générative.\n- `polli_web_search` : Recherche connectée pour étendre la base de contexte de l'agent.",
       "features_config": "- **Une configuration granulaire**, des modes de gestions de vos tokens et de vos outils, de la sécurisation des coûts des outils consommant du pollen...",
-      "tiers_title": "> **Your tiers:** {emoji} {tier}",
+      "tiers_title": "> **Votre palier :** {emoji} {tier}",
       "about": "## 🌍 Qu'est-ce que pollinations.ai ?\npollinations.ai est une plateforme d'IA open-source construite par et pour la communauté. Nous offrons une API unifiée pour les images, le texte, l'audio et la vidéo. Tout fonctionne de manière ouverte : notre code, notre feuille de route, nos conversations. Des centaines de développeurs construisent déjà des outils, des jeux, des bots et des expériences farfelues avec nous. Vous êtes les bienvenus !\n\nPas de boîtes noires. Pas de dépendance exclusive (vendor lock-in). Juste une API conviviale et un Discord rempli de personnes qui s'entraident réellement.",
-      "levels_title": "## 📈 Évoluez votre Palier (Tier)",
+      "levels_title": "## 📈 Paliers & Pollen Horaire",
       "levels_list": "Pour les développeurs qui créent avec pollinations.ai. Montez de niveau pour gagner plus de Pollen.\n\n{tier_table}\n\n> ⚠️ **Nouveau (v6.2.4)** : Les quotas sont maintenant **horaires** (reset à :00). Le quota journalier est une estimation (~24h × taux horaire).",
       "beta_note": "✨ *Nous sommes en bêta ! Nous apprenons ce qui fonctionne le mieux pour notre communauté.*",
       "pollen_title": "## 💎 Qu'est-ce que le Pollen ?",
       "pollen_get": "Faire tourner des modèles d'IA coûte de l'argent. Le Pollen est notre moyen de faire fonctionner les serveurs sans publicité ni revente de vos données. Un crédit simple et unique pour tous les modèles — prévisible, transparent, sans surprises.\n\n**$1 ≈ 1 Pollen** (les prix peuvent évoluer). Vous le dépensez pour faire des appels API.",
-      "pollen_spend": "## 🛒 Comment obtenir du Pollen ?\nIl y a plusieurs moyens d'ajouter du Pollen à votre solde : Participer à la communauté, ou l'acheter directement via le dashboard."
+      "pollen_spend": "## 🛒 Comment obtenir du Pollen ?\nIl y a plusieurs moyens d'ajouter du Pollen à votre solde : Participer à la communauté, ou l'acheter directement via le dashboard.",
+      "quests": "## 🎯 Quêtes — Gagnez du Pollen gratuit\nLe Pollen se gagne désormais surtout en complétant des **Quêtes**. Bonne nouvelle : utiliser ce plugin (modèles texte, image & audio) complète plusieurs quêtes **rétroactivement** — vous avez peut-être déjà du Pollen gratuit en attente !\n\n👉 Consultez et réclamez vos récompenses sur le [dashboard](https://enter.pollinations.ai). _La réclamation se fait uniquement sur le dashboard._\n\n> 💡 Le Pollen de quête fonctionne sur tous les modèles standard. Les modèles 💎 payants nécessitent toujours du Pollen acheté.",
+      "hourly_note": "> ⚠️ Les quotas sont **horaires** (recharge à :00). Le quota journalier est une estimation (~24h × taux horaire)."
     },
     "pricing_units": {
       "tokens": "~tokens",
       "img": "🌻/img",
       "s": "🌻/s",
       "tok": "🌻/tok"
+    },
+    "login": {
+      "prompt": "## 🔐 Connexion rapide (Device Flow)\n\n**1.** Ouvrez : **{uri_complete}**\n_(ou allez sur {uri} et entrez le code ci-dessous)_\n\n**2.** Votre code : **`{code}`**\n\n**3.** Connectez-vous avec GitHub, puis sur le formulaire de consentement :\n   • ✅ Gardez **Profile** + **Usage** accordés (requis pour le quota, les quêtes et l'always-free)\n   • 💡 Pour une **clé illimitée** : videz le champ **Budget** (→ Illimité) et le champ **Expiry** (→ Jamais)\n   • Cliquez **Authorize**\n\nLe plugin attend et se connecte **automatiquement** dès validation (un toast confirme ✅).\n\n💡 _Vous préférez une clé créée manuellement ? Utilisez plutôt `/poll connect sk_...`._",
+      "already_running": "⏳ Une connexion est déjà en cours. Terminez l'autorisation dans votre navigateur, ou patientez.",
+      "code_error": "❌ Impossible de démarrer la connexion : {error}\n💡 Vous pouvez toujours utiliser `/poll connect sk_...` manuellement.",
+      "expired": "⏱️ Code de connexion expiré. Relancez /poll login.",
+      "success_toast": "✅ Connecté via device login ! Modèles Pro débloqués.",
+      "validate_error": "❌ Échec de validation de la clé : {error}",
+      "nothing_pending": "ℹ️ Aucune connexion en cours. Lancez d'abord polli_login (sans wait) pour obtenir un code.",
+      "opened": "🌐 Ouverture de votre navigateur pour autoriser…",
+      "still_waiting": "⏳ En attente de votre autorisation dans le navigateur. Une fois validé, rappelez polli_login avec wait:true pour confirmer.",
+      "success_limited": "⚠️ Connecté, mais votre clé semble limitée (Profile/Usage non accordés). L'affichage du quota, le repli always-free et le contrôle du wallet peuvent ne pas fonctionner. Relancez login en accordant Profile + Usage, ou utilisez une clé complète."
     }
   },
   "proxy": {
@@ -349,6 +363,70 @@
       "err_auth": "❌ Clé API invalide ou non autorisée.",
       "err_large": "❌ Fichier audio trop volumineux.\n💡 Essayez de compresser ou découper l'audio.",
       "err_stt": "❌ Erreur transcription: {error}"
+    },
+    "polli_quests": {
+      "desc": "Liste vos Quêtes Pollinations et indique combien de Pollen gratuit vous pouvez réclamer. Lecture seule. Compléter des quêtes (y compris en utilisant simplement ce plugin) rapporte du Pollen ; la réclamation se fait sur le dashboard.",
+      "arg_filter": "Filtre : 'all' (défaut), 'available' (quêtes ouvertes) ou 'claimable' (gagnées mais pas encore réclamées).",
+      "no_key": "🔑 Aucune clé API configurée. Utilisez d'abord `/poll connect <clé>`.",
+      "error": "⚠️ Impossible de récupérer les quêtes : {error}",
+      "empty": "Aucune quête trouvée pour ce compte.",
+      "title": "## 🎯 Quêtes Pollinations",
+      "claimable": "> 🎁 **Vous avez {count} récompense(s) = {pollen} 🌻 à réclamer !**",
+      "none_claimable": "✅ Rien à réclamer pour le moment. Continuez d'utiliser le plugin pour en gagner plus !",
+      "claim_hint": "👉 Réclamez vos récompenses sur le [dashboard](https://enter.pollinations.ai) (réclamation uniquement sur le dashboard).",
+      "legend": "_Légende : 🎁 à réclamer · ✅ réclamée · ✔️ complétée · 🔜 bientôt · ⬜ ouverte_"
+    },
+    "gen_edit_image_free": {
+      "desc": "🆓 BONUS — Génération & édition d'images toujours gratuites. Aucune clé Pollinations requise, fonctionne avec n'importe quel modèle. Générez depuis un prompt, ou ÉDITEZ 1 à 3 images en les passant dans `images`. Via un playground public depuis votre propre IP : ~20 requêtes gratuites/jour (génération et édition PARTAGENT le même compteur quotidien). Au-delà du quota, utilisez `polli_gen_image` (Pollinations).",
+      "arg_prompt": "Description de l'image à générer, ou l'instruction d'édition en mode édition.",
+      "arg_images": "Optionnel. 1 à 3 images à ÉDITER (chemin local, URL http(s) ou data: URI). Si fourni, bascule en mode édition.",
+      "arg_aspect": "Ratio pour la génération (16:9 par défaut, 1:1, 9:16). Ignoré en édition.",
+      "arg_save_to": "Dossier de sortie ou chemin de fichier complet.",
+      "arg_filename": "Nom de fichier personnalisé (sans extension).",
+      "too_many_images": "❌ Le mode édition accepte 1 à 3 images maximum.",
+      "quota_exhausted": "🆓 Quota gratuit journalier atteint ({max}/jour pour cette IP, gén+édition partagés). Il se réinitialise toutes les 24h.\n💡 En attendant, utilisez `polli_gen_image` avec votre clé Pollinations.",
+      "working": "{mode} gratuite en cours…",
+      "failed": "Image gratuite échouée : {error}",
+      "api_error": "⚠️ Le service d'image gratuit a renvoyé une erreur : {error}\n💡 Réessayez, ou utilisez `polli_gen_image` (Pollinations).",
+      "res_title_gen": "🆓 Image Gratuite Générée",
+      "res_title_edit": "🆓 Image Gratuite Éditée",
+      "res_prompt": "Prompt : {prompt}",
+      "res_file": "Fichier : {path}",
+      "res_size": "Taille : {size}",
+      "res_quota": "Quota gratuit restant aujourd'hui : {remaining}/{max} (gén+édition partagés, par IP)",
+      "res_note": "_🆓 Outil bonus — gratuit, hors économie Pollinations. Résolution 1344×768. Au-delà du quota, utilisez `polli_gen_image`._",
+      "success": "{mode} gratuite terminée ✓",
+      "degraded": "⚠️ Service d'image gratuit indisponible ({error}).\n💡 Repli : utilisez `polli_gen_image` / `polli_gen_video` avec votre clé Pollinations."
+    },
+    "gen_video_free": {
+      "desc": "🆓 BONUS — Génération vidéo toujours gratuite. Aucune clé Pollinations requise, fonctionne avec n'importe quel modèle. Texte-vers-vidéo, avec `image` de première frame OPTIONNELLE et `audio` OPTIONNEL à joindre. Via un playground public Pruna depuis votre propre IP : ~5 vidéos gratuites/jour (séparé du quota image). Génération asynchrone (peut prendre 1-3 min). Au-delà du quota, utilisez `polli_gen_video` (Pollinations).",
+      "arg_prompt": "Description de la vidéo (mouvement, caméra, scène, indices audio).",
+      "arg_image": "Optionnel. Image de première frame / référence (chemin local, URL http(s) ou data: URI).",
+      "arg_audio": "Optionnel. Piste audio à joindre (chemin local, URL http(s) ou data: URI).",
+      "arg_duration": "Durée en secondes (défaut : 5, max : 10).",
+      "arg_aspect": "Ratio (16:9 par défaut, 9:16, 1:1).",
+      "arg_resolution": "Résolution (480p, 720p par défaut, 1080p).",
+      "arg_save_to": "Dossier de sortie ou chemin de fichier complet.",
+      "arg_filename": "Nom de fichier personnalisé (sans extension).",
+      "quota_exhausted": "🆓 Quota vidéo gratuit journalier atteint ({max}/jour pour cette IP). Il se réinitialise toutes les 24h.\n💡 En attendant, utilisez `polli_gen_video` avec votre clé Pollinations.",
+      "working": "Génération vidéo gratuite lancée (asynchrone, 1-3 min)…",
+      "failed": "Vidéo gratuite échouée : {error}",
+      "api_error": "⚠️ Le service vidéo gratuit a renvoyé une erreur : {error}\n💡 Réessayez, ou utilisez `polli_gen_video` (Pollinations).",
+      "res_title": "🆓 Vidéo Gratuite Générée",
+      "res_prompt": "Prompt : {prompt}",
+      "res_params": "Params : {duration}s · {resolution} · {aspect}",
+      "res_image": "Image : ✅ utilisée comme référence",
+      "res_audio": "Audio : ✅ joint",
+      "res_file": "Fichier : {path}",
+      "res_size": "Taille : {size}",
+      "res_quota": "Quota gratuit restant aujourd'hui : {remaining}/{max} (vidéos, par IP)",
+      "res_note": "_🆓 Outil bonus — gratuit, hors économie Pollinations. Au-delà du quota, utilisez `polli_gen_video`._",
+      "success": "Vidéo gratuite terminée ✓",
+      "degraded": "⚠️ Service vidéo gratuit indisponible ({error}).\n💡 Repli : utilisez `polli_gen_video` avec votre clé Pollinations."
+    },
+    "polli_login": {
+      "desc": "🔐 Démarre une connexion Pollinations rapide (device flow) pour l'utilisateur. Affiche un code court + une URL ; l'utilisateur se connecte avec GitHub dans son navigateur, et le plugin se connecte AUTOMATIQUEMENT une fois approuvé (un toast confirme). Aucune clé API nécessaire pour lancer ceci. À utiliser quand l'utilisateur veut connecter son compte Pollinations facilement, sans copier-coller de clé. Pour une clé permanente, dites-lui d'utiliser `/poll connect sk_...`.",
+      "arg_wait": "Si true, attend la fin d'une connexion en cours et retourne le résultat final (✅ connecté / expiré). Appelez d'abord sans wait pour afficher le code, puis à nouveau avec wait:true après avoir dit à l'utilisateur d'autoriser."
     }
   },
   "connect_response": {
@@ -358,7 +436,7 @@
     "resources": "### 📚 Ressources\n* **Site Web:** [pollinations.ai](https://pollinations.ai)\n* **Discord:** [Rejoindre la communauté](https://discord.gg/8HqSRhJVmK)\n* **Recharger le Wallet:** [Top-Up Balance](https://pollinations.ai/topup)",
     "free_models_success": "Modèles gratuits disponibles : {models}",
     "free_models_error": "⚠️ Impossible de récupérer la liste des modèles gratuits.",
-    "onboarding": "## 🌸 Bienvenue dans le Plugin Pollinations\n\n**Accès gratuit immédiat — aucune clé requise**\nCe plugin offre un environnement complet de chat, de génération de code et de manipulation de médias (Génération Image, Vidéo, Audio, Outils d'extraction...).\n\nSélectionnez un modèle `pollinations/free/*` dans la liste et discutez pour commencer.\n{freeText}\n\n---\n\n## 🚀 Agents et Outils Multimédias Intégrés au Développement\n\nClaude Opus, GPT-5, Gemini 3, Génération Vidéo Veo & Wan, ElevenLabs Music... débloquez la puissance complète de l'API Pollinations !\n\nCe plugin adopte un modèle **BYOK** (Bring Your Own Key) : en utilisant votre propre clé API, l'Agent OpenCode gagne la capacité d'interagir directement avec des outils Premium en créant vos fichiers multimédias dans votre Espace de Travail.\n\n**Étape 1 — Créer un compte avec 10$ Gratuits !**\nSoutenez le plugin en passant par ce lien :\n👉 **https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin**\n\n**Étape 2 — Générer votre clé API**\nDans la section **API Keys** sur `enter.pollinations.ai`, créez une clé **Secret** (`sk_...`).\n\n**Étape 3 — Connecter la clé**\n```bash\n/poll connect sk_votre_clé_ici\n```\n*(La clé s'enregistre immédiatement dans votre environnement OpenCode, débloquant les modèles Pro !)*\n\n---\n\n## 💰 Système de Pollen et Tiers\nChaque développeur reçoit une **Subvention quotidienne gratuite (Tier Grant)** pour utiliser ces services Premium :\n- 🦠 **Microbe** (0.1 pollen/jour) : Pour débloquer : S'inscrire\n- 🍄 **Spore** (1 pollen/jour) : Pour débloquer : Vérification automatique (Vérifié à l'inscription)\n- 🌱 **Seed** (3 pollen/jour) : Pour débloquer : 8+ points dev (Mise à niveau automatique hebdomadaire)\n- 🌸 **Flower** (10 pollen/jour) : Pour débloquer : Publier une application\n- 🍯 **Nectar** (20 pollen/jour) : Bientôt disponible 🔮\n\nUne fois le quota gratuit épuisé, vous consommez le Pollen de votre portefeuille ($1 ≈ 1 Pollen, pas d'abonnement, pas d'expiration).\n\n**Besoin d'aide ?**\n- Tapez `/poll help` pour la liste des commandes.\n- Discord Officiel : https://discord.gg/pollinations-ai-885844321461485618"
+    "onboarding": "## 🌸 Bienvenue sur le plugin Pollinations\n\n**Accès gratuit immédiat — aucune clé requise**\nCe plugin offre un environnement complet pour le chat, la génération de code et la manipulation média (génération d'images, vidéos, audio, outils d'extraction...).\n\nSélectionnez un modèle `pollinations/free/*` dans la liste et commencez à discuter.\n{freeText}\n\n**🆓 Outils gratuits bonus (sans clé) :** `gen_edit_image_free` et `gen_video_free` — générez/éditez des images (~20/jour) et des vidéos (~5/jour) immédiatement, pour n'importe quel modèle.\n\n---\n\n## 🚀 Agents et outils multimédias pour développeurs\n\nClaude Opus, GPT-5, Gemini 3, génération vidéo Veo & Wan, musique ElevenLabs... libérez toute la puissance de l'API Pollinations !\n\nCe plugin adopte un modèle **BYOK** (Bring Your Own Key) : avec votre propre clé API, l'agent OpenCode peut interagir directement avec les outils Premium et créer vos fichiers média dans votre Workspace.\n\n**Étape 1 — Créez un compte gratuit**\n👉 **https://enter.pollinations.ai**\n\n**Étape 2 — Générez votre clé API**\nDans la section **API Keys** sur `enter.pollinations.ai`, créez une clé **Secret** (`sk_...`).\n\n**Étape 3 — Connectez la clé**\n```bash\n/poll connect sk_votre_cle_ici\n```\n*(La clé est immédiatement enregistrée dans votre environnement OpenCode, débloquant les modèles Pro !)*\n\n---\n\n## 💰 Pollen, Paliers & Quêtes\nVotre **palier** vous donne une recharge horaire de Pollen gratuit (ex. 🌸 Flower ≈ 0,4/h). En plus, les **Quêtes** vous récompensent en Pollen gratuit — et utiliser simplement ce plugin en complète plusieurs rétroactivement ! Consultez `/poll quests`.\n\nUne fois le Pollen gratuit épuisé, vous puisez dans votre wallet (1 $ ≈ 1 Pollen, sans abonnement, sans expiration).\n\n**Besoin d'aide ?** Tapez `/poll help`. Discord officiel : https://discord.gg/pollinations-ai-885844321461485618"
   },
   "cost_guard": {
     "cost_validated_max": "💰 Coût validé (Max théorique: {maxCost})",
@@ -369,5 +447,15 @@
     "reason_fixed": "Le coût estimé de cette action ({cost}) dépasse le seuil défini ({limit}).",
     "estimated_max": "💰 Coût estimé moyen: {cost} (Max: {maxCost})",
     "estimated": "💰 Coût estimé: {cost}"
+  },
+  "tier": {
+    "condition": {
+      "signup": "Inscrivez-vous, c'est tout !",
+      "auto_verify": "Vérification automatique",
+      "community": "Membre actif de la communauté",
+      "publish_app": "Publier une app",
+      "top_contributor": "Contributeur de premier plan",
+      "special": "Spécial / sur invitation"
+    }
   }
 }

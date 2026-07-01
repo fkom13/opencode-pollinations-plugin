@@ -1,9 +1,16 @@
 /**
  * Tier Information - Central Configuration
- * 
- * Hourly quota system (Pollinations API v2026-03)
- * Quotas reset every hour at :00
+ *
+ * Hourly quota system (Pollinations API). Quotas refill every hour at :00.
+ * Tiers mirror the official pollinations/shared/tier-config.ts.
+ *
+ * NOTE (2026-06): The legacy account-level upgrade paths (dev-points → Seed,
+ * publish-app → Flower, admin tier-update) were removed upstream. Pollen is now
+ * primarily earned by completing Quests. The `condition` fields below describe
+ * the broad tier profile, not an automated upgrade trigger.
  */
+
+import { t } from '../locales/index.js';
 
 export interface TierInfo {
   name: string;
@@ -18,8 +25,8 @@ export const TIER_INFO: Record<string, TierInfo> = {
   microbe: {
     name: 'Microbe',
     emoji: '🦠',
-    hourlyPollen: 0.01,
-    dailyEstimate: 0.24,
+    hourlyPollen: 0,
+    dailyEstimate: 0,
     condition: 'Just register!',
     conditionKey: 'tier.condition.signup',
   },
@@ -36,8 +43,8 @@ export const TIER_INFO: Record<string, TierInfo> = {
     emoji: '🌱',
     hourlyPollen: 0.15,
     dailyEstimate: 3.6,
-    condition: '8+ dev points (weekly auto-upgrade)',
-    conditionKey: 'tier.condition.dev_points',
+    condition: 'Active community member',
+    conditionKey: 'tier.condition.community',
   },
   flower: {
     name: 'Flower',
@@ -52,8 +59,16 @@ export const TIER_INFO: Record<string, TierInfo> = {
     emoji: '🍯',
     hourlyPollen: 0.8,
     dailyEstimate: 19.2,
-    condition: 'Coming soon 🔮',
-    conditionKey: 'tier.condition.coming_soon',
+    condition: 'Top contributor',
+    conditionKey: 'tier.condition.top_contributor',
+  },
+  router: {
+    name: 'Router',
+    emoji: '🐝',
+    hourlyPollen: 10,
+    dailyEstimate: 240,
+    condition: 'Special / invite-only',
+    conditionKey: 'tier.condition.special',
   },
 };
 
@@ -74,44 +89,41 @@ export function getAllTiers(): TierInfo[] {
 /**
  * Format tier list for display (markdown table)
  */
-export function formatTierTable(lang: 'en' | 'fr' | 'es' | 'de' | 'it' = 'en'): string {
+export function formatTierTable(lang: 'en' | 'fr' | 'es' | 'de' | 'it' | 'zh' = 'en'): string {
   const tiers = getAllTiers();
   
-  const headers = {
+  const headers: Record<string, string> = {
     en: '| Tier | Hourly | Daily (est.) | Condition |',
     fr: '| Palier | Horaire | Journalier (est.) | Condition |',
     es: '| Nivel | Por hora | Diario (est.) | Condición |',
     de: '| Stufe | Pro Stunde | Täglich (ca.) | Bedingung |',
     it: '| Livello | Orario | Giornaliero (stima) | Condizione |',
+    zh: '| 等级 | 每小时 | 每日 (估算) | 条件 |',
   };
-  
+
   const separator = '|------|---------|----------------|-----------|';
-  
+
   const rows = tiers.map(tier => {
-    const conditionText = lang === 'fr' ? tier.condition : tier.condition;
+    const conditionText = t(tier.conditionKey);
     return `| ${tier.emoji} **${tier.name}** | **${tier.hourlyPollen} pollen/h** | ~${tier.dailyEstimate}/day | ${conditionText} |`;
   });
-  
-  return [headers[lang], separator, ...rows].join('\n');
+
+  return [headers[lang] || headers.en, separator, ...rows].join('\n');
 }
 
 /**
  * Get dynamic tier description with hourly rates
  */
-export function getTierDescription(lang: 'en' | 'fr' | 'es' | 'de' | 'it' = 'en'): string {
-  const isFrench = lang === 'fr';
-  const pollenWord = isFrench ? 'Pollen' : 'Pollen';
-  const perHour = isFrench ? '/heure' : '/hour';
-  const perDay = isFrench ? '/jour (est.)' : '/day (est.)';
-  
+export function getTierDescription(lang: 'en' | 'fr' | 'es' | 'de' | 'it' | 'zh' = 'en'): string {
+  const perHour = lang === 'fr' ? '/heure' : '/hour';
+  const perDay = lang === 'fr' ? '/jour (est.)' : '/day (est.)';
+
   const tiers = getAllTiers();
-  
+
   const lines = tiers.map(tier => {
-    const conditionText = isFrench ? 
-      (tier.conditionKey === 'tier.condition.publish_app' ? '**Publier une App** (comme ce plugin !)' : tier.condition) :
-      tier.condition;
-    return `- ${tier.emoji} **${tier.name}** (**${tier.hourlyPollen} ${pollenWord}${perHour}** ≈ ~${tier.dailyEstimate}${perDay}) : ${conditionText}`;
+    const conditionText = t(tier.conditionKey);
+    return `- ${tier.emoji} **${tier.name}** (**${tier.hourlyPollen} Pollen${perHour}** ≈ ~${tier.dailyEstimate}${perDay}) : ${conditionText}`;
   });
-  
+
   return lines.join('\n');
 }

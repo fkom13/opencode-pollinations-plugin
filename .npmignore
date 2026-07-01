@@ -17,6 +17,7 @@ CONTRIBUTING.md
 *.md
 !README.md
 !LICENSE.md
+*.code-workspace
 
 # Versioning & Dev Tools
 .gencodedoc/

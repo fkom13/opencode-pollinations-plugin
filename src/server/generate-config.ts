@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { loadConfig, CONFIG_FILE } from './config.js';
+import { ModelRegistry } from './models/cache.js';
 
 // --- INTERFACES SCRICT ---
 
@@ -139,15 +140,12 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     // 2. ENTERPRISE UNIVERSE
     if (effectiveKey && effectiveKey.length > 5 && effectiveKey !== 'dummy') {
         try {
-            // Use /text/models for full metadata (input_modalities, tools, reasoning, pricing)
-            const enterListRaw = await fetchJson('https://gen.pollinations.ai/text/models', {
-                'Authorization': `Bearer ${effectiveKey}`
-            });
-            const enterList = Array.isArray(enterListRaw) ? enterListRaw : (enterListRaw.data || []);
+            // Utilise le cache centralisé fusionné (V1 + Détaillé) au lieu de re-télécharger
+            const enterList = ModelRegistry.list('text');
 
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
-                if (m.tools === false) return;
+                if (m.tools === false) return; // OpenCode UI chat nécessite explicitement les tools
                 const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {

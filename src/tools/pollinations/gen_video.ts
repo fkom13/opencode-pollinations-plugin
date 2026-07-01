@@ -90,7 +90,7 @@ export const polliGenVideoTool: ToolDefinition = tool({
         }
 
         // Validate aspect ratio (for known models; beta models accept any)
-        if (!isBetaModel && !validateAspectRatio(model, aspectRatio)) {
+        if (!isBetaModel && !modelConfig!.aspectRatios.includes(aspectRatio)) {
             return t('tools.polli_gen_video.invalid_aspect', { model, aspect: aspectRatio, supported: modelConfig!.aspectRatios.join(', ') });
         }
 

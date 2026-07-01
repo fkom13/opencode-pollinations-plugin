@@ -24,7 +24,7 @@ export async function buildConnectResponse(config: PollinationsConfigV5): Promis
     }
 
     const emojis: Record<string, string> = {
-        microbe: '🦠', spore: '🍄', seed: '🌱', flower: '🌸', nectar: '🍯', anonymous: '👤'
+        microbe: '🦠', spore: '🍄', seed: '🌱', flower: '🌸', nectar: '🍯', router: '🐝', anonymous: '👤'
     };
     const tierEmoji = emojis[tier] || '❓';
 

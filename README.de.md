@@ -1,4 +1,12 @@
-# 🌸 Pollinations AI Plugin für OpenCode (v6.2.7)
+# 🌸 Pollinations AI Plugin für OpenCode (v6.3.0)
+
+## ✨ Neu in v6.3.0
+
+- 🎯 **Quests & Gamification** : `polli_quests` + `/poll quests` — sieh deine Quests und das **einlösbare kostenlose Pollen**. Die Nutzung des Plugins schließt Quests rückwirkend ab!
+- 🆓 **Kostenlose Bild- & Videogenerierung (ohne Schlüssel!)** : `gen_edit_image_free` (erstellen + bearbeiten, ~20/Tag) und `gen_video_free` (Text→Video + Bild/Audio, ~5/Tag), für jedes Modell.
+- 🔐 **1-Klick-Login** : `/poll login` + `polli_login` (Device Flow wie `gh auth login`), Browser öffnet automatisch. `/poll connect sk_...` bleibt für permanente Schlüssel verfügbar.
+- 🇨🇳 **Chinesisch hinzugefügt** : Oberfläche in 6 Sprachen (en, fr, es, de, it, zh).
+
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">

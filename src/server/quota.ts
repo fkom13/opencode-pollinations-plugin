@@ -9,7 +9,7 @@ interface Profile {
     githubUsername: string;
     tier: string;
     createdAt: string;
-    nextResetAt: string;
+    nextResetAt: string | null; // null for tiers with no refill (cadence 'none': anonymous/microbe)
 }
 import { DetailedUsageEntry } from './pollinations-api.js';
 
@@ -58,12 +58,16 @@ const HISTORY_RETENTION_MS = 48 * 60 * 60 * 1000; // 48h history
 // === TIER LIMITS (HOURLY) ===
 // https://pollinations.ai/pricing - Quotas refreshed every hour
 
-const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
-  microbe: { pollen: 0.01, emoji: '🦠' },
-  spore: { pollen: 0.01, emoji: '🍄' },
-  seed: { pollen: 0.15, emoji: '🌱' },
-  flower: { pollen: 0.4, emoji: '🌸' },
-  nectar: { pollen: 0.8, emoji: '🍯' },
+// Source of truth mirrored from official pollinations/shared/tier-config.ts (2026-06)
+// cadence 'none' => no hourly refill => API returns nextResetAt: null
+const TIER_LIMITS: Record<string, { pollen: number; emoji: string; cadence: 'hourly' | 'none' }> = {
+  anonymous: { pollen: 0, emoji: '👤', cadence: 'none' },
+  microbe: { pollen: 0, emoji: '🦠', cadence: 'none' },
+  spore: { pollen: 0.01, emoji: '🍄', cadence: 'hourly' },
+  seed: { pollen: 0.15, emoji: '🌱', cadence: 'hourly' },
+  flower: { pollen: 0.4, emoji: '🌸', cadence: 'hourly' },
+  nectar: { pollen: 0.8, emoji: '🍯', cadence: 'hourly' },
+  router: { pollen: 10, emoji: '🐝', cadence: 'hourly' },
 };
 
 // === LOGGING ===
@@ -147,7 +151,7 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
         // 3. Smart Fetch : Récupérer uniquement les dépenses du jour (depuis lastReset)
         const periodUsage = await fetchUsageForPeriod(config.apiKey, resetInfo.lastReset);
 
-        const tierInfo = TIER_LIMITS[profile.tier] || { pollen: 1, emoji: '❓' };
+        const tierInfo = TIER_LIMITS[profile.tier] || { pollen: 0, emoji: '❓', cadence: 'none' as const };
         const tierLimit = tierInfo.pollen;
 
         // 4. Calcul Strict FreeTier / Wallet
@@ -253,10 +257,29 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
     });
 }
 
-function calculateResetInfo(nextResetAt: string): ResetInfo {
-  const nextReset = new Date(nextResetAt);
-  const lastReset = new Date(nextReset.getTime() - ONE_HOUR_MS);
+function calculateResetInfo(nextResetAt: string | null): ResetInfo {
   const now = new Date();
+
+  // Tiers with cadence 'none' (anonymous/microbe) return nextResetAt: null.
+  // Guard also against malformed timestamps that would yield Invalid Date (NaN).
+  let nextReset = nextResetAt ? new Date(nextResetAt) : null;
+  if (!nextReset || isNaN(nextReset.getTime())) {
+    // No refill: there is no upcoming reset. Use a stable current-hour window
+    // so usage SmartFetch still has a sane lower bound, and surface 0 countdown.
+    const lastReset = new Date(now.getTime() - ONE_HOUR_MS);
+    return {
+      nextReset: now,
+      lastReset,
+      timeUntilReset: 0,
+      timeSinceReset: ONE_HOUR_MS,
+      resetHour: now.getUTCHours(),
+      resetMinute: now.getUTCMinutes(),
+      resetSecond: now.getUTCSeconds(),
+      progressPercent: 100
+    };
+  }
+
+  const lastReset = new Date(nextReset.getTime() - ONE_HOUR_MS);
 
   const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
   const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());

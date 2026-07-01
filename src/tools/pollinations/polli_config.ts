@@ -37,7 +37,7 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
         costThreshold: tool.schema.number().optional().describe('Cost threshold in USD/🌼 above which confirmation is required'),
         thresholdsTier: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 10 for 10%) for Free Tier.'),
         thresholdsWallet: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 50 for 50%) for Wallet balance.'),
-        lang: tool.schema.enum(['en', 'fr', 'es', 'de', 'it']).optional().describe('Plugin language for commands and toasts (en, fr, es, de, it).')
+        lang: tool.schema.enum(['en', 'fr', 'es', 'de', 'it', 'zh']).optional().describe('Plugin language for commands and toasts (en, fr, es, de, it, zh).')
     },
     async execute(args, context) {
         if (args.action === 'view') {

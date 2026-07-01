@@ -100,17 +100,19 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     const port = await startProxy();
     const localBaseUrl = `http://127.0.0.1:${port}/v1`;
 
-    // INIT MODEL REGISTRY (non-blocking, fire-and-forget)
-    ModelRegistry.refresh().then(() => {
+    // INIT MODEL REGISTRY (blocking, requires full load before tools are exported)
+    try {
+        const configLocal = loadConfig();
+        await ModelRegistry.refresh(configLocal.apiKey);
         const stats = ModelRegistry.stats();
         log(`[ModelRegistry] Ready: ${stats.image} image, ${stats.video} video, ${stats.audio} audio, ${stats.text} text`);
 
-        // Démarrage du patcher asynchrone des descriptions des Outils (Phase 1.5)
-        import('./server/models/worker.js').then(module => {
-            module.ToolRegistryWorker.start();
-        }).catch(e => log(`[ToolWorker] Failed to load worker: ${e}`));
-
-    }).catch(e => log(`[ModelRegistry] Init failed (will use fallback): ${e}`));
+        // Initialisation synchrone du patcher des descriptions des Outils
+        const module = await import('./server/models/worker.js');
+        module.ToolRegistryWorker.start();
+    } catch (e) {
+        log(`[ModelRegistry] Init failed (will use fallback): ${e}`);
+    }
 
     setGlobalClient(ctx.client);
     setClientForCommands(ctx.client);

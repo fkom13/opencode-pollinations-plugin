@@ -15,6 +15,7 @@ out/
 .DS_Store
 Thumbs.db
 *.swp
+*.code-workspace
 
 # Environment & Config
 .env
@@ -48,3 +49,7 @@ scripts/*
 !scripts/i18n/
 !scripts/i18n/**
 !scripts/set_key.cjs
+
+# Audit & PoC (contain secrets - never commit)
+API_AUDIT_*.md
+test-api-poc.sh

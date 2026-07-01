@@ -19,6 +19,11 @@ import { extractFramesTool } from './power/extract_frames.js';
 import { extractAudioTool } from './power/extract_audio.js';
 import { rmbgKeysTool } from './power/rmbg_keys.js';
 
+// === FREE BONUS: standalone always-free image gen/edit + video (no key, no Pollen) ===
+import { genEditImageFreeTool } from './pollinations/gen_edit_image_free.js';
+import { genVideoFreeTool } from './pollinations/gen_video_free.js';
+import { polliLoginTool } from './pollinations/polli_login.js';
+
 // === ENTER TOOLS (Require API key) ===
 import { polliGenImageTool } from './pollinations/gen_image.js';
 import { polliGenVideoTool } from './pollinations/gen_video.js';
@@ -30,6 +35,7 @@ import { polliBetaDiscoveryTool } from './pollinations/beta_discovery.js';
 import { polliGenConfirmTool } from './pollinations/polli_gen_confirm.js';
 import { polliStatusTool } from './pollinations/polli_status.js';
 import { polliConfigTool } from './pollinations/polli_config.js';
+import { polliQuestsTool } from './pollinations/polli_quests.js';
 
 import * as fs from 'fs';
 
@@ -68,6 +74,15 @@ export function createToolRegistry(): Record<string, any> {
     tools['extract_audio'] = extractAudioTool;
     tools['rmbg_keys'] = rmbgKeysTool;
 
+    // Bonus tool: always-free image gen/edit (works without a Pollinations key)
+    tools['gen_edit_image_free'] = genEditImageFreeTool;
+
+    // Bonus tool: always-free video generation (works without a Pollinations key)
+    tools['gen_video_free'] = genVideoFreeTool;
+
+    // Login tool: device-flow login, callable by any model (no key needed to run)
+    tools['polli_login'] = polliLoginTool;
+
     log(`Free tools injected: ${Object.keys(tools).length}`);
 
     // === ENTER UNIVERSE: Only with valid API key (+6 tools) ===
@@ -94,6 +109,9 @@ export function createToolRegistry(): Record<string, any> {
         // Plugin Status / Info / Pricing helper map
         tools['polli_status'] = polliStatusTool;
 
+        // Quests — read-only quest status & claimable Pollen nudge
+        tools['polli_quests'] = polliQuestsTool;
+
         log(`Enter tools injected (key detected). Total: ${Object.keys(tools).length}`);
     } else {
         // En mode gratuit, on ajoute quand meme polli_status mais restraint (il dira manque une clé pour full profile etc)
@@ -115,5 +133,6 @@ export {
     polliBetaDiscoveryTool,
     polliGenConfirmTool,
     polliStatusTool,
-    polliConfigTool
+    polliConfigTool,
+    polliQuestsTool
 };

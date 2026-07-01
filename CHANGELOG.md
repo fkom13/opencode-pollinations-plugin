@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.3.0] — 2026-07-01
+
+### ✨ Nouvelles Fonctionnalités
+
+- **🎯 Quêtes (Gamification Pollinations)** : Nouvel outil `polli_quests` + commande `/poll quests`. Affiche vos quêtes par catégorie et le **Pollen gratuit à réclamer** (lecture `/account/quests`). Utiliser simplement le plugin complète plusieurs quêtes rétroactivement.
+- **🆓 `gen_edit_image_free`** : Génération ET édition d'images **toujours gratuites, sans clé** (~20/jour), accessibles à n'importe quel modèle OpenCode. Support 1-3 images en entrée (chemin local, URL ou data URI).
+- **🆓 `gen_video_free`** : Génération vidéo **gratuite, sans clé** (~5/jour), avec image de première frame et audio optionnels. Flux asynchrone (poll de job).
+- **🔐 Device Login** : Nouvelle commande `/poll login` + outil `polli_login` (connexion en 1 clic type `gh auth login`). Ouverture navigateur automatique, poller de fond, mode `wait` pour l'agent, attribution à l'app via `client_id`. Guide de création de clé intégré (Profile+Usage, budget/expiry).
+- **🇨🇳 Chinois (zh)** : Ajout complet de la 6ème langue runtime. L'interface est désormais disponible en `en, fr, es, de, it, zh`.
+
+### 🛠 Fixes & Corrections
+
+- **Tiers alignés sur l'API officielle** : Ajout de `router` (🐝 10/h) et `anonymous`, correction de `microbe` (0/h). Correction du crash sur `nextResetAt: null` (tiers sans refill) et des dates invalides.
+- **Suppression de la table `TIER_LIMITS` fantôme** (anciennes valeurs journalières 10/20) source de dérive, et alignement de `calculateResetDate` sur le système horaire.
+- **Narration des tiers corrigée** : Remplacement de la mécanique obsolète (dev points / publish app, supprimée par Pollinations) par la logique **Quêtes**. Onboarding refait dans les 6 langues.
+- **i18n** : Câblage réel des conditions de tiers par langue (affichaient l'anglais en dur), + audit de parité (389 clés alignées sur les 6 langues).
+
+---
+
 ## [6.2.7.1] — 2026-04-02
 
 ### ✨ Nouvelles Fonctionnalités & Refontes

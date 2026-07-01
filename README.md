@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v6.2.7)
+# 🌸 Pollinations AI Plugin for OpenCode (v6.3.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -27,12 +27,15 @@
 
 ---
 
-## ✨ What's new in V6.2.7?
+## ✨ What's new in V6.3.0?
 
-- ⏱️ **Hourly Quotas**: Say goodbye to daily limits! Developer tiers now reset **every single hour** at `:00`, ensuring you always have fresh credits available throughout your coding sessions.
-- ⚡ **100% Dynamic Engine**: Hardcoded model lists, default configurations, and fixed prices are gone! In V6.2, OpenCode's AI agent now fetches the latest LLMs (`[💎 Paid]`, `[🌿 Free]`, limits), and cost approximations dynamically from the Pollinations APIs.
-- 🛡️ **Robust Security**: Protection against path traversal and strict URL verifications are fully integrated.
-- 🔍 **Improved Web Search**: The `polli_web_search` component maps seamlessly to current web-enabled and specialized groundings options like Google Gemini Fast, Perplexity, and Custom assistants.
+- 🎯 **Quests & Gamification**: New `polli_quests` tool + `/poll quests` command. See your Pollinations quests by category and the **free Pollen waiting to be claimed**. Just using this plugin (text, image & audio models) completes several quests **retroactively** — you may already have free Pollen waiting!
+- 🆓 **Free Image & Video Tools (no key required!)**: Two brand-new bonus tools usable by **any** OpenCode model, even without a Pollinations account:
+  - `gen_edit_image_free` — generate **and edit** images (~20/day).
+  - `gen_video_free` — text-to-video with optional first-frame image & audio (~5/day).
+- 🔐 **1-Click Device Login**: New `/poll login` command + `polli_login` tool (like `gh auth login`). Opens your browser automatically and connects the plugin — no manual key copy-paste needed. The old `/poll connect sk_...` still works for permanent keys.
+- 🇨🇳 **Chinese added**: The interface is now available in **6 languages** (en, fr, es, de, it, **zh**).
+- 🛠️ **Tier fixes**: Full alignment with the official Pollinations tier config (added `router` 🐝, `anonymous`), crash fixes on no-refill tiers, and quest-based progression replacing the deprecated dev-points system.
 
 ---
 
@@ -47,14 +50,18 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 - 🎙️ `polli_stt` : High-flying voice transcription (Whisper V3).
 - 🌐 `polli_web_search` : Connected Web & Specialized Search context (`gemini-search`, `perplexity...`).
 
-### 🧰 Free Creator Bonus Tools (Always available)
+### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
+- 🆓 `gen_edit_image_free` : Generate **and edit** images for free (~20/day, any model, no key).
+- 🆓 `gen_video_free` : Free text-to-video with optional first-frame image & audio (~5/day, no key).
 - ✂️ `remove_background` : Built-in ultra-fast AI image background removal.
-- 🛠️ `gen_qrcode`, `gen_diagram`, `extract_frames`, `extract_audio`, `file_to_url`: Dev utilities.
+- 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Dev utilities.
 
 ### 💻 Complete List of Terminal Commands
 Use the alias **`/poll`** or **`/pollinations`** anytime inside your conversation terminal:
 - `/poll help` : Displays the interactive help table.
-- `/poll connect` : Bring Your Own Key configuration tool (Interactive).
+- `/poll login` : **1-click browser login** (device flow) — creates & connects a key automatically.
+- `/poll connect <key>` : Bring Your Own Key (manual `sk_...`, permanent key).
+- `/poll quests` : See your quests & free Pollen ready to claim. 🎯
 - `/poll usage full` : Real-time dashboard (Stats), active Freetiers, and Wallet Balance.
 - `/poll config` : Finely adjust Cost Guards, Logs, Language, and Display.
 - `/poll models` : Check the status of available Models.
@@ -83,13 +90,16 @@ In the past, Pollinations mainly relied on ad-funded network traffic. Today, run
 
 | Tier | Hourly Reload ⏱️ | Daily Estimate* | Condition |
 | :--- | :--- | :--- | :--- |
-| 🦠 **Microbe** | **0.01 Pollen / hour** | ~0.24 / day | Just register! |
+| 🦠 **Microbe** | **0 Pollen / hour** | ~0 / day | Just register! |
 | 🍄 **Spore** | **0.01 Pollen / hour** | ~0.24 / day | Automatic verification |
-| 🌱 **Seed** | **0.15 Pollen / hour** | ~3.6 / day | Active GitHub Developer (8+ points) |
-| 🌸 **Flower** | **0.40 Pollen / hour** | ~9.6 / day | **Publish an App** (Like this Plugin!) |
-| 🍯 **Nectar** | **0.80 Pollen / hour** | ~19.2 / day | Coming soon 🔮 |
+| 🌱 **Seed** | **0.15 Pollen / hour** | ~3.6 / day | Active community member |
+| 🌸 **Flower** | **0.40 Pollen / hour** | ~9.6 / day | Publish an App (like this Plugin!) |
+| 🍯 **Nectar** | **0.80 Pollen / hour** | ~19.2 / day | Top contributor |
+| 🐝 **Router** | **10 Pollen / hour** | ~240 / day | Special / invite-only |
 
 _*Daily estimates are approximate (~24h × hourly rate). Actual reset occurs automatically at the top of every hour (XX:00)._
+
+> 🎯 **Earn even more free Pollen by completing Quests!** Just using this plugin completes several quests retroactively. Run `/poll quests` to see what you can claim.
 
 > 🎁 **Get your Free Personal Key (BYOK) on [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) to boost OpenCode!**
 
@@ -125,11 +135,20 @@ This plugin is **fully cross-platform** (Windows, macOS, Linux) and detects Open
    *(Or inject it manually into `~/.config/opencode/opencode.json`)*
 
 ### 🔑 2. Interactive Onboarding
-Once inside OpenCode, simply type the following command in the Agent Terminal:
+
+Once inside OpenCode, connect your Pollinations account with **one** of these:
+
+**Option A — 1-click login (recommended):**
 ```bash
-/poll connect
+/poll login
 ```
-An interactive conversational assistant will guide you to inject your Pollinations Key and configure your workspace. *(Restart OpenCode to update the UI models list).*
+Your browser opens automatically. Sign in with GitHub and click **Authorize** — the plugin connects itself, no copy-paste. 💡 On the consent form, keep **Profile + Usage** granted; clear the **Budget** and **Expiry** fields for an unlimited, never-expiring key.
+
+**Option B — manual key:**
+```bash
+/poll connect sk_your_key_here
+```
+Create a **Secret** key yourself on [enter.pollinations.ai](https://enter.pollinations.ai) and paste it. *(Restart OpenCode to update the UI models list.)*
 
 ---
 

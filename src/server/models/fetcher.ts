@@ -88,7 +88,7 @@ function mapRawToModel(raw: any, fallbackCategory: ModelCategory, averageCost?: 
         tools: raw.tools,
         reasoning: raw.reasoning,
         is_specialized: raw.is_specialized,
-        context_window: raw.context_window,
+        context_window: raw.context_window || raw.context_length,
         averageCost: averageCost !== undefined && !isNaN(averageCost) ? averageCost : undefined,
     };
 
@@ -129,6 +129,7 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
 
     const statsPromise = fetchJson('https://enter.pollinations.ai/api/model-stats', headers).catch(() => ({ data: [] }));
     const openapiPromise = fetchJson('https://enter.pollinations.ai/api/docs/open-api/generate-schema', headers).catch(() => ({}));
+    const v1ModelsPromise = fetchJson('https://gen.pollinations.ai/v1/models', headers).catch(() => ({ data: [] }));
 
     const fetches = endpoints.map(async ({ url, fallbackCategory }) => {
         try {
@@ -140,10 +141,19 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
         }
     });
 
-    const resultsRaw = await Promise.all([...fetches, statsPromise, openapiPromise]);
+    const resultsRaw = await Promise.all([...fetches, statsPromise, openapiPromise, v1ModelsPromise]);
 
+    const v1ModelsRaw: any = resultsRaw.pop();
     const openapiRaw: any = resultsRaw.pop();
     const statsRaw: any = resultsRaw.pop();
+    
+    // Index V1 endpoints to extract structural modalities and properties
+    const v1List = Array.isArray(v1ModelsRaw) ? v1ModelsRaw : (v1ModelsRaw?.data || []);
+    const v1Map = new Map<string, any>();
+    for (const v of v1List) {
+        v1Map.set(v.id || v.name, v);
+    }
+
     const statsList = Array.isArray(statsRaw?.data) ? statsRaw.data : [];
     const statsMap = new Map<string, number>();
     for (const s of statsList) {
@@ -157,6 +167,17 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
         for (const item of list) {
             const modelId = item.name || item.id;
             const avgCost = statsMap.get(modelId);
+            const v1Item = v1Map.get(modelId);
+
+            // Merge structuraux de la V1 vers l'Item
+            if (v1Item) {
+                if (v1Item.input_modalities) item.input_modalities = v1Item.input_modalities;
+                if (v1Item.output_modalities) item.output_modalities = v1Item.output_modalities;
+                if (v1Item.context_length) item.context_length = v1Item.context_length;
+                if (v1Item.tools !== undefined) item.tools = v1Item.tools;
+                if (v1Item.reasoning !== undefined) item.reasoning = v1Item.reasoning;
+            }
+
             const model = mapRawToModel(item, res.fallbackCategory, avgCost);
 
             const uniqueId = model.name;

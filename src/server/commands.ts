@@ -8,6 +8,7 @@ import { ModelRegistry } from './models/index.js';
 import type { PollinationsModel, ModelCategory } from './models/types.js';
 import { t } from '../locales/index.js';
 import { getTierInfo, formatTierTable, getTierDescription } from './tier-info.js';
+import { buildQuestsReport } from '../tools/pollinations/polli_quests.js';
 
 // --- HELPER: STRICT PERMISSION CHECK ---
 interface CheckResult { ok: boolean; status?: number | string; reason?: string; }
@@ -60,15 +61,6 @@ export async function checkKeyPermissions(key: string): Promise<CheckResult> {
     return { ok: true };
 }
 
-// === CONSTANTS & PRICING ===
-const TIER_LIMITS: Record<string, { pollen: number; emoji: string }> = {
-    microbe: { pollen: 0.1, emoji: '🦠' },
-    spore: { pollen: 1, emoji: '🦠' },
-    seed: { pollen: 3, emoji: '🌱' },
-    flower: { pollen: 10, emoji: '🌸' },
-    nectar: { pollen: 20, emoji: '🍯' },
-};
-
 // === INTERFACE ===
 interface CommandResult {
     handled: boolean;
@@ -118,8 +110,9 @@ function parseUsageTimestamp(timestamp: string): Date {
 }
 
 function calculateResetDate(nextResetAt: Date) {
-    const now = new Date();
-    const lastReset = new Date(nextResetAt.getTime() - 24 * 60 * 60 * 1000);
+    // Hourly quota system (reset at :00). The "current period" is the last hour,
+    // matching the tier window computed in quota.ts. (Previously 24h — stale daily model.)
+    const lastReset = new Date(nextResetAt.getTime() - 60 * 60 * 1000);
     return lastReset;
 }
 
@@ -192,6 +185,8 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             return await handleUsageCommand(args);
         case 'connect':
             return await handleConnectCommand(args);
+        case 'login':
+            return await startDeviceLogin();
         case 'fallback':
             return handleFallbackCommand(args);
         case 'config':
@@ -204,6 +199,8 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             return await handlePricingCommand();
         case 'infos':
             return await handleInfosCommand();
+        case 'quests':
+            return await handleQuestsCommand(args);
         case 'addKey': // External trigger
             // UI Pollution Fix: User hates appendPrompt.
             // Just return a message telling them to use the tool.
@@ -466,6 +463,199 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
     }
 }
 
+// ─── DEVICE FLOW LOGIN (option C: background poller) ───────────────────────
+
+/** Best-effort cross-platform browser open. Never throws (headless-safe). */
+function openBrowser(url: string): boolean {
+    try {
+        const cp = require('child_process');
+        const platform = process.platform;
+        const cmd = platform === 'win32' ? 'start ""'
+            : platform === 'darwin' ? 'open'
+            : 'xdg-open';
+        // Detached + ignore stdio so it never blocks the proxy process.
+        const child = cp.spawn(cmd, [url], {
+            shell: platform === 'win32',
+            detached: true,
+            stdio: 'ignore',
+        });
+        child.unref?.();
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function postJsonEnter(path: string, body: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const payload = JSON.stringify(body);
+        const req = https.request({
+            hostname: 'enter.pollinations.ai',
+            path,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+                'User-Agent': 'opencode-pollinations-plugin',
+            },
+        }, (res) => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => {
+                try { resolve(JSON.parse(data)); }
+                catch (e) { reject(new Error(`Bad JSON: ${data.slice(0, 120)}`)); }
+            });
+        });
+        req.on('error', reject);
+        req.setTimeout(15000, () => { req.destroy(); reject(new Error('Timeout')); });
+        req.write(payload);
+        req.end();
+    });
+}
+
+let loginPollActive = false;
+
+// Publishable app key (pk_) — embedded for BYOP attribution: the consent screen
+// shows "plugin by fkom13" and traffic is credited to this app. Safe to ship
+// publicly (publishable by design); earningsEnabled=false so users pay nothing extra.
+const APP_CLIENT_ID = 'pk_sATzVHuna3I5e7Sf';
+
+// Shared result promise so the tool's `wait` mode can attach to the running poll.
+type LoginOutcome = { status: 'connected' | 'expired' | 'error'; message: string };
+let loginResultPromise: Promise<LoginOutcome> | null = null;
+let lastLoginPrompt: string | null = null; // code+URL prompt, reused on wait timeout
+
+/**
+ * Wait mode for the tool: ensures a login is running (auto-starts + opens the
+ * browser if needed), then waits up to ~90s and returns the final outcome.
+ * On timeout it returns the code/URL prompt so the agent can ask the user to
+ * finish authorizing, then be called again with wait:true.
+ */
+export async function awaitDeviceLogin(): Promise<string> {
+    // Auto-start if nothing is in progress (single-call UX: open + wait + report).
+    if (!loginPollActive || !loginResultPromise) {
+        const started = await startDeviceLogin();
+        if (started.error) return started.error;
+        // If it reported "already running" without a promise, fall through to wait.
+    }
+
+    if (!loginResultPromise) {
+        return lastLoginPrompt || t('commands.login.nothing_pending');
+    }
+
+    const WAIT_CAP_MS = 120000;
+    const timeout = new Promise<LoginOutcome>((res) =>
+        setTimeout(() => res({ status: 'error', message: '__TIMEOUT__' }), WAIT_CAP_MS)
+    );
+
+    const outcome = await Promise.race([loginResultPromise, timeout]);
+    if (outcome.message === '__TIMEOUT__') {
+        // Still pending — hand back the code/URL so the user can finish, then retry.
+        return (lastLoginPrompt ? lastLoginPrompt + '\n\n' : '') + t('commands.login.still_waiting');
+    }
+    return outcome.message;
+}
+
+export async function startDeviceLogin(): Promise<CommandResult> {
+    if (loginPollActive) {
+        return { handled: true, response: t('commands.login.already_running') };
+    }
+
+    let codeResp: any;
+    try {
+        codeResp = await postJsonEnter('/api/device/code', {
+            client_id: APP_CLIENT_ID,
+            scope: 'profile usage keys',   // all scopes shown for transparency; keys (Account Admin) checked by default, user can uncheck
+        });
+    } catch (e: any) {
+        return { handled: true, error: t('commands.login.code_error', { error: e.message }) };
+    }
+
+    const userCode = codeResp.user_code;
+    const deviceCode = codeResp.device_code;
+    const verifyUri = codeResp.verification_uri || 'https://enter.pollinations.ai/device';
+    // Standard device link (proven reliable). Scope is applied server-side via the
+    // /api/device/code POST body — passing budget/expiry/scope in the /authorize URL
+    // breaks submission (their form coerces empty->default and array-scope fails validation).
+    // For an unlimited key: user clears Budget + Expiry fields on the form before Authorize.
+    const verifyComplete = codeResp.verification_uri_complete || `${verifyUri}?user_code=${userCode}`;
+    const interval = (codeResp.interval || 5) * 1000;
+    const expiresIn = (codeResp.expires_in || 900) * 1000;
+
+    if (!userCode || !deviceCode) {
+        return { handled: true, error: t('commands.login.code_error', { error: 'no code returned' }) };
+    }
+
+    // Background poller — non-blocking. Resolves the shared promise on completion.
+    loginPollActive = true;
+    const deadline = Date.now() + Math.min(expiresIn, 300000); // cap 5 min for UX
+
+    let resolveOutcome: (o: LoginOutcome) => void;
+    loginResultPromise = new Promise<LoginOutcome>((res) => { resolveOutcome = res; });
+    const finish = (o: LoginOutcome) => { loginPollActive = false; resolveOutcome(o); };
+
+    const poll = async () => {
+        if (Date.now() > deadline) {
+            const msg = t('commands.login.expired');
+            emitStatusToast('warning', msg, 'Pollinations Login');
+            finish({ status: 'expired', message: msg });
+            return;
+        }
+        try {
+            const tok = await postJsonEnter('/api/device/token', { device_code: deviceCode });
+            if (tok.access_token) {
+                // Got the key — validate & hot-load it (no restart needed)
+                const key = tok.access_token;
+                try {
+                    await generatePollinationsConfig(key, true);
+                    // Verify what the user actually granted (they choose on the consent form).
+                    // Do NOT presume profile access — check it, like /poll connect does.
+                    let limited = false;
+                    try {
+                        const check = await checkKeyPermissions(key);
+                        limited = !check.ok;
+                    } catch { limited = true; }
+
+                    saveConfig({ apiKey: key, keyHasAccessToProfile: !limited, ...(limited ? { mode: 'manual' } : {}) });
+                    saveKeyToAuthJson(key);
+
+                    const msg = limited
+                        ? t('commands.login.success_limited')
+                        : t('commands.login.success_toast');
+                    emitStatusToast(limited ? 'warning' : 'success', msg, 'Pollinations Login');
+                    finish({ status: 'connected', message: msg });
+                } catch (e: any) {
+                    const msg = t('commands.login.validate_error', { error: e.message });
+                    emitStatusToast('error', msg, 'Pollinations Login');
+                    finish({ status: 'error', message: msg });
+                }
+                return;
+            }
+            // pending → keep polling
+            setTimeout(poll, interval);
+        } catch (e: any) {
+            // authorization_pending / slow_down / transient → keep polling
+            setTimeout(poll, interval);
+        }
+    };
+    setTimeout(poll, interval);
+
+    // Try to open the consent page automatically (headless-safe; URL shown as fallback).
+    const opened = openBrowser(verifyComplete);
+
+    const promptText = (opened ? t('commands.login.opened') + '\n\n' : '') + t('commands.login.prompt', {
+        code: userCode,
+        uri: verifyUri,
+        uri_complete: verifyComplete,
+    });
+    lastLoginPrompt = promptText;
+
+    return {
+        handled: true,
+        response: promptText,
+    };
+}
+
 function handleConfigCommand(args: string[]): CommandResult {
     const [key, value] = args;
 
@@ -502,7 +692,7 @@ ${t('commands.config.table_divider')}
     }
 
     if (key === 'lang' && value) {
-        if (!['en', 'fr', 'es', 'de', 'it'].includes(value)) {
+        if (!['en', 'fr', 'es', 'de', 'it', 'zh'].includes(value)) {
             return { handled: true, error: "Valeurs supportées: en, fr, es, de, it" };
         }
         saveConfig({ lang: value });
@@ -783,12 +973,12 @@ export async function handleInfosCommand(): Promise<CommandResult> {
     }
 
     const emojis: Record<string, string> = {
-        microbe: '🦠', spore: '🍄', seed: '🌱', flower: '🌸', nectar: '🍯', anonymous: '👤'
+        microbe: '🦠', spore: '🍄', seed: '🌱', flower: '🌸', nectar: '🍯', router: '🐝', anonymous: '👤'
     };
     const tierEmoji = emojis[tier] || '❓';
 
     // Get dynamic tier table based on user's language
-const userLang = (config.lang || 'en') as 'en' | 'fr' | 'es' | 'de' | 'it';
+const userLang = (config.lang || 'en') as 'en' | 'fr' | 'es' | 'de' | 'it' | 'zh';
 const tierTable = formatTierTable(userLang);
 
 const response = `${t('commands.infos.title', { name })}
@@ -806,9 +996,11 @@ ${t('commands.infos.levels_title')}
 
 ${tierTable}
 
-> ⚠️ **v6.2.4+** : Les quotas sont **horaires** (reset à :00). Le quota journalier est une estimation (~24h × taux horaire).
+${t('commands.infos.hourly_note')}
 
 ${t('commands.infos.beta_note')}
+
+${t('commands.infos.quests')}
 
 ${t('commands.infos.pollen_title')}
 
@@ -817,6 +1009,18 @@ ${t('commands.infos.pollen_get')}
 ${t('commands.infos.pollen_spend')}`;
 
     return { handled: true, response };
+}
+
+async function handleQuestsCommand(args: string[]): Promise<CommandResult> {
+    const arg = (args[0] || 'all').toLowerCase();
+    const filter: 'all' | 'available' | 'claimable' =
+        arg === 'available' ? 'available' : arg === 'claimable' ? 'claimable' : 'all';
+    try {
+        const report = await buildQuestsReport(filter);
+        return { handled: true, response: report };
+    } catch (e: any) {
+        return { handled: true, error: `Erreur: ${e.message || e}` };
+    }
 }
 
 // === INTEGRATION OPENCODE ===
