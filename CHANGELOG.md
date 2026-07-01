@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.0] — 2026-07-01
+
+### ✨ Split Quête / Payé reconstruit (croisement de données)
+
+- **`/poll usage` affiche désormais le split Quest Pollen / Paid Pollen**, reconstruit par **croisement de données exactes** (l'API ne l'expose pas directement — le split live est réservé à la session dashboard) :
+  - Quêtes réclamées (bucket `tier`) via `/account/quests` (exact)
+  - − consommation `meter_source == 'tier'` depuis la date du 1er claim via `/account/usage` (exact)
+  - + plancher horaire de l'heure en cours (seul terme approximatif, ≤ refill du tier)
+  - Payé = Total − Quêtes
+- Précision validée au centime face au dashboard (ex. Flower : Quêtes ~11.40 · Payé ~14.17 · Total 25.57). Le préfixe `~` assume le plancher horaire (≤0.4 sur Flower).
+- Rappel de la règle de facturation (issue de `deduction.ts`) : les modèles réguliers puisent dans le **tier (Quêtes)** en priorité, les modèles `paid_only` 💎 puisent **toujours** dans le **pack (Payé)**.
+
+> ℹ️ Une feature request a été ouverte côté Pollinations (issue #11203) pour exposer le split `tier`/`pack` directement aux clés API. Dès disponible, le plugin basculera sur la donnée native.
+
+---
+
 ## [6.3.0] — 2026-07-01
 
 ### ✨ Nouvelles Fonctionnalités

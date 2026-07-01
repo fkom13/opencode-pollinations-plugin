@@ -62,7 +62,9 @@
       "table_head2": "|--------|--------|-------|--------|\n",
       "no_history": "*Sin actividad en el período actual.*\n",
       "full_requires_key": "⚠️ `/poll usage full` requiere una clave API conectada.\n",
-      "hint_full": "💡 Usa `/poll usage full` para ver detalles (requiere clave)."
+      "hint_full": "💡 Usa `/poll usage full` para ver detalles (requiere clave).",
+      "source_split": "- **Consumido este período:** 🎁 Misiones {tier} · 💎 Pagado {pack}\n",
+      "split": "- **Saldo:** {total} 🌻  ·  🎁 Misiones ~{quest}  ·  💎 Pagado ~{paid}\n\n"
     },
     "fallback": {
       "current": "Current fallbacks:\n- {free}\n- {enter}",

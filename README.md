@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v6.3.0)
+# 🌸 Pollinations AI Plugin for OpenCode (v6.4.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">

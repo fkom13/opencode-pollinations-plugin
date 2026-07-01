@@ -62,7 +62,9 @@
       "table_head2": "|-------|------|------|--------|\n",
       "no_history": "*当前周期内无活动。*\n",
       "full_requires_key": "⚠️ `/poll usage full` 需要已连接的 API 密钥。\n",
-      "hint_full": "💡 使用 `/poll usage full` 查看详情 (需要密钥)。"
+      "hint_full": "💡 使用 `/poll usage full` 查看详情 (需要密钥)。",
+      "source_split": "- **本期已消耗：** 🎁 任务 {tier} · 💎 付费 {pack}\n",
+      "split": "- **余额：** {total} 🌻  ·  🎁 任务 ~{quest}  ·  💎 付费 ~{paid}\n\n"
     },
     "fallback": {
       "current": "当前回退：\n- {free}\n- {enter}",

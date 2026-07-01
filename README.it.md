@@ -1,6 +1,6 @@
-# 🌸 Pollinations AI Plugin per OpenCode (v6.3.0)
+# 🌸 Pollinations AI Plugin per OpenCode (v6.4.0)
 
-## ✨ Novità v6.3.0
+## ✨ Novità v6.4.0
 
 - 🎯 **Quest e Gamification** : `polli_quests` + `/poll quests` — guarda le tue quest e il **Pollen gratuito da riscattare**. Usare il plugin completa quest retroattivamente!
 - 🆓 **Immagini e Video gratis (senza chiave!)** : `gen_edit_image_free` (genera + modifica, ~20/giorno) e `gen_video_free` (testo→video + immagine/audio, ~5/giorno), per qualsiasi modello.

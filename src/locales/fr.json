@@ -62,7 +62,9 @@
       "table_head2": "|--------|------|------|--------|\n",
       "no_history": "*Aucune activité dans la période en cours.*\n",
       "full_requires_key": "⚠️ `/poll usage full` nécessite une clé API connectée.\n",
-      "hint_full": "💡 Utilisez `/poll usage full` pour les détails (nécessite une clé)."
+      "hint_full": "💡 Utilisez `/poll usage full` pour les détails (nécessite une clé).",
+      "source_split": "- **Consommé cette période :** 🎁 Quêtes {tier} · 💎 Payé {pack}\n",
+      "split": "- **Solde :** {total} 🌻  ·  🎁 Quêtes ~{quest}  ·  💎 Payé ~{paid}\n\n"
     },
     "fallback": {
       "current": "Fallbacks actuels:\n- {free}\n- {enter}",
