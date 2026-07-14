@@ -48,7 +48,7 @@ export function emitStatusToast(
     type: 'info' | 'warning' | 'error' | 'success',
     message: string,
     title?: string,
-    metadata?: { filePath?: string; params?: Record<string, any> }
+    metadata?: { filePath?: string; freeTool?: boolean; params?: Record<string, any> }
 ) {
     const config = loadConfig();
     const verbosity = config.gui.status;
@@ -63,9 +63,14 @@ export function emitStatusToast(
     }
 
     if (type === 'success' || type === 'error') {
-        // En arrière-plan, essaye de récupérer le quota localement sans bloquer l'appel
+        // Skip quota display for non-polli tools (free tools)
+        if (metadata?.freeTool === true) {
+            dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
+            return;
+        }
+        // En arrière-plan, récupère le quota EN LIVE (pas de cache)
         import('./quota.js').then(({ getQuotaStatus, formatQuotaForToast }) => {
-            getQuotaStatus(false).then(quota => {
+            getQuotaStatus(true).then(quota => {
                 const quotaMsg = formatQuotaForToast
                     ? formatQuotaForToast(quota)
                     : `🌻 Freetier: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} | Wallet: $${quota.walletBalance.toFixed(2)}`;

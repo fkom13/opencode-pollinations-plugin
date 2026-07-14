@@ -116,7 +116,7 @@
     "infos": {
       "title": "## 🍯💚 POLLINATIONS OPENCODE PLUGIN 💚🍯\n\nWillkommen **{name}** beim Pollinations OpenCode Plugin!\n\nDieses Plugin ermöglicht es, Code und Bilder zu generieren, Videos zu analysieren und nahtlos mit den besten KI-Modellen zu interagieren. Greifen Sie über Chat, Refactoring oder Terminal auf erstklassige LLMs zu.",
       "features_title": "**Was dieses Plugin Ihnen bietet! :**",
-      "features_free": "**🛠️ Kostenlose Tools (Immer verfugbar):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : Visuals und Dev-Tools.\n- `remove_background` : Hintergrundentfernung.\n- `extract_frames` / `extract_audio` : Medien-Extraktion.\n- `file_to_url` : Online-Hosting.\n- `gen_edit_image_free` : Kostenlose Bild-Generierung & Bearbeitung (~20/Tag).\n- `gen_video_free` : Kostenlose Video-Generierung (~5/Tag).",
+      "features_free": "**🛠️ Kostenlose Tools (Immer verfugbar):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : Visuals und Dev-Tools.\n- `remove_background` : Hintergrundentfernung.\n- `extract_frames` / `extract_audio` : Medien-Extraktion.\n- `file_to_url` : Online-Hosting.\n- `gen_edit_image_free` : Kostenlose Bild-Generierung & Bearbeitung (~20/Tag).\n- `gen_video_free` : Kostenlose Video-Generierung (~5/Tag).\n- `object_remover` : Suppression d’objets par prompt (gratuit, direct).\n- `image_upscaler` : Agrandissement 2x/4x (gratuit, direct).\n- `image_enhancer` : Amélioration IA d’image (gratuit, direct).",
       "features_pro": "**💎 Pollinations Tools (Premium - Automatisiert mit Key):**\n- `polli_gen_image` : Bildgen (Flux, Gemini) + Image-to-Image.\n- `polli_gen_video` : Text-to-Video / Image-to-Video (Veo, Wan...).\n- `polli_gen_audio`/`polli_stt` : Whisper STT, ElevenLabs TTS.\n- `polli_gen_music` : Generative Musik-Engine.\n- `polli_web_search` : Verbundene Websuche.",
       "features_config": "- **Granulare Konfiguration**, Modus- und Token-Management, Kostenschutz...",
       "tiers_title": "> **Dein Quest Pollen Refill:** {emoji} {tier}",
@@ -445,11 +445,26 @@
     "polli_login": {
       "desc": "🔐 Startet einen schnellen Pollinations-Login (Device Flow) für den Benutzer. Zeigt einen kurzen Code + URL; der Benutzer meldet sich im Browser mit GitHub an, und das Plugin verbindet sich AUTOMATISCH nach Genehmigung (ein Toast bestätigt). Kein API-Schlüssel zum Ausführen nötig. Verwende dies, wenn der Benutzer sein Pollinations-Konto einfach verbinden möchte, ohne einen Schlüssel zu kopieren. Für einen permanenten Schlüssel sage ihm, `/poll connect sk_...` zu verwenden.",
       "arg_wait": "Wenn true, wartet auf den Abschluss eines laufenden Logins und gibt das Endergebnis zurück (✅ verbunden / abgelaufen). Rufe zuerst ohne wait auf, um den Code anzuzeigen, dann erneut mit wait:true, nachdem du den Benutzer zur Autorisierung aufgefordert hast."
+    },
+    "object_remover": {
+      "file_not_found": "❗ File not found: {path}",
+      "no_result": "❗ No result received.",
+      "error": "❗ Error: {error}"
+    },
+    "image_upscaler": {
+      "file_not_found": "❗ File not found: {path}",
+      "no_result": "❗ No result received.",
+      "error": "❗ Error: {error}"
+    },
+    "image_enhancer": {
+      "file_not_found": "❗ File not found: {path}",
+      "no_result": "❗ No result received.",
+      "error": "❗ Error: {error}"
     }
   },
   "connect_response": {
     "title_key": "## 🍯💚 POLLINATIONS PLUGIN VERBUNDEN 💚🍯\n\nWillkommen **{name}** beim Pollinations Agent Plugin!\n**Aktueller Modus**: `{mode}`",
-    "tools_intro": "### 🚀 Multimedia Tools\n\nDieses Plugin ermöglicht es, Code und Bilder zu generieren, Videos zu analysieren und mit den besten KI-Modellen zu interagieren.\n\n**🛠️ Kostenlose Tools:**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`\n- `remove_background`\n- `extract_frames` / `extract_audio`\n- `file_to_url`\n- `gen_edit_image_free` (Bild-Gen & Edit, ~20/Tag)\n- `gen_video_free` (Video-Gen, ~5/Tag)\n\n**💎 Premium Tools:**\n- `polli_gen_image`\n- `polli_gen_video`\n- `polli_gen_audio`/`polli_stt`\n- `polli_gen_music`\n- `polli_web_search`",
+    "tools_intro": "### 🚀 Multimedia Tools\n\nDieses Plugin ermöglicht es, Code und Bilder zu generieren, Videos zu analysieren und mit den besten KI-Modellen zu interagieren.\n\n**🛠️ Kostenlose Tools:**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`\n- `remove_background`\n- `extract_frames` / `extract_audio`\n- `file_to_url`\n- `gen_edit_image_free` (Bild-Gen & Edit, ~20/Tag)\n- `gen_video_free` (Video-Gen, ~5/Tag)\n- `object_remover`\n- `image_upscaler`\n- `image_enhancer`\n\n**💎 Premium Tools:**\n- `polli_gen_image`\n- `polli_gen_video`\n- `polli_gen_audio`/`polli_stt`\n- `polli_gen_music`\n- `polli_web_search`",
     "terminal_cmds": "### 💻 Terminal Befehle\nVerwenden Sie `/poll help` um alle Befehle anzuzeigen.",
     "resources": "### 📚 Ressourcen\n* **Dashboard:** enter.pollinations.ai\n* **Discord:** Community beitreten\n* **Plugin:** github.com/fkom13/opencode-pollinations-plugin",
     "free_models_success": "Verfügbare Modelle: {models}",

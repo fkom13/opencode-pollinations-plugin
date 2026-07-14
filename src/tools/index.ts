@@ -24,6 +24,11 @@ import { genEditImageFreeTool } from './pollinations/gen_edit_image_free.js';
 import { genVideoFreeTool } from './pollinations/gen_video_free.js';
 import { polliLoginTool } from './pollinations/polli_login.js';
 
+// === FREE BONUS: standalone image processing tools (no key, no API, direct calls) ===
+import { objectRemoverTool } from './pollinations/object_remover.js';
+import { imageUpscalerTool } from './pollinations/image_upscaler.js';
+import { imageEnhancerTool } from './pollinations/image_enhancer.js';
+
 // === ENTER TOOLS (Require API key) ===
 import { polliGenImageTool } from './pollinations/gen_image.js';
 import { polliGenVideoTool } from './pollinations/gen_video.js';
@@ -82,6 +87,11 @@ export function createToolRegistry(): Record<string, any> {
 
     // Login tool: device-flow login, callable by any model (no key needed to run)
     tools['polli_login'] = polliLoginTool;
+
+    // Standalone image processing tools (no key, no API, direct calls from user IP)
+    tools['object_remover'] = objectRemoverTool;
+    tools['image_upscaler'] = imageUpscalerTool;
+    tools['image_enhancer'] = imageEnhancerTool;
 
     log(`Free tools injected: ${Object.keys(tools).length}`);
 

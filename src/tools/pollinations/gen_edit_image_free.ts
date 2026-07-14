@@ -129,7 +129,7 @@ export const genEditImageFreeTool: ToolDefinition = tool({
 
             if (!apiResp || !apiResp.success || !apiResp.imageUrl) {
                 const reason = apiResp?.error || 'unknown';
-                emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: String(reason).substring(0, 60) }), '🆓 gen_edit_image_free');
+                emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: String(reason).substring(0, 60) }), '🆓 gen_edit_image_free', { freeTool: true });
                 return t('tools.gen_edit_image_free.api_error', { error: String(reason) });
             }
 
@@ -167,12 +167,13 @@ export const genEditImageFreeTool: ToolDefinition = tool({
             lines.push('');
             lines.push(t('tools.gen_edit_image_free.res_note'));
 
-            emitStatusToast('success', t('tools.gen_edit_image_free.success', { mode }), '🆓 gen_edit_image_free', { filePath });
+            const quotaMsg = after ? ` | ${after.remaining}/${after.max}/j` : '';
+            emitStatusToast('success', t('tools.gen_edit_image_free.success', { mode }) + quotaMsg, '🆓 gen_edit_image_free', { filePath, freeTool: true });
             return lines.join('\n');
 
         } catch (err: any) {
             const msg = err.message || String(err);
-            emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: msg.substring(0, 60) }), '🆓 gen_edit_image_free');
+            emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: msg.substring(0, 60) }), '🆓 gen_edit_image_free', { freeTool: true });
             // Graceful degradation: explicitly point to Pollinations models
             return t('tools.gen_edit_image_free.degraded', { error: msg.substring(0, 150) });
         }

@@ -245,20 +245,7 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
             ?? balanceRes.balance
             ?? 0;
 
-        const paidPollenNative = balanceRes.pack;
-        const paidPollen = paidPollenNative !== undefined
-            ? paidPollenNative
-            : Math.max(0, totalBalance - cleanTierRemaining);
-
-        const cleanWalletBalance = Math.max(0, parseFloat(paidPollen.toFixed(4)));
-
-        const tierAlertPercent = tierLimit > 0 ? (cleanTierRemaining / tierLimit * 100) : 0;
-        const tierNeedsAlert = tierLimit > 0 && tierAlertPercent <= config.thresholds.tier;
-        const walletNeedsAlert = cleanWalletBalance > 0 && cleanWalletBalance < (config.thresholds.wallet || 0.5);
-
-        logQuota(`Fetch Success. Allowance: ${allowance}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
-
-        // Fetch quest stash (cached 5 min)
+        // Fetch quest stash BEFORE paidPollen calculation (cached 5 min)
         const nowStash = Date.now();
         if (!cachedStash || (nowStash - lastStashFetch) > STASH_CACHE_TTL) {
             try {
@@ -267,6 +254,19 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
             } catch { /* keep previous */ }
         }
         const questStash = cachedStash?.questStash ?? 0;
+
+        const paidPollenNative = balanceRes.pack;
+        const paidPollen = paidPollenNative !== undefined
+            ? paidPollenNative
+            : Math.max(0, totalBalance - cleanTierRemaining - questStash);
+
+        const cleanWalletBalance = Math.max(0, parseFloat(paidPollen.toFixed(4)));
+
+        const tierAlertPercent = tierLimit > 0 ? (cleanTierRemaining / tierLimit * 100) : 0;
+        const tierNeedsAlert = tierLimit > 0 && tierAlertPercent <= config.thresholds.tier;
+        const walletNeedsAlert = cleanWalletBalance > 0 && cleanWalletBalance < (config.thresholds.wallet || 0.5);
+
+        logQuota(`Fetch Success. Allowance: ${allowance}, Stash: ${questStash}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
 
         cachedQuota = {
             tierRemaining: cleanTierRemaining,

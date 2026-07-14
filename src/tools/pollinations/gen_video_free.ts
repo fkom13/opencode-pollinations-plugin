@@ -259,12 +259,13 @@ export const genVideoFreeTool: ToolDefinition = tool({
             lines.push('');
             lines.push(t('tools.gen_video_free.res_note'));
 
-            emitStatusToast('success', t('tools.gen_video_free.success'), '🆓 gen_video_free', { filePath });
+            const quotaMsg = after ? ` | ${after.remaining}/${after.max}/j` : '';
+            emitStatusToast('success', t('tools.gen_video_free.success') + quotaMsg, '🆓 gen_video_free', { filePath, freeTool: true });
             return lines.join('\n');
 
         } catch (err: any) {
             const msg = err.message || String(err);
-            emitStatusToast('error', t('tools.gen_video_free.failed', { error: msg.substring(0, 60) }), '🆓 gen_video_free');
+            emitStatusToast('error', t('tools.gen_video_free.failed', { error: msg.substring(0, 60) }), '🆓 gen_video_free', { freeTool: true });
             return t('tools.gen_video_free.degraded', { error: msg.substring(0, 150) });
         }
     },

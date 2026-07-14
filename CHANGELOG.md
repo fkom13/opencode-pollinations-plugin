@@ -5,6 +5,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.7] — 2026-07-14
+
+### ✨ 3 nouveaux outils libres standalone + suppression cut
+
+- **`object_remover`** — Suppression d'objets par prompt (objectremover.com). Appel direct depuis l'IP utilisateur, gratuit.
+- **`image_upscaler`** — Agrandissement 2x/4x (imgupscaler.com). Gratuit.
+- **`image_enhancer`** — Amélioration IA ( débrutage, netteté, restauration). Gratuit.
+- **`remove_background`** — Provider par défaut passe de `cut.esprit-artificiel.com` à `imgtools/rmbg` (bgeraser.com). `cut` supprimé définitivement.
+- **`gen_edit_image_free` + `gen_video_free`** — Toast indicatif du quota restant (ex: "16/20/j").
+
+### 🔧 Core
+
+- **`crypto.ts`** (imgtools) — Correction buf AES-GCM : `IV||CIPHERTEXT||TAG` au lieu de `IV||TAG||CIPHERTEXT`. Les outils encryp (ruo, enhance) fonctionnent maintenant.
+- **`toast.ts`** — Flag `freeTool: true` : les toasts des outils gratuits n'affichent plus le quota Polliniations.
+- **`toast.ts`** — `getQuotaStatus(true)` en live (pas de cache 30s) pour les toasts.
+- **`quota.ts`** — `paidPollen = total - tierRemaining - questStash`. Correction du montant affiché dans le toast.
+- **`commands.ts`** — `/poll help` dynamique + i18n (12 paramètres config).
+- **`tier-info.ts`** — Retiré Microbe et Anonymous du tableau visible.
+
+### 🌍 Locales (6 langues)
+
+- `connect_response.tools_intro` + `commands.infos.features_free` mis à jour avec les 4 nouveaux outils.
+- Clés de traduction ajouté pour les messages d'erreur des outils libres.
+- Liens resources : Dashboard (`enter.polliniations.ai`) + Plugin GitHub.
+
+---
+
 ## [6.4.3] — 2026-07-14
 
 ### ✨ Quest stash + Community filtering + Safety Net

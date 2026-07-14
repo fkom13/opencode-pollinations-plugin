@@ -4,14 +4,13 @@ import * as https from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
 import { resolveOutputDir, formatFileSize, TOOL_DIRS } from '../shared.js';
-import { sanitizeFilename } from '../pollinations/shared.js';
+import { sanitizeFilename, httpsGet } from '../pollinations/shared.js';
+import { processTool } from '../pollinations/imgtools/clients.js';
 import { getConfigDir } from '../../server/config.js';
 
 // ─── Provider Defaults ───────────────────────────────────────────────────────
 
-const CUT_API_URL = 'https://cut.esprit-artificiel.com';
 const BACKGROUNDCUT_API_URL = 'https://backgroundcut.co/api/v1/cut/';
-const HMAC_SECRET = "super_secret_community_key_2026"; // Sel caché dans le code transpilé
 
 // ─── Key Storage ─────────────────────────────────────────────────────────────
 
@@ -109,58 +108,12 @@ function getImageSize(filePath: string): { width: number; height: number } | nul
     return null;
 }
 
-// ─── Provider: cut.esprit-artificiel.com (returns binary PNG directly) ────────
+// ─── Provider: imgtools/rmbg (bgeraser.com) ──────────────────────────────
 
-async function removeViaCut(imageData: Buffer, filename: string, mimeType: string): Promise<Buffer> {
-    const boundary = `----FormBoundary${Date.now()}`;
-    const parts: Buffer[] = [];
-    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
-    parts.push(imageData);
-    parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-    const body = Buffer.concat(parts);
-
-    const url = new URL(`${CUT_API_URL}/remove-bg`);
-    const headers: any = {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': body.length,
-        'User-Agent': 'OpenCode-Pollinations-Plugin/6.1',
-    };
-
-    // 1. Vérifier si l'utilisateur (Franck) a configuré une clé VIP localement
-    let vipKey = null;
-    try {
-        const vipPath = path.join(getConfigDir(), 'cut_vip.json');
-        if (fs.existsSync(vipPath)) {
-            const data = JSON.parse(fs.readFileSync(vipPath, 'utf-8'));
-            if (data.vip_key) vipKey = data.vip_key;
-        }
-    } catch (e) { console.error(`[Cut VIP] Error loading vip key: ${e}`); }
-
-    if (vipKey) {
-        // Mode Fast-Lane (VIP) : la requête passe directement en tête de file
-        headers['X-Api-Key'] = vipKey;
-    } else {
-        // Mode Communauté (Plugin public) : Génération de la signature dynamique courte durée (Anti-leech)
-        const timestamp = Date.now().toString();
-        const payloadToSign = `request-rembg-v1:${timestamp}`;
-        const signature = require('crypto')
-            .createHmac('sha256', HMAC_SECRET)
-            .update(payloadToSign)
-            .digest('hex');
-
-        headers['X-Cut-Timestamp'] = timestamp;
-        headers['Authorization'] = `Bearer community:${signature}`;
-    }
-
-    const res = await httpRequest(url.toString(), {
-        method: 'POST',
-        headers
-    }, body);
-
-    if (res.statusCode >= 400) {
-        throw new Error(`CUT API Error ${res.statusCode}: ${res.body.toString().substring(0, 200)}`);
-    }
-    return res.body;
+async function removeViaImgtools(imageData: Buffer, mimeType: string, filename: string): Promise<Buffer> {
+    const result = await processTool('rmbg', { data: imageData, contentType: mimeType, filename });
+    const res = await httpsGet(result.imageUrl);
+    return res.data;
 }
 
 // ─── Provider: BackgroundCut.co (returns JSON with output_image_url) ─────────
@@ -228,11 +181,11 @@ export const removeBackgroundTool: ToolDefinition = tool({
     description: `Remove the background from an image, producing a transparent PNG or WebP.
 
 **Providers:**
-- \`cut\` (default free) — Built-in u2netp AI. Slower. Ignores quality/format/resolution.
+- \`imgtools\` (default) — rmbg via bgeraser.com. Free.
 - \`backgroundcut\` — Premium API. Requires API key. Supports all parameters.
 
 **Setup:** Use \`rmbg_keys\` tool to manage API keys.
-**Auto mode:** Uses BackgroundCut if key is available, falls back to cut.`,
+**Auto mode:** Uses imgtools by default, falls back to BackgroundCut if key is available.`,
 
     args: {
         image_path: tool.schema.string().describe('Absolute path to the image file'),
@@ -284,7 +237,7 @@ export const removeBackgroundTool: ToolDefinition = tool({
         let effectiveProvider = provider;
         if (provider === 'auto') {
             // If we have keys, start with backgroundcut, else cut
-            effectiveProvider = keysToCheck.length > 0 ? 'backgroundcut' : 'cut';
+            effectiveProvider = 'imgtools'; // Default to imgtools (free, no key needed)
         }
 
         // ── Info message when no BackgroundCut key ──
@@ -339,7 +292,7 @@ export const removeBackgroundTool: ToolDefinition = tool({
         // ── Execute ──
         try {
             let resultBuffer: Buffer | null = null;
-            let usedProvider = 'cut'; // Default
+            let usedProvider = 'imgtools'; // Default
             let fallbackUsed = false;
             let successKey = '';
 
@@ -399,13 +352,15 @@ export const removeBackgroundTool: ToolDefinition = tool({
                     emitStatusToast('info', `Détourage via API Gratuite: ${basename}`, '✂️ Free RMBG');
                 }
 
-                resultBuffer = await removeViaCut(imageData, basename, mimeType);
+                emitStatusToast('info', `Détourage via rmbg (bgeraser.com): ${basename}`, '✂️ Free RMBG', { freeTool: true });
+
+                resultBuffer = await removeViaImgtools(imageData, mimeType, basename);
 
                 context.metadata({
                     title: "RMBG (Free)",
-                    metadata: { type: 'success', message: "Détourage Standard réussi" }
+                    metadata: { type: 'success', message: "Background removed (imgtools/rmbg)" }
                 });
-                usedProvider = 'cut (free)';
+                usedProvider = 'imgtools';
             }
 
             if (!resultBuffer || resultBuffer.length < 100) {
@@ -422,6 +377,8 @@ export const removeBackgroundTool: ToolDefinition = tool({
 
             const dims = getImageSize(finalPath);
             const dimStr = dims ? `${dims.width}×${dims.height}` : 'N/A';
+
+            emitStatusToast('success', `✂️ Fond supprimé · ${usedProvider}`, 'remove_background', { filePath: finalPath, freeTool: true });
 
             const lines = [
                 `✂️ Background Removed`,
