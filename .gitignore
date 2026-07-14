@@ -53,3 +53,4 @@ scripts/*
 # Audit & PoC (contain secrets - never commit)
 API_AUDIT_*.md
 test-api-poc.sh
+testjuillet/

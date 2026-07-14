@@ -877,13 +877,35 @@ ${t('commands.config.table_divider')}
 }
 
 function handleHelpCommand(): CommandResult {
+    const config = loadConfig();
+
+    const configKeys = [
+        { key: 'lang',              values: 'en, fr, es, de, it, zh',             i18n: 'commands.help.config.lang' },
+        { key: 'status_gui',        values: 'none, alert, all',                    i18n: 'commands.help.config.status_gui' },
+        { key: 'logs_gui',          values: 'none, error, verbose',                i18n: 'commands.help.config.logs_gui' },
+        { key: 'threshold_tier',    values: '0-100',                               i18n: 'commands.help.config.threshold_tier' },
+        { key: 'threshold_wallet',  values: '0-100',                               i18n: 'commands.help.config.threshold_wallet' },
+        { key: 'status_bar',        values: 'true/false',                          i18n: 'commands.help.config.status_bar' },
+        { key: 'cost_estimator',    values: 'true/false',                          i18n: 'commands.help.config.cost_estimator' },
+        { key: 'enablePaidTools',   values: 'true/false',                          i18n: 'commands.help.config.enablePaidTools' },
+        { key: 'costThreshold',     values: 'number (pollen)',                     i18n: 'commands.help.config.costThreshold' },
+        { key: 'costConfirmationRequired', values: 'true/false',                   i18n: 'commands.help.config.costConfirmationRequired' },
+        { key: 'refillOverride',    values: '0.01, 0.15, 0.4, 0.8, 10, auto',    i18n: 'commands.help.config.refillOverride' },
+        { key: 'questStashInFreeMode', values: 'true/false',                       i18n: 'commands.help.config.questStashInFreeMode' },
+    ];
+
+    const configSection = configKeys.map(k =>
+        `   - \`${k.key}\`: ${t(k.i18n)} (\`${k.values}\`)`
+    ).join('\n');
+
     const help = `
 ${t('commands.help.title')}
 ${t('commands.help.alias_note')}
 
 ${t('commands.help.mode_usage')}
 
-${t('commands.help.configuration')}
+${t('commands.help.configuration_intro')}
+${configSection}
 
 ${t('commands.help.models_pricing')}
 `.trim();

@@ -5,7 +5,22 @@
       "alias_note": "*(支持并推荐使用别名 `/poll` 代替 `/pollinations`！)*",
       "mode_usage": "**模式与用法**\n- **`/poll mode [模式]`**：切换模式 (manual, alwaysfree, pro)。\n- **`/poll usage [full]`**：显示仪表盘 (full = 详情)。\n- **`/poll fallback <main> [agent]`**：配置安全网。",
       "configuration": "**配置**\n- **`/poll config [键] [值]`**：\n   - `lang`：en, fr, es, de, it, zh 等\n   - `status_gui`：none, alert, all\n   - `logs_gui`：none, error, verbose\n   - `threshold_tier` / `threshold_wallet`：0-100\n   - `status_bar`：true/false\n   - `cost_estimator`：true/false (在输出中显示费用)\n   - `enablePaidTools`：true/false (钱包保护)\n   - `costThreshold`：Pollen 限额 (默认：0.15)\n   - `costConfirmationRequired`：true/false (花费确认)",
-      "models_pricing": "**模型与定价**\n- **`/poll models [类型]`**：列出模型 (类型：image, video, audio, text)\n- **`/poll pricing`**：详细定价表\n- **`/poll infos`**：关于等级和 Pollen 的说明\n- **`/poll quests`**：查看你的任务和可领取的免费 Pollen\n\n> 💡 **RMBG 密钥**：使用 `rmbg_keys` 工具 (适用于任何模型)。"
+      "models_pricing": "**模型与定价**\n- **`/poll models [类型]`**：列出模型 (类型：image, video, audio, text)\n- **`/poll pricing`**：详细定价表\n- **`/poll infos`**：关于等级和 Pollen 的说明\n- **`/poll quests`**：查看你的任务和可领取的免费 Pollen\n\n> 💡 **RMBG 密钥**：使用 `rmbg_keys` 工具 (适用于任何模型)。",
+      "configuration_intro": "**配置**\n- **`/poll config [键] [值]`**:",
+      "config": {
+        "lang": "插件语言",
+        "status_gui": "状态通知详细程度",
+        "logs_gui": "日志详细程度",
+        "threshold_tier": "免费层级警告阈值 (%)",
+        "threshold_wallet": "钱包警告阈值 (%)",
+        "status_bar": "显示状态栏图标",
+        "cost_estimator": "显示费用估算",
+        "enablePaidTools": "钱包保护（阻止付费工具）",
+        "costThreshold": "费用警告阈值",
+        "costConfirmationRequired": "消费前请求确认",
+        "refillOverride": "手动 Quest Pollen 补充",
+        "questStashInFreeMode": "在 alwaysfree 中计算 Quest 储备"
+      }
     },
     "config": {
       "title": "## ⚙️ Pollinations 配置 (v{version})",

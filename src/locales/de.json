@@ -5,7 +5,22 @@
       "alias_note": "*(Der Alias `/poll` wird unterstützt und anstelle von `/pollinations` empfohlen!)*",
       "mode_usage": "**Modus & Nutzung**\n- **`/poll mode [modus]`**: Modus ändern (manual, alwaysfree, pro).\n- **`/poll usage [full]`**: Dashboard anzeigen (full = Details).\n- **`/poll fallback <main> [agent]`**: Sicherheitsnetz konfigurieren.",
       "configuration": "**Konfiguration**\n- **`/poll config [schlüssel] [wert]`**:\n   - `lang`: en, fr, de, es, it, etc.\n   - `status_gui`: none, alert, all\n   - `logs_gui`: none, error, verbose\n   - `threshold_tier` / `threshold_wallet`: 0-100\n   - `status_bar`: true/false\n   - `cost_estimator`: true/false (Kosten in Ausgaben anzeigen)\n   - `enablePaidTools`: true/false (Wallet-Schutz)\n   - `costThreshold`: Limit in Pollen (Standard: 0.15)\n   - `costConfirmationRequired`: true/false (Ausgabenbestätigung)",
-      "models_pricing": "**Modelle & Preise**\n- **`/poll models [typ]`**: Modelle auflisten (Typ: image, video, audio, text)\n- **`/poll pricing`**: Detaillierte Preistabelle\n- **`/poll infos`**: Erklärungen zu Tiers und Pollen\n- **`/poll quests`**: Deine Quests & einlösbares kostenloses Pollen anzeigen\n\n> 💡 **RMBG-Schlüssel**: Verwende das Tool `rmbg_keys` (funktioniert mit jedem Modell)."
+      "models_pricing": "**Modelle & Preise**\n- **`/poll models [typ]`**: Modelle auflisten (Typ: image, video, audio, text)\n- **`/poll pricing`**: Detaillierte Preistabelle\n- **`/poll infos`**: Erklärungen zu Tiers und Pollen\n- **`/poll quests`**: Deine Quests & einlösbares kostenloses Pollen anzeigen\n\n> 💡 **RMBG-Schlüssel**: Verwende das Tool `rmbg_keys` (funktioniert mit jedem Modell).",
+      "configuration_intro": "**Konfiguration**\n- **`/poll config [schlüssel] [wert]`**:",
+      "config": {
+        "lang": "Plugin-Sprache",
+        "status_gui": "Toast-Ausführlichkeit",
+        "logs_gui": "Log-Ausführlichkeit",
+        "threshold_tier": "Free-Tier-Warnschwelle (%)",
+        "threshold_wallet": "Wallet-Warnschwelle (%)",
+        "status_bar": "Statusleisten-Symbol anzeigen",
+        "cost_estimator": "Kostenschätzungen anzeigen",
+        "enablePaidTools": "Wallet-Schutz (kostenpflichtige Tools blockieren)",
+        "costThreshold": "Kosten-Warnschwelle",
+        "costConfirmationRequired": "Bestätigung vor Ausgaben anfordern",
+        "refillOverride": "Manueller Quest Pollen Refill",
+        "questStashInFreeMode": "Quest-Stash als Free in alwaysfree zählen"
+      }
     },
     "config": {
       "title": "## ⚙️ Pollinations Konfiguration (v{version})",
