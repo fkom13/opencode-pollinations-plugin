@@ -863,6 +863,9 @@ ${t('commands.config.table_divider')}
     }
 
     if (key === 'questStashInFreeMode' && value) {
+        if (value !== 'true' && value !== 'false') {
+            return { handled: true, error: 'Valeurs supportées: true, false' };
+        }
         const enabled = value === 'true';
         saveConfig({ questStashInFreeMode: enabled });
         return { handled: true, response: `✅ questStashInFreeMode = ${enabled}${enabled ? ' (le stash Quest compte comme free)' : ' (seul le refill horaire compte)'}` };
@@ -1064,26 +1067,29 @@ export async function handleInfosCommand(): Promise<CommandResult> {
     const config = loadConfig();
     let name = "Developer";
     let tier = "anonymous";
+    let tierEmoji = '👤';
 
     if (config.apiKey) {
+        try {
+            const quota = await getQuotaStatus(true);
+            tier = quota.tier || 'anonymous';
+            tierEmoji = quota.tierEmoji || '👤';
+        } catch (e) {
+            // Ignorer l'erreur réseau et garder les valeurs par défaut
+        }
+
         try {
             const res = await fetch('https://gen.pollinations.ai/account/profile', {
                 headers: { 'Authorization': `Bearer ${config.apiKey}` }
             });
             if (res.ok) {
                 const data: any = await res.json();
-                if (data.name) name = data.name;
-                tier = data.tier || "anonymous";
+                if (data.githubUsername) name = data.githubUsername;
             }
         } catch (e) {
-            // Ignorer l'erreur réseau et garder les valeurs par défaut
+            // Ignorer
         }
     }
-
-    const emojis: Record<string, string> = {
-        microbe: '🦠', spore: '🍄', seed: '🌱', flower: '🌸', nectar: '🍯', router: '🐝', anonymous: '👤'
-    };
-    const tierEmoji = emojis[tier] || '❓';
 
     // Get dynamic tier table based on user's language
 const userLang = (config.lang || 'en') as 'en' | 'fr' | 'es' | 'de' | 'it' | 'zh';
@@ -1098,6 +1104,8 @@ ${t('commands.infos.features_pro')}
 ${t('commands.infos.features_config')}
 
 ${t('commands.infos.tiers_title', { emoji: tierEmoji, tier: tier.toUpperCase() })}
+${t('commands.infos.get_started')}
+
 ${t('commands.infos.about')}
 
 ${t('commands.infos.levels_title')}
@@ -1105,8 +1113,6 @@ ${t('commands.infos.levels_title')}
 ${tierTable}
 
 ${t('commands.infos.hourly_note')}
-
-${t('commands.infos.beta_note')}
 
 ${t('commands.infos.quests')}
 
