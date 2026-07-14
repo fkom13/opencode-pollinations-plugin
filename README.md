@@ -30,12 +30,12 @@
 ## ✨ What's new in v6.4?
 
 - 🎯 **Quests & Gamification**: New `polli_quests` tool + `/poll quests` command. See your Pollinations quests by category and the **free Pollen waiting to be claimed**. Just using this plugin (text, image & audio models) completes several quests **retroactively** — you may already have free Pollen waiting!
-- 🆓 **Free Image & Video Tools (no key required!)**: Two brand-new bonus tools usable by **any** OpenCode model, even without a Pollinations account:
+- 🆓 **Free Image & Video Tools (no key required!)**: Bonus tools usable by **any** OpenCode model, even without a Pollinations account:
   - `gen_edit_image_free` — generate **and edit** images (~20/day).
   - `gen_video_free` — text-to-video with optional first-frame image & audio (~5/day).
-- 🧹 `object_remover` : Remove objects by prompt (free, direct).
-- 📐 `image_upscaler` : Upscale images 2x/4x (free, direct).
-- ✨ `image_enhancer` : AI image enhancement (free, direct).
+  - `object_remover` — remove objects by prompt for free.
+  - `image_upscaler` — upscale images 2x/4x for free.
+  - `image_enhancer` — AI image enhancement (denoise, sharpen) for free.
 - 🔐 **1-Click Device Login**: New `/poll login` command + `polli_login` tool (like `gh auth login`). Opens your browser automatically and connects the plugin — no manual key copy-paste needed. The old `/poll connect sk_...` still works for permanent keys.
 - 🇨🇳 **Chinese added**: The interface is now available in **6 languages** (en, fr, es, de, it, **zh**).
 - 🛠️ **Tier fixes**: Full alignment with the official Pollinations tier config (added `router` 🐝, `anonymous`), crash fixes on no-refill tiers, and quest-based progression replacing the deprecated dev-points system.
@@ -56,7 +56,10 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 ### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
 - 🆓 `gen_edit_image_free` : Generate **and edit** images for free (~20/day, any model, no key).
 - 🆓 `gen_video_free` : Free text-to-video with optional first-frame image & audio (~5/day, no key).
-- ✂️ `remove_background` : AI background removal (bgeraser.com)'s rmbg, free).
+- 🧹 `object_remover` : Remove objects by prompt for free (30-120s, no key).
+- 📐 `image_upscaler` : Upscale images 2x/4x for free (30-120s, no key).
+- ✨ `image_enhancer` : AI image enhancement — denoise, sharpen, restore (30-120s, no key).
+- ✂️ `remove_background` : AI background removal via rmbg (bgeraser.com) — free.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Dev utilities.
 
 ### 💻 Complete List of Terminal Commands
@@ -83,34 +86,29 @@ We have introduced fundamental protections to ensure your workflow never interru
 
 ---
 
-## 🐝 Understanding Pollens & "Free Tiers"
+## 🐝 Understanding Quest Pollen & Hourly Refill
 
-In the past, Pollinations mainly relied on ad-funded network traffic. Today, running massive models (like Claude 3.5 Sonnet, Flux Pro, Wan Video) costs money. The **Enter Universe** unlocks cutting-edge models through an API key.
+In the past, Pollinations relied on tier grants. Today, you earn free Pollen by completing **Quests** and get **hourly refills** based on your contribution level:
 
-**But wait, you don't need a credit card!**
-
-**Pollen 🌻** is our unified credit system ($1 ≈ 1 Pollen). By connecting a simple Free API Key, you unlock **hourly** Pollen reloads according to your Developer Tier:
-
-| Tier | Hourly Reload ⏱️ | Daily Estimate* | Condition |
+| Level | Hourly Refill ⏱️ | Daily Estimate* | Condition |
 | :--- | :--- | :--- | :--- |
-| 🦠 **Microbe** | **0 Pollen / hour** | ~0 / day | Just register! |
-| 🍄 **Spore** | **0.01 Pollen / hour** | ~0.24 / day | Automatic verification |
+| 🍄 **Spore** | **0.01 Pollen / hour** | ~0.24 / day | New account (default) |
 | 🌱 **Seed** | **0.15 Pollen / hour** | ~3.6 / day | Active community member |
-| 🌸 **Flower** | **0.40 Pollen / hour** | ~9.6 / day | Publish an App (like this Plugin!) |
+| 🌸 **Flower** | **0.40 Pollen / hour** | ~9.6 / day | Complete Quests & contribute |
 | 🍯 **Nectar** | **0.80 Pollen / hour** | ~19.2 / day | Top contributor |
 | 🐝 **Router** | **10 Pollen / hour** | ~240 / day | Special / invite-only |
 
-_*Daily estimates are approximate (~24h × hourly rate). Actual reset occurs automatically at the top of every hour (XX:00)._
+_*Daily estimates are approximate (~24h × hourly rate). Refill resets automatically at the top of every hour (XX:00). Quest Pollen lasts 12 months since last account activity._
 
-> 🎯 **Earn even more free Pollen by completing Quests!** Just using this plugin completes several quests retroactively. Run `/poll quests` to see what you can claim.
+> 🎯 **Earn free Pollen by completing Quests!** Just using this plugin completes several quests retroactively. Run `/poll quests` to see what you can claim.
 
-> 🎁 **Get your Free Personal Key (BYOK) on [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) to boost OpenCode!**
+> 🎁 **Get your Free Personal Key (BYOK) on [Pollinations](https://enter.pollinations.ai) to boost OpenCode!**
 
 **How It Works:**
-1. Your free tier quota (e.g., 0.40 🌻/hour for Flower) is consumed first.
-2. When quota is exhausted, the safety net gracefully switches you to free fallback variants.
-3. Wallet balance (if purchased) is used for premium models only when the free quota is insufficient.
-4. Boom! 💥 Quota resets completely at the start of the next hour.
+1. Your Quest Pollen (hourly refill + accumulated quest rewards) is consumed first on all regular models.
+2. 💎 Paid-only models always use purchased Pollen.
+3. When Quest Pollen is exhausted, the safety net gracefully switches you to free fallback variants.
+4. ⏰ Refill resets at the top of the next hour.
 
 ---
 
@@ -157,7 +155,7 @@ Create a **Secret** key yourself on [enter.pollinations.ai](https://enter.pollin
 
 ## 🔗 Links
 
-- **Create your Pollen API Key**: [pollinations.ai](https://pollinations.ai)
+- **Dashboard**: [enter.pollinations.ai](https://enter.pollinations.ai)
 - **Discord Community**: [Join us!](https://discord.gg/pollinations-ai-885844321461485618)
 - **OpenCode Ecosystem**: [opencode.ai](https://opencode.ai/docs/ecosystem#plugins)
 
