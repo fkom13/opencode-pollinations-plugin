@@ -1,0 +1,52 @@
+model,category,status,latency_ms,error
+openai,official-gpt,HTTP_400,2463,{"success":false "error":{"message":"400 Bad Request: azure-openai error: Could not finish the messa
+openai-fast,official-gpt,HTTP_400,1784,{"success":false "error":{"message":"400 Bad Request: azure-openai error: Could not finish the messa
+gpt-5.4-mini,official-gpt,HTTP_400,1685,{"success":false "error":{"message":"400 Bad Request: azure-openai error: Could not finish the messa
+openai-large,official-gpt,HTTP_400,1309,{"success":false "error":{"message":"400 Bad Request: azure-openai error: Could not finish the messa
+gemini,official-gemini,OK,1182,
+gemini-fast,official-gemini,OK,865,
+gemini-3-flash,official-gemini,OK,1225,
+gemini-flash-lite-3.1,official-gemini,OK,955,
+gemini-large,official-gemini,OK,2499,
+claude-fast,official-claude,OK,1597,
+claude,official-claude,OK,1851,
+claude-sonnet-5,official-claude,OK,1813,
+claude-large,official-claude,OK,1741,
+deepseek,official-deepseek,OK,968,
+nova-fast,official-nova,OK,1103,
+nova,official-nova,OK,1152,
+kimi,official-kimi,OK,2363,
+llama-scout,official-llama,OK,1017,
+mistral,official-mistral,OK,1125,
+qwen-coder,official-qwen,OK,752,
+grok,official-grok,OK,1518,
+minimax,official-minimax,OK,7311,
+step-flash,official-step,OK,5143,
+glm,official-glm,OK,811,
+perplexity-fast,official-search,HTTP_400,579,{"success":false "error":{"message":"400 Bad Request: perplexity-ai error: max_tokens must be at lea
+MarcosFRG/gemini-3-flash-preview,community-tools,OK,4552,
+MarcosFRG/gemini-2.5-flash-lite,community-tools,HTTP_000,15059,
+MarcosFRG/gemini-3.1-flash-lite,community-tools,OK,9239,
+MarcosFRG/gemini-3.1-pro-preview,community-tools,OK,9047,
+YoannDev90/gemini-3-pro,community-tools,OK,2065,
+YoannDev90/gpt-4o-mini-search-preview,community-search,OK,4890,
+Circuit-Overtime/lixsearch,community-search,OK,4786,
+polly,community-tools,OK,4120,
+Catniti/agnes-2.0-flash,community-text,OK,7399,
+Catniti/claude-sonnet-4.6,community-text,OK,1784,
+Catniti/gpt-oss-120b,community-text,OK,711,
+Spit-fires/step-3.5-flash-free,community-text,OK,1476,
+solarnode-developement/hy3,community-text,OK,1934,
+vendouple/deepseek-v4-flash,community-text,HTTP_502,3537,{"success":false "error":{"message":"502 Bad Gateway" "code":"BAD_GATEWAY" "timestamp":"2026-07-14T1
+sharktide/inferenceport.ai-gpt-oss-20b,community-text,OK,1411,
+voodoohop/airforce-grok-4-fast,community-text,OK,3716,
+morriszdweck/qwen-3.7-plus-cheap,community-text,OK,14531,
+Minor-fun/deepseek-v4-flash,community-text,OK,2006,
+smplstuff/falcon-h1-tiny,community-text,HTTP_502,1007,{"success":false "error":{"message":"502 Bad Gateway" "code":"BAD_GATEWAY" "timestamp":"2026-07-14T1
+Bakhshi7889/gemma-4-31b-it,community-text,HTTP_400,491,{"success":false "error":{"message":"400 Bad Request" "code":"BAD_REQUEST" "timestamp":"2026-07-14T1
+CloudCompile/gemma-4-e2b,community-text,OK,2469,
+tomdacatto/ezra,community-text,OK,7395,
+MarcosFRG/deepseek-v4-flash,community-text,OK,7165,
+MarcosFRG/gemma-3-27b,community-text,OK,1572,
+YoannDev90/llama-4-scout,community-text,OK,2263,
+vendouple/kimi-k2.6,community-text,OK,5298,

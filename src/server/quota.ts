@@ -49,6 +49,10 @@ const CACHE_TTL = 30000;
 let cachedQuota: QuotaStatus | null = null;
 let lastQuotaFetch: number = 0;
 
+const STASH_CACHE_TTL = 5 * 60 * 1000; // 5 min — le stash Quest change rarement
+let cachedStash: { questStash: number; claimedQuestTier: number; tierConsumedSinceClaim: number } | null = null;
+let lastStashFetch: number = 0;
+
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const KNOWN_REFILLS = [
@@ -254,11 +258,21 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
 
         logQuota(`Fetch Success. Allowance: ${allowance}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
 
+        // Fetch quest stash (cached 5 min)
+        const nowStash = Date.now();
+        if (!cachedStash || (nowStash - lastStashFetch) > STASH_CACHE_TTL) {
+            try {
+                cachedStash = await fetchQuestStash(config.apiKey!);
+                lastStashFetch = nowStash;
+            } catch { /* keep previous */ }
+        }
+        const questStash = cachedStash?.questStash ?? 0;
+
         cachedQuota = {
             tierRemaining: cleanTierRemaining,
             tierUsed,
             tierLimit,
-            questStash: 0, // will be computed by fetchQuestStash if needed
+            questStash,
             walletBalance: cleanWalletBalance,
             nextResetAt: resetInfo.nextReset,
             timeUntilReset: resetInfo.timeUntilReset,
