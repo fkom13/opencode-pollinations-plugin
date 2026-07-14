@@ -94,7 +94,6 @@ Das **Pollen 🌻** ist unser zentrales Kreditsystem (1$ ≈ 1 Pollen). Verbinde
 
 | Tier (Stufe) | Stündliche Aufladung ⏱️ | Schätzung Tag* | Voraussetzung |
 | :--- | :--- | :--- | :--- |
-| 🦠 **Microbe** | **0.01 Pollen / Std.** | ~0.24 / Tag | Einfach registrieren! |
 | 🍄 **Spore** | **0.01 Pollen / Std.** | ~0.24 / Tag | Automatische Verifikation |
 | 🌱 **Seed** | **0.15 Pollen / Std.** | ~3.6 / Tag | Aktiver GitHub-Entwickler (8+ Punkte) |
 | 🌸 **Flower** | **0.40 Pollen / Std.** | ~9.6 / Tag | **Eine App veröffentlichen** (Wie dieses Plugin!) |

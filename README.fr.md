@@ -94,7 +94,6 @@ Le **Pollen 🌻** est notre système de crédit unifié (1$ ≈ 1 Pollen). En c
 
 | Tier | Recharge Horaire ⏱️ | Estimation Jour* | Condition |
 | :--- | :--- | :--- | :--- |
-| 🦠 **Microbe** | **0.01 Pollen / heure** | ~0.24 / jour | Simple inscription ! |
 | 🍄 **Spore** | **0.01 Pollen / heure** | ~0.24 / jour | Vérification automatique |
 | 🌱 **Seed** | **0.15 Pollen / heure** | ~3.6 / jour | Développeur GitHub Actif (8+ points) |
 | 🌸 **Flower** | **0.40 Pollen / heure** | ~9.6 / jour | **Publier une App** (Comme ce plugin !) |

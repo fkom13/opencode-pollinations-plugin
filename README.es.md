@@ -94,7 +94,6 @@ El **Pollen 🌻** dicta la ley unificada del crédito (1$ ≈ 1 Pollen). Sólo 
 
 | Tier | Recarga Hora ⏱️ | Aprox Diario* | Requisito a Cumplir |
 | :--- | :--- | :--- | :--- |
-| 🦠 **Microbe** | **0.01 Pollen / hora** | ~0.24 /día | ¡Sólo con crear el token! |
 | 🍄 **Spore** | **0.01 Pollen / hora** | ~0.24 /día | Examen de perfil y verificación |
 | 🌱 **Seed** | **0.15 Pollen / hora** | ~3.6 /día | Desarrollador activo en Github (+8 pts) |
 | 🌸 **Flower** | **0.40 Pollen / hora** | ~9.6 /día | **Completar y Publicar una App** |
