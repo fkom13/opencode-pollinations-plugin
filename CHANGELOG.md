@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.8] — 2026-07-14
+
+### 📚 README 6 langues — Outils libres ajoutés
+
+- `object_remover`, `image_upscaler`, `image_enhancer` ajoutés dans les 6 README
+- `remove_background` description mise à jour (rmbg bgeraser.com)
+
+---
+
 ## [6.4.7] — 2026-07-14
 
 ### ✨ 3 nouveaux outils libres standalone + suppression cut

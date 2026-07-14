@@ -4,6 +4,9 @@
 
 - 🎯 **Quêtes & Gamification** : `polli_quests` + `/poll quests` — voyez vos quêtes et le **Pollen gratuit à réclamer**. Utiliser le plugin complète des quêtes rétroactivement !
 - 🆓 **Image & Vidéo gratuites (sans clé !)** : `gen_edit_image_free` (génération + édition, ~20/j) et `gen_video_free` (texte→vidéo + image/audio, ~5/j), pour n'importe quel modèle.
+- `object_remover`
+- `image_upscaler`
+- `image_enhancer`
 - 🔐 **Connexion 1 clic** : `/poll login` + `polli_login` (device flow façon `gh auth login`), le navigateur s'ouvre tout seul. `/poll connect sk_...` reste dispo pour une clé permanente.
 - 🇨🇳 **Chinois ajouté** : interface disponible en 6 langues (en, fr, es, de, it, zh).
 

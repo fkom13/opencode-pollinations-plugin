@@ -33,6 +33,9 @@
 - 🆓 **Free Image & Video Tools (no key required!)**: Two brand-new bonus tools usable by **any** OpenCode model, even without a Pollinations account:
   - `gen_edit_image_free` — generate **and edit** images (~20/day).
   - `gen_video_free` — text-to-video with optional first-frame image & audio (~5/day).
+- 🧹 `object_remover` : Remove objects by prompt (free, direct).
+- 📐 `image_upscaler` : Upscale images 2x/4x (free, direct).
+- ✨ `image_enhancer` : AI image enhancement (free, direct).
 - 🔐 **1-Click Device Login**: New `/poll login` command + `polli_login` tool (like `gh auth login`). Opens your browser automatically and connects the plugin — no manual key copy-paste needed. The old `/poll connect sk_...` still works for permanent keys.
 - 🇨🇳 **Chinese added**: The interface is now available in **6 languages** (en, fr, es, de, it, **zh**).
 - 🛠️ **Tier fixes**: Full alignment with the official Pollinations tier config (added `router` 🐝, `anonymous`), crash fixes on no-refill tiers, and quest-based progression replacing the deprecated dev-points system.
@@ -53,7 +56,7 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 ### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
 - 🆓 `gen_edit_image_free` : Generate **and edit** images for free (~20/day, any model, no key).
 - 🆓 `gen_video_free` : Free text-to-video with optional first-frame image & audio (~5/day, no key).
-- ✂️ `remove_background` : Built-in ultra-fast AI image background removal.
+- ✂️ `remove_background` : AI background removal (bgeraser.com)'s rmbg, free).
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Dev utilities.
 
 ### 💻 Complete List of Terminal Commands

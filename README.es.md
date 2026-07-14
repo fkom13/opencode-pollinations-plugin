@@ -4,6 +4,9 @@
 
 - 🎯 **Misiones y Gamificación** : `polli_quests` + `/poll quests` — mira tus misiones y el **Pollen gratis por reclamar**. ¡Usar el plugin completa misiones retroactivamente!
 - 🆓 **Imagen y Vídeo gratis (¡sin clave!)** : `gen_edit_image_free` (generar + editar, ~20/día) y `gen_video_free` (texto→vídeo + imagen/audio, ~5/día), para cualquier modelo.
+- `object_remover` : Elimina objetos por prompt (gratis).
+- `image_upscaler` : Amplía imágenes 2x/4x (gratis).
+- `image_enhancer` : Mejora IA de imagen (gratis).
 - 🔐 **Inicio 1 clic** : `/poll login` + `polli_login` (device flow como `gh auth login`), el navegador se abre solo. `/poll connect sk_...` sigue disponible para clave permanente.
 - 🇨🇳 **Chino añadido** : interfaz en 6 idiomas (en, fr, es, de, it, zh).
 

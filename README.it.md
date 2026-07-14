@@ -4,6 +4,9 @@
 
 - 🎯 **Quest e Gamification** : `polli_quests` + `/poll quests` — guarda le tue quest e il **Pollen gratuito da riscattare**. Usare il plugin completa quest retroattivamente!
 - 🆓 **Immagini e Video gratis (senza chiave!)** : `gen_edit_image_free` (genera + modifica, ~20/giorno) e `gen_video_free` (testo→video + immagine/audio, ~5/giorno), per qualsiasi modello.
+- `object_remover` : Rimuovi oggetti con prompt (gratis).
+- `image_upscaler` : Ingrandisci immagini 2x/4x (gratis).
+- `image_enhancer` : Miglioramento IA immagini (gratis).
 - 🔐 **Accesso 1 clic** : `/poll login` + `polli_login` (device flow come `gh auth login`), il browser si apre da solo. `/poll connect sk_...` resta disponibile per chiave permanente.
 - 🇨🇳 **Cinese aggiunto** : interfaccia in 6 lingue (en, fr, es, de, it, zh).
 
