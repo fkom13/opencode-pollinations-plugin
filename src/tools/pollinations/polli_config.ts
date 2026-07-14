@@ -37,7 +37,8 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
         costThreshold: tool.schema.number().optional().describe('Cost threshold in USD/🌼 above which confirmation is required'),
         thresholdsTier: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 10 for 10%) for Free Tier.'),
         thresholdsWallet: tool.schema.number().optional().describe('Warning threshold PERCENTAGE (e.g. 50 for 50%) for Wallet balance.'),
-        lang: tool.schema.enum(['en', 'fr', 'es', 'de', 'it', 'zh']).optional().describe('Plugin language for commands and toasts (en, fr, es, de, it, zh).')
+        lang: tool.schema.enum(['en', 'fr', 'es', 'de', 'it', 'zh']).optional().describe('Plugin language for commands and toasts (en, fr, es, de, it, zh).'),
+        refillOverride: tool.schema.number().optional().describe('Manual Quest Pollen hourly refill override (0.01, 0.15, 0.4, 0.8, or 10). Set to 0 for auto-deduction.')
     },
     async execute(args, context) {
         if (args.action === 'view') {
@@ -59,6 +60,9 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
             if (args.costConfirmationRequired !== undefined) updates.costConfirmationRequired = args.costConfirmationRequired;
             if (args.enablePaidTools !== undefined) updates.enablePaidTools = args.enablePaidTools;
             if (args.costThreshold !== undefined) updates.costThreshold = args.costThreshold;
+            if (args.refillOverride !== undefined) {
+                updates.refillOverride = args.refillOverride === 0 ? undefined : args.refillOverride;
+            }
             if (args.lang !== undefined) updates.lang = args.lang;
 
             if (args.thresholdsTier !== undefined || args.thresholdsWallet !== undefined) {

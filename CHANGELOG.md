@@ -5,6 +5,42 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.2] — 2026-07-14
+
+### 🔧 refillOverride — correction manuelle du refill horaire
+
+- **`quota.ts`** — `deduceAllowanceFromApi()` analyse 7 jours d'usage (`/account/usage?days=7`) avec pagination cursor-based pour déduire le refill Quest Pollen
+- **`config.ts`** — Nouveau champ `refillOverride` (0.01/0.15/0.4/0.8/10 ou `auto`) pour forcer le refill quand la déduction automatique sous-estime
+- **`commands.ts`** — `/poll config refillOverride <valeur>` + affichage dans le tableau `/poll config`
+- **`polli_config` tool** — L'agent peut lire/modifier `refillOverride` via `action: update`
+
+### Priorité de résolution du refill
+1. `balanceRes.allowance` (PR #12449 — natif, futur)
+2. `config.refillOverride` (manuel, immédiat)
+3. `deduceAllowanceFromApi()` (automatique, 7 jours)
+
+---
+
+## [6.4.1] — 2026-07-14
+
+### 🔧 Stopgap — Quota fix post-removal of `tier` from API profile
+
+Pollinations removed `tier` and `nextResetAt` from `/account/profile` (commit #10255, PR #7618).
+The plugin no longer crashes on `/poll usage` — the hourly refill is now deduced from usage data.
+
+- **`quota.ts` — Refonte complète de `getQuotaStatus()`**
+  - `/account/profile` n'est plus appelé (les champs `tier`/`nextResetAt` ne sont plus retournés)
+  - L'allowance horaire est déduite depuis `/account/usage` (analyse `meter_source == 'tier'` sur 24h)
+  - Compatible avec le futur format de `/account/balance` (PR #12449 : `allowance`/`pack` natifs)
+  - La pagination `offset` est remplacée par `before_event_id` (cursor-based, aligné sur l'OpenAPI v0.3.0)
+  - `calculateResetInfo()` calcule la prochaine heure :00 UTC localement (n'attend plus `nextResetAt`)
+- **`tier-info.ts`** — Conditions de progression mises à jour (Quêtes au lieu de dev-points/Publish app)
+- **`formatQuotaForToast()`** — Affiche "Quest"/"Paid" au lieu de "Tier"/"Wallet"
+
+> ℹ️ PR #12449 (pollinations/pollinations) exposera `allowance`/`pack` directement dans `/account/balance` — le plugin basculera automatiquement. Voir `docs/AUDIT_TIERS_2026-07-14.md`.
+
+---
+
 ## [6.4.0] — 2026-07-01
 
 ### ✨ Split Quête / Payé reconstruit (croisement de données)

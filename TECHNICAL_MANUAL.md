@@ -1,5 +1,5 @@
-# 📘 Technical Manual — OpenCode Pollinations Plugin v6.2.7
-> **Version**: 6.2.7.1 | **Status**: Stable | **Last Updated**: 2026-04-02
+# 📘 Technical Manual — OpenCode Pollinations Plugin v6.4
+> **Version**: 6.4.2 | **Status**: Stable | **Last Updated**: 2026-07-14
 
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
@@ -362,49 +362,58 @@ interface OpenCodeModel {
 
 ### 5. `server/quota.ts` — Quota Tracking
 
-**QuotaStatus Interface:**
+**QuotaStatus Interface (v6.4.1):**
 ```typescript
 interface QuotaStatus {
-    tierRemaining: number;      // Free Pollen remaining today
-    tierUsed: number;           // Free Pollen used today
-    tierLimit: number;          // Daily limit (1/3/10/20)
-    walletBalance: number;      // Paid wallet balance
+    tierRemaining: number;      // Quest Pollen remaining this hour
+    tierUsed: number;           // Quest Pollen consumed this hour
+    tierLimit: number;          // Hourly refill (deduced: 0.01/0.15/0.4/0.8/10)
+    walletBalance: number;      // Paid Pollen balance
     nextResetAt: Date;
-    timeUntilReset: number;     // ms until daily reset
+    timeUntilReset: number;     // ms until next :00 UTC
     canUseEnterprise: boolean;  // tier > 0 OR wallet > 0
     isUsingWallet: boolean;     // tier === 0 AND wallet > 0
     needsAlert: boolean;        // Below configured threshold
-    tier: string;               // 'spore' | 'seed' | 'flower' | 'nectar'
+    tier: string;               // 'spore' | 'seed' | 'flower' | 'nectar' (deduced)
     tierEmoji: string;
 }
 ```
 
+**Allowance Deduction (v6.4.1):**
+Since Pollinations removed `tier` and `nextResetAt` from `/account/profile` (PR #7618, commit #10255),
+the plugin deduces the hourly refill from usage data:
+1. Fetch `/account/balance` (format dual: legacy `{balance}` or new PR #12449 `{total, allowance, pack}`)
+2. If `allowance` is present (PR #12449 format) → use natively
+3. Otherwise, fetch `/account/usage?days=1`, filter `meter_source == 'tier'`, take max `cost_usd`
+4. Map to the closest known refill: `[0, 0.01, 0.15, 0.4, 0.8, 10]`
+5. `calculateResetInfo()` computes the next :00 UTC locally
+
 **Paid-Only Model Strategy (v5.5+):**
-Models tagged `paid_only: true` (e.g., `gemini-large`, `veo`) require `walletBalance > 0`. Daily grant (tier credits) cannot be used for these models. If wallet is empty, the proxy falls back immediately.
+Models tagged `paid_only: true` (e.g., `gemini-large`, `veo`) always deduct from `packBalance`. Quest Pollen cannot be used for these models.
 
 **Limited Key Support (v5.6+):**
 Some API keys allow generation but block access to `/account/usage` and `/account/profile`. Detection happens at `/connect` time:
 - If profile endpoints return 403/401 but model generation works → `keyHasAccessToProfile = false`
 - Mode is forced to `manual` to skip quota checks
 - Generation is allowed; proxy ignores quota 403s and passes requests through
-- Dashboard shows "Limited Key (Generation Only)" alert
 
 **Cache:**
 ```typescript
 const CACHE_TTL = 30000; // 30 seconds
 ```
 
-**Tier Limits:**
+**Hourly Refill Rates (deduced):**
 
-| Tier | Pollen/Day | Emoji |
-|------|:----------:|:-----:|
-| spore | 1 | 🌱 |
-| seed | 3 | 🌿 |
-| flower | 10 | 🌸 |
-| nectar | 20 | 🍯 |
+| Refill/h | Emoji | Label |
+|----------|:-----:|-------|
+| 0.01 | 🍄 | spore |
+| 0.15 | 🌱 | seed |
+| 0.4 | 🌸 | flower |
+| 0.8 | 🍯 | nectar |
+| 10 | 🐝 | router |
 
-**Smart Fetch Quota (v6.1.0-beta.22 — New):**
-Local usage tracking has been entirely replaced by a recursive API fetch (`fetchUsageForPeriod`). The system queries `/account/usage?limit=100` iteratively until it reaches the exact mathematical timestamp of `nextResetAt - 24h` (in absolute UTC). This guarantees 100% exact alignment with the Pollinations backend billing without relying on local cache or local timezones.
+**Smart Fetch Quota (v6.4.1 — updated):**
+`fetchUsageForPeriod` uses cursor-based pagination (`before_event_id`) instead of the deprecated `offset` parameter (silently ignored by the API since OpenAPI v0.3.0). Queries `/account/usage?limit=100` iteratively until reaching the hourly reset boundary.
 
 ---
 

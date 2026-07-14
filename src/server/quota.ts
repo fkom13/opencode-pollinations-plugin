@@ -1,17 +1,17 @@
-import * as https from 'https'; // Use Native HTTPS
+import * as https from 'https';
 import { loadConfig } from './config.js';
 
 // === INTERFACES ===
 
-interface Profile {
-    name: string;
-    email: string;
-    githubUsername: string;
-    tier: string;
-    createdAt: string;
-    nextResetAt: string | null; // null for tiers with no refill (cadence 'none': anonymous/microbe)
-}
 import { DetailedUsageEntry } from './pollinations-api.js';
+
+interface BalanceResponse {
+    total?: number;       // PR #12449 (new format)
+    allowance?: number;   // PR #12449 — hourly refill (0.01/0.15/0.4/0.8/10)
+    pack?: number;        // PR #12449 — paid pollen
+    balance?: number;     // legacy format (single combined number)
+    currency?: string;
+}
 
 interface ResetInfo {
     nextReset: Date;
@@ -25,50 +25,39 @@ interface ResetInfo {
 }
 
 export interface QuotaStatus {
-    // État actuel
-    tierRemaining: number;      // Pollen gratuit restant
-    tierUsed: number;           // Pollen gratuit utilisé
-    tierLimit: number;          // Limite du tier (1/3/10/20)
-    walletBalance: number;      // Solde wallet payant
+    tierRemaining: number;
+    tierUsed: number;
+    tierLimit: number;       // hourly refill (deduced or native allowance)
+    walletBalance: number;
 
-    // Infos reset
     nextResetAt: Date;
-    timeUntilReset: number;     // ms
+    timeUntilReset: number;
 
-    // Flags de décision
-    canUseEnterprise: boolean;  // tier > 0 OU wallet > 0
-    isUsingWallet: boolean;     // tier === 0 ET wallet > 0
-    needsAlert: boolean;        // Sous le seuil configuré
+    canUseEnterprise: boolean;
+    isUsingWallet: boolean;
+    needsAlert: boolean;
 
-    // Pour les toasts
-    tier: string;               // 'spore', 'seed', 'flower', 'nectar'
+    tier: string;
     tierEmoji: string;
     errorType?: 'auth_limited' | 'network' | 'unknown';
 }
 
 // === CACHE & CONSTANTS ===
 
-const CACHE_TTL = 30000; // 30 secondes
+const CACHE_TTL = 30000;
 let cachedQuota: QuotaStatus | null = null;
 let lastQuotaFetch: number = 0;
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
-const HISTORY_RETENTION_MS = 48 * 60 * 60 * 1000; // 48h history
 
-// === TIER LIMITS (HOURLY) ===
-// https://pollinations.ai/pricing - Quotas refreshed every hour
-
-// Source of truth mirrored from official pollinations/shared/tier-config.ts (2026-06)
-// cadence 'none' => no hourly refill => API returns nextResetAt: null
-const TIER_LIMITS: Record<string, { pollen: number; emoji: string; cadence: 'hourly' | 'none' }> = {
-  anonymous: { pollen: 0, emoji: '👤', cadence: 'none' },
-  microbe: { pollen: 0, emoji: '🦠', cadence: 'none' },
-  spore: { pollen: 0.01, emoji: '🍄', cadence: 'hourly' },
-  seed: { pollen: 0.15, emoji: '🌱', cadence: 'hourly' },
-  flower: { pollen: 0.4, emoji: '🌸', cadence: 'hourly' },
-  nectar: { pollen: 0.8, emoji: '🍯', cadence: 'hourly' },
-  router: { pollen: 10, emoji: '🐝', cadence: 'hourly' },
-};
+const KNOWN_REFILLS = [
+    { pollen: 0,    emoji: '👤', label: 'anonymous' },
+    { pollen: 0.01, emoji: '🍄', label: 'spore' },
+    { pollen: 0.15, emoji: '🌱', label: 'seed' },
+    { pollen: 0.4,  emoji: '🌸', label: 'flower' },
+    { pollen: 0.8,  emoji: '🍯', label: 'nectar' },
+    { pollen: 10,   emoji: '🐝', label: 'router' },
+];
 
 // === LOGGING ===
 import { logApi } from './logger.js';
@@ -76,47 +65,142 @@ function logQuota(msg: string) {
     logApi(`[QUOTA] ${msg}`);
 }
 
-// === SMART FETCH API ===
+// === SMART FETCH API (cursor-based) ===
 
 export async function fetchUsageForPeriod(apiKey: string, lastReset: Date): Promise<DetailedUsageEntry[]> {
     let allUsage: DetailedUsageEntry[] = [];
-    let offset = 0;
-    const limit = 100; // Bulk fetch 
+    const limit = 100;
+    let cursorEventId: string | null = null;
 
     while (true) {
+        let queryPath = `/account/usage?limit=${limit}`;
+        if (cursorEventId) {
+            queryPath += `&before_event_id=${encodeURIComponent(cursorEventId)}`;
+        }
+
         let usageRes;
         try {
-            usageRes = await fetchAPI<{ usage: DetailedUsageEntry[] }>(`/account/usage?limit=${limit}&offset=${offset}`, apiKey);
+            usageRes = await fetchAPI<{ usage: DetailedUsageEntry[]; count: number }>(queryPath, apiKey);
         } catch (e) {
-            logQuota(`SmartFetch failed at offset ${offset}: ${e}`);
+            logQuota(`SmartFetch failed: ${e}`);
             break;
         }
 
         if (!usageRes.usage || usageRes.usage.length === 0) {
-            break; // No more records
+            break;
         }
 
         let reachedCutoff = false;
         for (const entry of usageRes.usage) {
-            const timestampStr = entry.timestamp.includes('Z') ? entry.timestamp : entry.timestamp.replace(' ', 'T') + 'Z';
+            const timestampStr = entry.timestamp.includes('Z')
+                ? entry.timestamp
+                : entry.timestamp.replace(' ', 'T') + 'Z';
             const entryTime = new Date(timestampStr);
             if (entryTime < lastReset) {
                 reachedCutoff = true;
-                break; // Entry is from previous period, stop.
+                break;
             }
             allUsage.push(entry);
         }
 
-        // If we found an entry older than lastReset, or if the page was not full, we reached the end.
         if (reachedCutoff || usageRes.usage.length < limit) {
             break;
         }
 
-        offset += limit;
+        const lastEntry = usageRes.usage[usageRes.usage.length - 1];
+        cursorEventId = (lastEntry as any).cursor_event_id || null;
+        if (!cursorEventId) break;
     }
 
     logQuota(`SmartFetch: Retrieved ${allUsage.length} transactions for current period.`);
     return allUsage;
+}
+
+// === ALLOWANCE DEDUCTION ===
+
+async function fetchUsageForAllowance(apiKey: string): Promise<DetailedUsageEntry[]> {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * ONE_HOUR_MS);
+    const allUsage: DetailedUsageEntry[] = [];
+    let cursorEventId: string | null = null;
+    let pageCount = 0;
+    const maxPages = 20;
+
+    while (pageCount < maxPages) {
+        let path = `/account/usage?days=7&limit=500`;
+        if (cursorEventId) {
+            path += `&before_event_id=${encodeURIComponent(cursorEventId)}`;
+        }
+
+        const res = await fetchAPI<{ usage: DetailedUsageEntry[]; count: number }>(path, apiKey);
+
+        if (!res.usage || res.usage.length === 0) break;
+
+        let reachedCutoff = false;
+        for (const entry of res.usage) {
+            const ts = (entry.timestamp.includes('Z') ? entry.timestamp : entry.timestamp.replace(' ', 'T') + 'Z');
+            if (new Date(ts) < sevenDaysAgo) { reachedCutoff = true; break; }
+            allUsage.push(entry);
+        }
+
+        if (reachedCutoff || res.usage.length < 500) break;
+
+        const last = res.usage[res.usage.length - 1] as any;
+        cursorEventId = last?.cursor_event_id || null;
+        if (!cursorEventId) break;
+        pageCount++;
+    }
+
+    logQuota(`deduceAllowance: fetched ${allUsage.length} records over ${pageCount + 1} pages`);
+    return allUsage;
+}
+
+async function deduceAllowanceFromApi(apiKey: string): Promise<number> {
+    try {
+        const allUsage = await fetchUsageForAllowance(apiKey);
+        if (allUsage.length === 0) return 0;
+
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * ONE_HOUR_MS);
+        const hourlyBuckets = new Map<number, number>();
+
+        for (const entry of allUsage) {
+            if (entry.meter_source !== 'tier') continue;
+            const ts = entry.timestamp.includes('Z') ? entry.timestamp : entry.timestamp.replace(' ', 'T') + 'Z';
+            const entryTime = new Date(ts);
+            if (entryTime < sevenDaysAgo) continue;
+
+            const hourKey = entryTime.getUTCFullYear() * 1000000
+                + entryTime.getUTCMonth() * 10000
+                + entryTime.getUTCDate() * 100
+                + entryTime.getUTCHours();
+            hourlyBuckets.set(hourKey, (hourlyBuckets.get(hourKey) || 0) + entry.cost_usd);
+        }
+
+        const maxHourlyTier = Math.max(0, ...hourlyBuckets.values());
+        const match = KNOWN_REFILLS.slice().reverse().find(r => r.pollen <= maxHourlyTier + 0.02);
+
+        logQuota(`deduceAllowance: ${allUsage.length} records, ${hourlyBuckets.size} hourly buckets, max=${maxHourlyTier.toFixed(4)}, deduced=${match?.pollen ?? 0} (${match?.label})`);
+        return match ? match.pollen : 0;
+    } catch (e) {
+        logQuota(`deduceAllowance failed: ${e}`);
+        return 0;
+    }
+}
+
+function deduceAllowanceFromUsage(usage: DetailedUsageEntry[]): number {
+    const tierCosts = usage
+        .filter(u => u.meter_source === 'tier')
+        .map(u => u.cost_usd);
+    const maxHourlyTier = Math.max(0, ...tierCosts);
+    const match = KNOWN_REFILLS.slice().reverse().find(r => r.pollen <= maxHourlyTier + 0.02);
+    return match ? match.pollen : 0;
+}
+
+function tierMetaForAllowance(allowance: number): { label: string; emoji: string } {
+    const match = KNOWN_REFILLS.find(r => r.pollen === allowance)
+        || KNOWN_REFILLS.findLast(r => r.pollen <= allowance);
+    return match
+        ? { label: match.label, emoji: match.emoji }
+        : { label: 'unknown', emoji: '❓' };
 }
 
 // === MAIN QUOTA FUNCTION ===
@@ -136,42 +220,38 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
     try {
         logQuota("Fetching Quota Data...");
 
-        // 1. Fetch API
-        // SEQUENTIAL FETCH (Avoid Rate Limits)
-        const profileRes = await fetchAPI<Profile>('/account/profile', config.apiKey);
-        const balanceRes = await fetchAPI<{ balance: number }>('/account/balance', config.apiKey);
+        const balanceRes = await fetchAPI<BalanceResponse>('/account/balance', config.apiKey);
 
-        const profile = profileRes;
-        const balance = balanceRes.balance;
-
-        // 2. Convertir Timezone : Obtenir instant exact du Reset
-        const resetInfo = calculateResetInfo(profile.nextResetAt);
-        logQuota(`Fetch Success. Tier: ${profile.tier}, Balance: ${balance}, Next Reset: ${profile.nextResetAt}`);
-
-        // 3. Smart Fetch : Récupérer uniquement les dépenses du jour (depuis lastReset)
+        const resetInfo = calculateResetInfo();
         const periodUsage = await fetchUsageForPeriod(config.apiKey, resetInfo.lastReset);
 
-        const tierInfo = TIER_LIMITS[profile.tier] || { pollen: 0, emoji: '❓', cadence: 'none' as const };
-        const tierLimit = tierInfo.pollen;
+        const allowance = balanceRes.allowance
+            ?? (config as any).refillOverride
+            ?? await deduceAllowanceFromApi(config.apiKey);
 
-        // 4. Calcul Strict FreeTier / Wallet
+        const tierMeta = tierMetaForAllowance(allowance);
+        const tierLimit = allowance;
+
         const { tierUsed } = calculateCurrentPeriodUsage(periodUsage, resetInfo);
-
-        // 4. Calculate Balances
         const tierRemaining = Math.max(0, tierLimit - tierUsed);
-
-        // Fix rounding errors
         const cleanTierRemaining = Math.max(0, parseFloat(tierRemaining.toFixed(4)));
 
-        // Le wallet c'est le reste (balance totale - ce qu'il reste du tier gratuit non consommé)
-        // Formula: Pollinations Balance = Wallet + TierRemaining.
-        const walletBalance = Math.max(0, balance - cleanTierRemaining);
-        const cleanWalletBalance = Math.max(0, parseFloat(walletBalance.toFixed(4)));
+        const totalBalance = balanceRes.total
+            ?? balanceRes.balance
+            ?? 0;
 
-        // needsAlert: check BOTH tier threshold AND wallet threshold
+        const paidPollenNative = balanceRes.pack;
+        const paidPollen = paidPollenNative !== undefined
+            ? paidPollenNative
+            : Math.max(0, totalBalance - cleanTierRemaining);
+
+        const cleanWalletBalance = Math.max(0, parseFloat(paidPollen.toFixed(4)));
+
         const tierAlertPercent = tierLimit > 0 ? (cleanTierRemaining / tierLimit * 100) : 0;
         const tierNeedsAlert = tierLimit > 0 && tierAlertPercent <= config.thresholds.tier;
         const walletNeedsAlert = cleanWalletBalance > 0 && cleanWalletBalance < (config.thresholds.wallet || 0.5);
+
+        logQuota(`Fetch Success. Allowance: ${allowance}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
 
         cachedQuota = {
             tierRemaining: cleanTierRemaining,
@@ -183,8 +263,8 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
             canUseEnterprise: cleanTierRemaining > 0.05 || cleanWalletBalance > 0.05,
             isUsingWallet: cleanTierRemaining <= 0.05 && cleanWalletBalance > 0.05,
             needsAlert: tierNeedsAlert || walletNeedsAlert,
-            tier: profile.tier,
-            tierEmoji: tierInfo.emoji
+            tier: tierMeta.label,
+            tierEmoji: tierMeta.emoji
         };
 
         lastQuotaFetch = now;
@@ -202,6 +282,7 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
 }
 
 function createDefaultQuota(tierName: string, limit: number): QuotaStatus {
+    const meta = tierMetaForAllowance(limit);
     return {
         tierRemaining: 0,
         tierUsed: 0,
@@ -212,8 +293,8 @@ function createDefaultQuota(tierName: string, limit: number): QuotaStatus {
         canUseEnterprise: false,
         isUsingWallet: false,
         needsAlert: false,
-        tier: tierName,
-        tierEmoji: TIER_LIMITS[tierName]?.emoji || '❌'
+        tier: tierName !== 'none' ? meta.label : 'none',
+        tierEmoji: meta.emoji
     };
 }
 
@@ -228,7 +309,7 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'User-Agent': 'opencode-pollinations-plugin/5.1.0'
+                'User-Agent': 'opencode-pollinations-plugin/6.4.1'
             }
         };
 
@@ -257,44 +338,31 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
     });
 }
 
-function calculateResetInfo(nextResetAt: string | null): ResetInfo {
-  const now = new Date();
+function calculateResetInfo(): ResetInfo {
+    const now = new Date();
+    const nextReset = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        now.getUTCHours() + 1,
+        0, 0, 0
+    ));
+    const lastReset = new Date(nextReset.getTime() - ONE_HOUR_MS);
 
-  // Tiers with cadence 'none' (anonymous/microbe) return nextResetAt: null.
-  // Guard also against malformed timestamps that would yield Invalid Date (NaN).
-  let nextReset = nextResetAt ? new Date(nextResetAt) : null;
-  if (!nextReset || isNaN(nextReset.getTime())) {
-    // No refill: there is no upcoming reset. Use a stable current-hour window
-    // so usage SmartFetch still has a sane lower bound, and surface 0 countdown.
-    const lastReset = new Date(now.getTime() - ONE_HOUR_MS);
+    const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
+    const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());
+    const progressPercent = Math.min(100, (timeSinceReset / ONE_HOUR_MS) * 100);
+
     return {
-      nextReset: now,
-      lastReset,
-      timeUntilReset: 0,
-      timeSinceReset: ONE_HOUR_MS,
-      resetHour: now.getUTCHours(),
-      resetMinute: now.getUTCMinutes(),
-      resetSecond: now.getUTCSeconds(),
-      progressPercent: 100
+        nextReset,
+        lastReset,
+        timeUntilReset,
+        timeSinceReset,
+        resetHour: nextReset.getUTCHours(),
+        resetMinute: 0,
+        resetSecond: 0,
+        progressPercent
     };
-  }
-
-  const lastReset = new Date(nextReset.getTime() - ONE_HOUR_MS);
-
-  const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
-  const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());
-  const progressPercent = Math.min(100, (timeSinceReset / ONE_HOUR_MS) * 100);
-
-  return {
-    nextReset,
-    lastReset,
-    timeUntilReset,
-    timeSinceReset,
-    resetHour: nextReset.getUTCHours(),
-    resetMinute: nextReset.getUTCMinutes(),
-    resetSecond: nextReset.getUTCSeconds(),
-    progressPercent
-  };
 }
 
 function calculateCurrentPeriodUsage(
@@ -305,7 +373,6 @@ function calculateCurrentPeriodUsage(
     let packUsed = 0;
 
     const entriesAfterReset = usage.filter(entry => {
-        // Safe Parse
         const timestamp = entry.timestamp.replace(' ', 'T') + 'Z';
         const entryTime = new Date(timestamp);
         return entryTime >= resetInfo.lastReset;
@@ -336,5 +403,5 @@ export function formatQuotaForToast(quota: QuotaStatus): string {
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     const resetIn = `${hours}h${minutes}m`;
 
-    return `${quota.tierEmoji} Tier: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} (${tierPercent}%) | 💎 Wallet: $${quota.walletBalance.toFixed(2)} | ⏰ Reset: ${resetIn}`;
+    return `${quota.tierEmoji} Quest: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} (${tierPercent}%) | 💎 Paid: $${quota.walletBalance.toFixed(2)} | ⏰ Reset: ${resetIn}`;
 }

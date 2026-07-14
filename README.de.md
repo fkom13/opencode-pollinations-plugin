@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin für OpenCode (v6.4.0)
+# 🌸 Pollinations AI Plugin für OpenCode (v6.4)
 
 ## ✨ Neu in v6.4.0
 
@@ -35,7 +35,7 @@
 
 ---
 
-## ✨ Was ist neu in V6.2.7?
+## ✨ Was ist neu in V6.4?
 
 - ⏱️ **Stündliche Quoten**: Verabschieden Sie sich von täglichen Limits! Developer Tiers werden jetzt **jede Stunde** pünktlich um `:00` zurückgesetzt. So haben Sie bei langen Code-Sitzungen immer frische Credits.
 - ⚡ **100% Dynamische Engine**: Keine hartcodierten Modelllisten, festen Standardkonfigurationen und Preise mehr! In V6.2 ruft der KI-Agent von OpenCode dynamisch die neuesten LLMs, Parameter, Tags (`[💎 Paid]`, `[🌿 Free]`) und Kostenabschätzungen über die Pollinations-APIs ab.

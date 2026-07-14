@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v6.4.0)
+# 🌸 Pollinations AI Plugin for OpenCode (v6.4)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -27,7 +27,7 @@
 
 ---
 
-## ✨ What's new in V6.3.0?
+## ✨ What's new in v6.4?
 
 - 🎯 **Quests & Gamification**: New `polli_quests` tool + `/poll quests` command. See your Pollinations quests by category and the **free Pollen waiting to be claimed**. Just using this plugin (text, image & audio models) completes several quests **retroactively** — you may already have free Pollen waiting!
 - 🆓 **Free Image & Video Tools (no key required!)**: Two brand-new bonus tools usable by **any** OpenCode model, even without a Pollinations account:

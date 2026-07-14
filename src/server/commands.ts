@@ -740,6 +740,7 @@ ${t('commands.config.table_divider')}
 | **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | ${t('commands.config.costConfirmationRequired_role')} | \`/poll config costConfirmationRequired <true/false>\` |
 | **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | ${t('commands.config.costThreshold_role')} | \`/poll config costThreshold <X>\` |
 | **cost_estimator**| \`${config.costEstimator ?? true}\` | ${t('commands.config.cost_estimator_role')} | \`/poll config cost_estimator <true/false>\` |
+| **refillOverride**| \`${config.refillOverride ?? 'auto (déduit)'}\` | Quest Pollen refill horaire | \`/poll config refillOverride <0.01/0.15/0.4/0.8/10>\` |
 | **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | ${t('commands.config.fallback_main_role')} | \`/poll fallback <main> <agent>\` |
 | **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_agent_role')} | \`/poll fallback <main> <agent>\` |
 | **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_enter_role')} | *${t('commands.config.managed_auto')}* |
@@ -847,11 +848,24 @@ ${t('commands.config.table_divider')}
         return { handled: true, response: `✅ costConfirmationRequired = ${enabled}` };
     }
 
+    if (key === 'refillOverride' && value) {
+        if (value === 'auto') {
+            saveConfig({ refillOverride: undefined });
+            return { handled: true, response: '✅ refillOverride = auto (déduction automatique)' };
+        }
+        const override = parseFloat(value);
+        if (isNaN(override) || ![0.01, 0.15, 0.4, 0.8, 10].includes(override)) {
+            return { handled: true, error: 'Valeurs supportées: auto, 0.01, 0.15, 0.4, 0.8, 10' };
+        }
+        saveConfig({ refillOverride: override });
+        return { handled: true, response: `✅ refillOverride = ${override} 🌻/h` };
+    }
+
 
 
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, lang`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, refillOverride, lang`
     };
 }
 

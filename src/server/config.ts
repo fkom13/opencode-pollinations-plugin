@@ -98,6 +98,7 @@ export interface PollinationsConfigV5 {
     costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
     statusBar: boolean;
     costEstimator: boolean; // Show cost estimates in tool outputs (default: true)
+    refillOverride?: number; // Manual Quest Pollen refill override (0.01/0.15/0.4/0.8/10)
     lang?: string; // Interface language (en, fr, etc.)
 }
 
