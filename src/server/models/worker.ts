@@ -65,12 +65,11 @@ export class ToolRegistryWorker {
                 videoTable += `|--------|------------|-------|------------|-------|\n`;
 
                 for (const m of videoModels) {
-                    // Estimation pour une vidéo moyenne de 6 secondes
                     const cost = estimateVideoCost(m.name, 6);
                     const price = cost ? `${per1pollen(cost)} vidéos` : 'inconnu';
-                    // durationRange et aspectRatios arrivent du fetcher (ou fallback)
                     const specs = `${m.durationRange ? m.durationRange.join('-') + 's' : '?s'} / ${m.aspectRatios ? m.aspectRatios.length : '?'} ratios`;
-                    const badge = m.paid_only ? '[💎 Paid]' : '[🌿 Free]';
+                    const isCommunity = (m as any).community === true || m.name.includes('/');
+                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
                     videoTable += `| \`${m.name}\` ${badge} | ${m.supportsI2X ? 'T2V/I2V' : 'T2V'} | ${m.output_modalities?.includes('audio') || m.name === 'grok-video' ? '✅' : '❌'} | ${price} | ${specs} |\n`;
                 }
 
@@ -94,7 +93,8 @@ export class ToolRegistryWorker {
                 for (const m of imageModels.slice(0, 20)) {
                     const cost = estimateImageCost(m.name);
                     const price = cost ? `${per1pollen(cost)} images` : 'inconnu';
-                    const badge = m.paid_only ? '[💎 Paid]' : '[🌿 Free]';
+                    const isCommunity = (m as any).community === true || m.name.includes('/');
+                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
                     imageTable += `| \`${m.name}\` ${badge} | ${m.supportsI2X ? '✅' : '❌'} | Standard | ${price} |\n`;
                 }
 
@@ -119,9 +119,9 @@ export class ToolRegistryWorker {
                 audioTable += `|--------|-----------|---------|\n`;
 
                 for (const m of audioModels) {
-                    const badge = m.paid_only ? '[💎 Paid]' : '[🌿 Free]';
+                    const isCommunity = (m as any).community === true || m.name.includes('/');
+                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
                     const duration = m.durationRange ? `${m.durationRange.join('-')}s` : 'Standard';
-                    // STT Whispers or TTS or Music
                     audioTable += `| \`${m.name}\` ${badge} | ${duration} | Standard |\n`;
                 }
 
@@ -157,7 +157,8 @@ export class ToolRegistryWorker {
                     searchTable += `|--------|---------------------|\n`;
 
                     for (const m of searchModels) {
-                        const badge = m.paid_only ? '[💎 Paid]' : '[🌿 Free]';
+                        const isCommunity = (m as any).community === true || m.name.includes('/');
+                        const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
                         // Clean markdown piping conflicts
                         let cleanDesc = m.description.replace(/\|/g, '-');
 

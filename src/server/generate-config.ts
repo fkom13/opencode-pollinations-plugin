@@ -145,11 +145,11 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
 
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
-                if (m.tools === false) return; // OpenCode UI chat nécessite explicitement les tools
+                if (m.tools !== true || m.community === true) return; // Exclude non-tool and community models
                 const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {
-                    paidModels.push(mapped.id.replace('enter/', '')); // Store bare ID "gemini-large"
+                    paidModels.push(mapped.id.replace('enter/', ''));
                 }
             });
             log(`Total models (Free+Pro): ${modelsOutput.length}`);
@@ -281,7 +281,7 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
     }
 
     // 2. REASONING VARIANTS — format @ai-sdk/openai-compatible: { reasoningEffort: "level" }
-    if (raw.reasoning === true || rawId.includes('thinking') || rawId.includes('reasoning')) {
+    if (raw.reasoning === true || raw.capabilities?.includes('reasoning') || rawId.includes('thinking') || rawId.includes('reasoning')) {
         modelObj.variants = {
             ...modelObj.variants,
             low: { reasoningEffort: 'low' },

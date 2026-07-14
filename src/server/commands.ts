@@ -741,6 +741,7 @@ ${t('commands.config.table_divider')}
 | **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | ${t('commands.config.costThreshold_role')} | \`/poll config costThreshold <X>\` |
 | **cost_estimator**| \`${config.costEstimator ?? true}\` | ${t('commands.config.cost_estimator_role')} | \`/poll config cost_estimator <true/false>\` |
 | **refillOverride**| \`${config.refillOverride ?? 'auto (déduit)'}\` | Quest Pollen refill horaire | \`/poll config refillOverride <0.01/0.15/0.4/0.8/10>\` |
+| **questStashInFreeMode**| \`${config.questStashInFreeMode ?? true}\` | Compte le stash dans alwaysfree | \`/poll config questStashInFreeMode <true/false>\` |
 | **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | ${t('commands.config.fallback_main_role')} | \`/poll fallback <main> <agent>\` |
 | **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_agent_role')} | \`/poll fallback <main> <agent>\` |
 | **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_enter_role')} | *${t('commands.config.managed_auto')}* |
@@ -861,11 +862,17 @@ ${t('commands.config.table_divider')}
         return { handled: true, response: `✅ refillOverride = ${override} 🌻/h` };
     }
 
+    if (key === 'questStashInFreeMode' && value) {
+        const enabled = value === 'true';
+        saveConfig({ questStashInFreeMode: enabled });
+        return { handled: true, response: `✅ questStashInFreeMode = ${enabled}${enabled ? ' (le stash Quest compte comme free)' : ' (seul le refill horaire compte)'}` };
+    }
+
 
 
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, refillOverride, lang`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, refillOverride, questStashInFreeMode, lang`
     };
 }
 

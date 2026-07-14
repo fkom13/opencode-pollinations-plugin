@@ -99,6 +99,7 @@ export interface PollinationsConfigV5 {
     statusBar: boolean;
     costEstimator: boolean; // Show cost estimates in tool outputs (default: true)
     refillOverride?: number; // Manual Quest Pollen refill override (0.01/0.15/0.4/0.8/10)
+    questStashInFreeMode?: boolean; // Count quest stash as free in alwaysfree Safety Net (default: true)
     lang?: string; // Interface language (en, fr, etc.)
 }
 
@@ -127,6 +128,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     keyHasAccessToProfile: true, // Default true for legacy keys
     statusBar: true,
     costEstimator: true, // Show cost estimates by default
+    questStashInFreeMode: true, // Count quest stash as free in alwaysfree
     lang: 'en', // Default language is English
 };
 

@@ -28,6 +28,7 @@ export interface QuotaStatus {
     tierRemaining: number;
     tierUsed: number;
     tierLimit: number;       // hourly refill (deduced or native allowance)
+    questStash: number;      // accumulated quest pollen (claimed - consumed)
     walletBalance: number;
 
     nextResetAt: Date;
@@ -257,6 +258,7 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
             tierRemaining: cleanTierRemaining,
             tierUsed,
             tierLimit,
+            questStash: 0, // will be computed by fetchQuestStash if needed
             walletBalance: cleanWalletBalance,
             nextResetAt: resetInfo.nextReset,
             timeUntilReset: resetInfo.timeUntilReset,
@@ -287,6 +289,7 @@ function createDefaultQuota(tierName: string, limit: number): QuotaStatus {
         tierRemaining: 0,
         tierUsed: 0,
         tierLimit: limit,
+        questStash: 0,
         walletBalance: 0,
         nextResetAt: new Date(),
         timeUntilReset: 0,
@@ -403,5 +406,40 @@ export function formatQuotaForToast(quota: QuotaStatus): string {
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     const resetIn = `${hours}h${minutes}m`;
 
-    return `${quota.tierEmoji} Quest: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} (${tierPercent}%) | 💎 Paid: $${quota.walletBalance.toFixed(2)} | ⏰ Reset: ${resetIn}`;
+    const stashStr = quota.questStash > 0
+        ? ` | 🎁 ~${quota.questStash.toFixed(2)} (stash)`
+        : '';
+
+    return `${quota.tierEmoji} ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} (${tierPercent}%)${stashStr} | 💎 $${quota.walletBalance.toFixed(2)} | ⏰ ${resetIn}`;
+}
+
+export async function fetchQuestStash(apiKey: string): Promise<{ questStash: number; claimedQuestTier: number; tierConsumedSinceClaim: number }> {
+    let claimedQuestTier = 0;
+    let firstClaimMs = Infinity;
+    let tierConsumedSinceClaim = 0;
+
+    try {
+        const qres = await fetchAPI<{ quests: Array<{ reward?: { pollenAmount: number; claimedAt: string | null; balanceBucket: string } | null }> }>('/account/quests', apiKey);
+        for (const q of (qres?.quests || [])) {
+            const r = q.reward;
+            if (r && r.claimedAt && r.balanceBucket === 'tier') {
+                claimedQuestTier += (r.pollenAmount || 0);
+                const cms = new Date(r.claimedAt).getTime();
+                if (!isNaN(cms) && cms < firstClaimMs) firstClaimMs = cms;
+            }
+        }
+
+        if (claimedQuestTier > 0 && isFinite(firstClaimMs)) {
+            const ures = await fetchAPI<{ usage: DetailedUsageEntry[] }>('/account/usage?limit=500', apiKey);
+            for (const e of (ures?.usage || [])) {
+                const ts = new Date(String(e.timestamp).replace(' ', 'T') + (String(e.timestamp).includes('Z') ? '' : 'Z')).getTime();
+                if (e.meter_source === 'tier' && !isNaN(ts) && ts >= firstClaimMs) {
+                    tierConsumedSinceClaim += (e.cost_usd || 0);
+                }
+            }
+        }
+    } catch { /* fallback gracefully */ }
+
+    const questStash = Math.max(0, claimedQuestTier - tierConsumedSinceClaim);
+    return { questStash, claimedQuestTier, tierConsumedSinceClaim };
 }

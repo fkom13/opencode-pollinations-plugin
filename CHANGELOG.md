@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.3] — 2026-07-14
+
+### ✨ Quest stash + Community filtering + Safety Net
+
+- **`quota.ts`** — `questStash` dans `QuotaStatus` + `fetchQuestStash()` exporté. Toast 3 composants : refill + stash + paid.
+- **`config.ts`** — Nouveau paramètre `questStashInFreeMode` (défaut `true`). Le stash Quest s'additionne au refill pour le Safety Net `alwaysfree`.
+- **`proxy.ts`** — Safety Net lit `questStashInFreeMode` et compte le stash dans le calcul du seuil.
+- **`generate-config.ts`** — `m.tools !== true` (rejette `undefined`). Plus aucun modèle Community dans le menu OpenCode. Reasoning via `capabilities.includes('reasoning')`.
+- **`worker.ts`** — Badge `[👥]` sur les modèles Community dans `/poll models` et les descriptions d'outils.
+- **`commands.ts`** — `/poll config questStashInFreeMode <true/false>` + affichage dans le tableau.
+- **`polli_config.ts`** — L'agent peut lire/modifier `questStashInFreeMode`.
+
+---
+
 ## [6.4.2] — 2026-07-14
 
 ### 🔧 refillOverride — correction manuelle du refill horaire

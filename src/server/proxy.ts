@@ -482,7 +482,13 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isFallbackActive = true;
                     fallbackReason = t('proxy.warnings.quota_unreachable_msg');
                 } else {
-                    const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
+                    const effectiveFree = config.questStashInFreeMode !== false
+                        ? quota.tierRemaining + (quota.questStash || 0)
+                        : quota.tierRemaining;
+                    const effectiveLimit = config.questStashInFreeMode !== false
+                        ? quota.tierLimit + (quota.questStash || 0)
+                        : quota.tierLimit;
+                    const tierRatio = effectiveLimit > 0 ? (effectiveFree / effectiveLimit) : 0;
                     if (tierRatio <= (config.thresholds.tier / 100)) {
                         log(`[SafetyNet] AlwaysFree Mode: Tier (${(tierRatio * 100).toFixed(1)}%) <= Threshold (${config.thresholds.tier}%). Switching.`);
                         emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'AlwaysFree Mode');
