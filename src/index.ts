@@ -1,8 +1,7 @@
 
 import type { Plugin } from "@opencode-ai/plugin";
 import * as http from 'http';
-import * as fs from 'fs';
-import { execSync } from 'child_process';
+import type { AddressInfo } from 'net';
 import { generatePollinationsConfig } from './server/generate-config.js';
 import { loadConfig, migrateLegacyConfig } from './server/config.js';
 import { handleChatCompletion } from './server/proxy.js';
@@ -13,8 +12,6 @@ import { createToolRegistry } from './tools/index.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-import * as os from 'os';
-import * as path from 'path';
 import { log } from './server/logger.js';
 import { ModelRegistry } from './server/models/index.js';
 
@@ -23,8 +20,6 @@ const sessionModels = new Map<string, string>();
 const startProxy = (): Promise<number> => {
     return new Promise((resolve) => {
         const server = http.createServer(async (req, res) => {
-            // ... (Request Handling) ...
-            // We reuse the existing logic structure but simplified startup
             log(`[Proxy] Request: ${req.method} ${req.url}`);
 
             res.setHeader('Access-Control-Allow-Origin', '*');
@@ -49,8 +44,8 @@ const startProxy = (): Promise<number> => {
             }
 
             if (req.method === 'POST' && (req.url === '/v1/chat/completions' || req.url === '/chat/completions')) {
-                const chunks: any[] = [];
-                req.on('data', chunk => chunks.push(chunk));
+                const chunks: Buffer[] = [];
+                req.on('data', (chunk: Buffer) => chunks.push(chunk));
                 req.on('end', async () => {
                     try {
                         const bodyRaw = Buffer.concat(chunks).toString();
@@ -73,8 +68,8 @@ const startProxy = (): Promise<number> => {
 
         // Listen on random port (0) to avoid conflicts (CLI/IDE)
         server.listen(0, '127.0.0.1', () => {
-            // @ts-ignore
-            const assignedPort = (server.address() as net.AddressInfo).port;
+            const addr = server.address() as AddressInfo | null;
+            const assignedPort = addr?.port ?? 0;
             log(`[Proxy] Started v${require('../package.json').version} (Dynamic Port) on port ${assignedPort}`);
             resolve(assignedPort);
         });
@@ -105,7 +100,7 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
         const configLocal = loadConfig();
         await ModelRegistry.refresh(configLocal.apiKey);
         const stats = ModelRegistry.stats();
-        log(`[ModelRegistry] Ready: ${stats.image} image, ${stats.video} video, ${stats.audio} audio, ${stats.text} text`);
+        log(`[ModelRegistry] Ready: image=${stats.image} video=${stats.video} audio=${stats.audio} text=${stats.text} 3d=${stats['3d']} emb=${stats.embedding} rt=${stats.realtime}`);
 
         // Initialisation synchrone du patcher des descriptions des Outils
         const module = await import('./server/models/worker.js');

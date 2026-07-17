@@ -5,6 +5,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.9] — 2026-07-17
+
+### 🛠 Quality / Packaging / CI
+
+- **`package.json`** — Removed VS Code leftovers (`engines.vscode`, `activationEvents`, `contributes`). Clean OpenCode plugin metadata, `engines.node >= 18`, keywords, homepage/bugs.
+- **`bin/setup.js`** — Restored CLI setup (`npx opencode-pollinations-plugin`) to inject the plugin into `~/.config/opencode/opencode.json` (`--check`, `--help`).
+- **`files`** — Publish `dist` + `bin` + README + LICENSE only.
+- **CI** — GitHub Actions workflow (Node 18/20/22): build, unit tests, i18n parity, `npm pack` sanity.
+- **Tests** — Expanded offline suite: packaging hygiene, quota unit helpers, tools registry, proxy cleanliness, security remote checks; dedicated `test:i18n`.
+
+### 🐛 Bug fixes
+
+- **`index.ts`** — Fixed missing `net` import / `@ts-ignore` on proxy port (`AddressInfo`).
+- **`proxy.ts`** — Removed temporary VISION DEBUG log spam from hot path.
+- **Model fetcher** — Unified `/models` + `/video/models` + `/3d/models` + `/embeddings/models` (categories `3d` / `embedding` / `realtime`).
+- **Quota** — Exported pure helpers (`tierMetaForAllowance`, `calculateResetInfo`, `getKnownRefills`) for reliable unit tests.
+- **Security** — Sanitize git remote (no embedded PAT in URL); ignore/secrets hygiene reinforced.
+
+### 🌍 Docs & i18n (6 languages)
+
+- Free tools strings no longer leak French into en/es/de/it/zh.
+- `remove_background` described as rmbg/bgeraser free path.
+- Onboarding lists all free tools + `/poll login`.
+- `/poll models` categories include 3D, embeddings, realtime.
+- README onboarding aligned with v6.4.9 packaging.
+
+---
+
 ## [6.4.8] — 2026-07-14
 
 ### 📚 README 6 langues — Outils libres ajoutés

@@ -1,13 +1,28 @@
 {
     "name": "opencode-pollinations-plugin",
     "displayName": "Pollinations",
-    "version": "6.4.8",
-    "description": "Native Pollinations.ai Provider Plugin for OpenCode",
-    "publisher": "pollinations",
+    "version": "6.4.9",
+    "description": "Native Pollinations.ai Provider Plugin for OpenCode — free & premium AI models, media tools, quests, cost guards",
+    "author": "fkom13",
+    "license": "MIT",
+    "keywords": [
+        "opencode",
+        "pollinations",
+        "ai",
+        "plugin",
+        "image-generation",
+        "video-generation",
+        "llm",
+        "pollen"
+    ],
     "repository": {
         "type": "git",
         "url": "git+https://github.com/fkom13/opencode-pollinations-plugin.git"
     },
+    "bugs": {
+        "url": "https://github.com/fkom13/opencode-pollinations-plugin/issues"
+    },
+    "homepage": "https://github.com/fkom13/opencode-pollinations-plugin#readme",
     "type": "module",
     "exports": {
         ".": {
@@ -21,35 +36,21 @@
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "engines": {
-        "vscode": "^1.80.0"
+        "node": ">=18"
     },
-    "activationEvents": [
-        "onStartupFinished"
-    ],
     "scripts": {
         "build": "tsc",
-        "test": "node scripts/tests/test-suite.cjs",
+        "test": "npm run build && node scripts/tests/test-suite.cjs",
+        "test:unit": "node scripts/tests/test-suite.cjs",
+        "test:i18n": "node scripts/tests/test-i18n.cjs",
         "prepare": "npm run build",
-        "package": "npx vsce package"
-    },
-    "contributes": {
-        "commands": [
-            {
-                "command": "pollinations.mode",
-                "title": "Pollinations: Change Mode"
-            },
-            {
-                "command": "pollinations.usage",
-                "title": "Pollinations: Show Usage"
-            },
-            {
-                "command": "pollinations.addKey",
-                "title": "Pollinations: Add BackgroundCut Key"
-            }
-        ]
+        "prepublishOnly": "npm run build && npm run test:unit && npm run test:i18n"
     },
     "files": [
-        "dist"
+        "dist",
+        "bin",
+        "README.md",
+        "LICENSE.md"
     ],
     "dependencies": {
         "@opencode-ai/plugin": "^1.0.85",

@@ -200,12 +200,18 @@ function deduceAllowanceFromUsage(usage: DetailedUsageEntry[]): number {
     return match ? match.pollen : 0;
 }
 
-function tierMetaForAllowance(allowance: number): { label: string; emoji: string } {
+/** Map hourly refill amount → display meta (exported for unit tests). */
+export function tierMetaForAllowance(allowance: number): { label: string; emoji: string } {
     const match = KNOWN_REFILLS.find(r => r.pollen === allowance)
         || KNOWN_REFILLS.findLast(r => r.pollen <= allowance);
     return match
         ? { label: match.label, emoji: match.emoji }
         : { label: 'unknown', emoji: '❓' };
+}
+
+/** Known hourly refill ladder (read-only, for tests / UI). */
+export function getKnownRefills(): ReadonlyArray<{ pollen: number; emoji: string; label: string }> {
+    return KNOWN_REFILLS;
 }
 
 // === MAIN QUOTA FUNCTION ===
@@ -355,7 +361,8 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
     });
 }
 
-function calculateResetInfo(): ResetInfo {
+/** Next top-of-hour UTC reset window (exported for unit tests). */
+export function calculateResetInfo(): ResetInfo {
     const now = new Date();
     const nextReset = new Date(Date.UTC(
         now.getUTCFullYear(),

@@ -104,18 +104,22 @@
         "image": "图像",
         "video": "视频",
         "audio": "音频",
-        "text": "文本与聊天"
+        "text": "文本与聊天",
+        "3d": "3D",
+        "embedding": "嵌入",
+        "realtime": "实时"
       },
       "cat_title": "### {emoji} {label} ({count})",
       "enter_headers1": "| 名称 | ID | 描述 | 标志 | 输入 | 输出费用 |",
       "enter_headers2": "|------|----|-------------|-------|----|----------|",
       "capabilities": "\n**能力：** `💎` 仅付费 `💬` 聊天/推理 `👁️` 视觉/图像 `🎙️` 音频 `🔍` 搜索 `💻` 代码",
-      "other": "**输入：** `📝` 文本 `🖼️` 图像 `🎤` 音频"
+      "other": "**输入：** `📝` 文本 `🖼️` 图像 `🎤` 音频",
+      "enter_error": "⚠️ 获取 Enter 模型时出错。"
     },
     "infos": {
       "title": "## 🍯💚 POLLINATIONS OPENCODE 插件 💚🍯\n\n欢迎 **{name}** 使用 Pollinations OpenCode 插件！\n\n本插件让你能够在开发环境中无缝生成代码、图像、分析视频，并与顶级 AI 模型交互。通过聊天、重构或终端访问最先进的 LLM。",
       "features_title": "**本插件为你带来的功能：**",
-      "features_free": "**🛠️ 免费工具 (始终可用):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : 视觉和开发工具.\n- `remove_background` : 原生背景移除.\n- `extract_frames` / `extract_audio` : 快速媒体提取.\n- `file_to_url` : 即时在线托管.\n- `gen_edit_image_free` : 免费图像生成和编辑 (~20/天).\n- `gen_video_free` : 免费视频生成 (~5/天).\n- `object_remover` : Suppression d’objets par prompt (gratuit, direct).\n- `image_upscaler` : Agrandissement 2x/4x (gratuit, direct).\n- `image_enhancer` : Amélioration IA d’image (gratuit, direct).",
+      "features_free": "**🛠️ 免费工具 (始终可用):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : 视觉和开发工具.\n- `remove_background` : AI 背景移除（rmbg / bgeraser — 免费）。\n- `extract_frames` / `extract_audio` : 快速媒体提取.\n- `file_to_url` : 即时在线托管.\n- `gen_edit_image_free` : 免费图像生成和编辑 (~20/天).\n- `gen_video_free` : 免费视频生成 (~5/天).\n- `object_remover` : 按提示词移除对象（免费，直连）。\n- `image_upscaler` : 放大 2x/4x（免费，直连）。\n- `image_enhancer` : AI 图像增强（免费，直连）。",
       "features_pro": "**💎 Pollinations 工具 (高级 - 使用密钥自动化)：**\n- `polli_gen_image`：图像生成 (Flux, Seedream, Gemini) + 图生图。\n- `polli_gen_video`：文生视频 / 图生视频 (Veo, Wan, LTX...)。\n- `polli_gen_audio`/`polli_stt`：Whisper 语音转文字, ElevenLabs 文字转语音。\n- `polli_gen_music`：生成式音乐引擎。\n- `polli_web_search`：联网搜索。",
       "features_config": "- **精细化配置**、模式与令牌管理、工具费用保护...",
       "tiers_title": "> **你的 Quest Pollen 补充:** {emoji} {tier}",
@@ -468,7 +472,7 @@
     "resources": "### 📚 资源\n* **Dashboard:** enter.pollinations.ai\n* **Discord:** 加入社区\n* **Plugin:** github.com/fkom13/opencode-pollinations-plugin",
     "free_models_success": "可用免费模型：{models}",
     "free_models_error": "⚠️ 无法获取免费模型。",
-    "onboarding": "## 🌸 欢迎使用 Pollinations 插件\n\n**即时免费访问 — 无需密钥**\n本插件提供完整的聊天、代码生成和媒体处理环境 (图像、视频、音频生成、提取工具...)。\n\n从列表中选择一个 `pollinations/free/*` 模型并开始聊天。\n{freeText}\n\n---\n\n## 🚀 为开发者集成的多媒体代理和工具\n\nClaude Opus, GPT-5, Gemini 3, Veo 和 Wan 视频生成, ElevenLabs 音乐... 释放 Pollinations API 的全部威力！\n\n本插件采用 **BYOK** (自带密钥) 模式：通过使用你自己的 API 密钥，OpenCode 代理获得直接与高级工具交互的能力，在你的工作区创建多媒体文件。\n\n**第 1 步 — 创建账户，获赠 $10！**\n通过此链接支持本插件：\n👉 **https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin**\n\n**第 2 步 — 生成你的 API 密钥**\n在 `enter.pollinations.ai` 的 **API Keys** 部分，创建一个 **Secret** 密钥 (`sk_...`)。\n\n**第 3 步 — 连接密钥**\n```bash\n/poll connect sk_your_key_here\n```\n*(密钥会立即注册到你的 OpenCode 环境，解锁 Pro 模型！)*\n\n---\n\n## 💰 Pollen 系统与任务\n现在 Pollen 主要通过完成**任务**来赚取 — 仅仅使用本插件就能追溯性地完成多个任务。在[仪表盘](https://enter.pollinations.ai)查看并领取你的免费 Pollen。\n\n你的等级提供每小时免费的 Pollen 充值额度，用于这些高级服务。免费额度耗尽后，你将从钱包消费 Pollen ($1 ≈ 1 Pollen，无订阅，无过期)。\n\n**需要帮助？**\n- 输入 `/poll help` 查看命令列表。\n- 官方 Discord：https://discord.gg/pollinations-ai-885844321461485618"
+    "onboarding": "## 🌸 欢迎使用 Pollinations 插件\n\n**即时免费访问 — 无需密钥**\n本插件提供完整的聊天、代码生成和媒体处理环境 (图像、视频、音频生成、提取工具...)。\n\n从列表中选择一个 `pollinations/free/*` 模型并开始聊天。\n{freeText}\n\n**🆓 额外免费工具（无需密钥）：** `gen_edit_image_free`、`gen_video_free`、`object_remover`、`image_upscaler`、`image_enhancer`、`remove_background` — 免费图像/视频 + 本地处理工具。\n\n---\n\n## 🚀 为开发者集成的多媒体代理和工具\n\nClaude Opus, GPT-5, Gemini 3, Veo 和 Wan 视频生成, ElevenLabs 音乐... 释放 Pollinations API 的全部威力！\n\n本插件采用 **BYOK** (自带密钥) 模式：通过使用你自己的 API 密钥，OpenCode 代理获得直接与高级工具交互的能力，在你的工作区创建多媒体文件。\n\n**第 1 步 — 创建账户，获赠 $10！**\n通过此链接支持本插件：\n👉 **https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin**\n\n**第 2 步 — 生成你的 API 密钥**\n在 `enter.pollinations.ai` 的 **API Keys** 部分，创建一个 **Secret** 密钥 (`sk_...`)。\n\n**第 3 步 — 连接密钥**\n```bash\n/poll connect sk_your_key_here\n```\n*(密钥会立即注册到你的 OpenCode 环境，解锁 Pro 模型！)*\n\n---\n\n## 💰 Pollen 系统与任务\n现在 Pollen 主要通过完成**任务**来赚取 — 仅仅使用本插件就能追溯性地完成多个任务。在[仪表盘](https://enter.pollinations.ai)查看并领取你的免费 Pollen。\n\n你的等级提供每小时免费的 Pollen 充值额度，用于这些高级服务。免费额度耗尽后，你将从钱包消费 Pollen ($1 ≈ 1 Pollen，无订阅，无过期)。\n\n**需要帮助？**\n- 输入 `/poll help` 查看命令列表。\n- 官方 Discord：https://discord.gg/pollinations-ai-885844321461485618"
   },
   "cost_guard": {
     "cost_validated_max": "💰 费用已验证 (理论最大值：{maxCost})",

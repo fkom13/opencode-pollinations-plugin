@@ -46,14 +46,25 @@ function fetchJson(url: string, headers: Record<string, string> = {}): Promise<a
 // ─── Category Detection ──────────────────────────────────────────────────
 
 function detectCategory(raw: any): ModelCategory {
+    // Prefer explicit type/category from unified /models endpoint
+    const explicit = String(raw.type || raw.category || raw.output_modality || '').toLowerCase();
+    if (explicit === 'video' || explicit === 'image' || explicit === 'audio' || explicit === 'text'
+        || explicit === '3d' || explicit === 'embedding' || explicit === 'realtime') {
+        return explicit as ModelCategory;
+    }
+
     const outputs: string[] = raw.output_modalities || [];
     if (outputs.includes('video')) return 'video';
+    if (outputs.includes('3d') || outputs.includes('mesh')) return '3d';
+    if (outputs.includes('embedding') || outputs.includes('embeddings')) return 'embedding';
     if (outputs.includes('image')) return 'image';
     if (outputs.includes('audio')) return 'audio';
+    if (outputs.includes('realtime')) return 'realtime';
 
-    // Correctif : Forcer les modèles Speech-to-Text en audio même si leur sortie API est 'text'
+    // Force STT models into audio even when output is text
     const nameStr = (raw.name || raw.id || '').toLowerCase();
     if (nameStr.includes('whisper') || nameStr.includes('scribe')) return 'audio';
+    if (nameStr.includes('embed')) return 'embedding';
 
     return 'text';
 }
@@ -105,10 +116,11 @@ function mapRawToModel(raw: any, fallbackCategory: ModelCategory, averageCost?: 
 
 /**
  * Fetch all models from the Pollinations API.
- * 
- * - /image/models returns both image AND video models (sorted by output_modalities)
- * - /audio/models returns audio models (TTS, STT, music)
- * 
+ *
+ * Primary: unified /models (all categories including 3d / embedding / realtime).
+ * Fallback per-modality endpoints if unified is empty/unavailable.
+ * Enriched with /v1/models structural fields + model-stats averages.
+ *
  * @param apiKey - Bearer token for authenticated endpoints
  * @returns Array of unified PollinationsModel objects
  */
@@ -121,10 +133,14 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
     const results: PollinationsModel[] = [];
     const seen = new Set<string>();
 
-    const endpoints = [
-        { url: `https://${API_BASE}/image/models`, fallbackCategory: 'image' as ModelCategory },
-        { url: `https://${API_BASE}/audio/models`, fallbackCategory: 'audio' as ModelCategory },
-        { url: `https://${API_BASE}/text/models`, fallbackCategory: 'text' as ModelCategory },
+    const endpoints: { url: string; fallbackCategory: ModelCategory }[] = [
+        { url: `https://${API_BASE}/models`, fallbackCategory: 'text' },
+        { url: `https://${API_BASE}/image/models`, fallbackCategory: 'image' },
+        { url: `https://${API_BASE}/video/models`, fallbackCategory: 'video' },
+        { url: `https://${API_BASE}/audio/models`, fallbackCategory: 'audio' },
+        { url: `https://${API_BASE}/text/models`, fallbackCategory: 'text' },
+        { url: `https://${API_BASE}/3d/models`, fallbackCategory: '3d' },
+        { url: `https://${API_BASE}/embeddings/models`, fallbackCategory: 'embedding' },
     ];
 
     const statsPromise = fetchJson('https://enter.pollinations.ai/api/model-stats', headers).catch(() => ({ data: [] }));
@@ -189,7 +205,8 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
         log(`[ModelFetcher] Parsed ${list.length} models from ${res.url}`);
     }
 
-    log(`[ModelFetcher] Total: ${results.length} models (${results.filter(m => m.category === 'image').length} image, ${results.filter(m => m.category === 'video').length} video, ${results.filter(m => m.category === 'audio').length} audio, ${results.filter(m => m.category === 'text').length} text)`);
+    const count = (c: ModelCategory) => results.filter(m => m.category === c).length;
+    log(`[ModelFetcher] Total: ${results.length} models (image=${count('image')} video=${count('video')} audio=${count('audio')} text=${count('text')} 3d=${count('3d')} emb=${count('embedding')} rt=${count('realtime')})`);
 
     // --- ENRICH MODELS WITH OPENAPI CONSTRAINTS ---
     try {

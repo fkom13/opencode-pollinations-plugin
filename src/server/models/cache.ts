@@ -171,6 +171,9 @@ class ModelRegistryImpl implements ModelRegistryInterface {
             video: this.list('video').length,
             audio: this.list('audio').length,
             text: this.list('text').length,
+            '3d': this.list('3d').length,
+            embedding: this.list('embedding').length,
+            realtime: this.list('realtime').length,
         };
     }
 }

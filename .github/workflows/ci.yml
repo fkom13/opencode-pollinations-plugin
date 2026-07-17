@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: Build & Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci || npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm run test:unit
+        env:
+          SKIP_NETWORK: "1"
+
+      - name: i18n parity
+        run: npm run test:i18n
+
+      - name: Packaging sanity
+        run: |
+          test -f bin/setup.js
+          test -f dist/index.js
+          test -f dist/index.d.ts
+          node -e "const p=require('./package.json'); if(p.engines&&p.engines.vscode) process.exit(1); if(p.activationEvents) process.exit(1);"
+          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
+          grep -q 'bin/setup.js' /tmp/pack.txt
+          grep -q 'dist/index.js' /tmp/pack.txt

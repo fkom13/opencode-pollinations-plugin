@@ -1,14 +1,17 @@
-# 🌸 Pollinations AI Plugin für OpenCode (v6.4)
+# 🌸 Pollinations AI Plugin für OpenCode (v6.4.9)
 
-## ✨ Neu in v6.4.0
+## ✨ Neu in v6.4.9
 
-- 🎯 **Quests & Gamification** : `polli_quests` + `/poll quests` — sieh deine Quests und das **einlösbare kostenlose Pollen**. Die Nutzung des Plugins schließt Quests rückwirkend ab!
-- 🆓 **Kostenlose Bild- & Videogenerierung (ohne Schlüssel!)** : `gen_edit_image_free` (erstellen + bearbeiten, ~20/Tag) und `gen_video_free` (Text→Video + Bild/Audio, ~5/Tag), für jedes Modell.
-- `object_remover` : Objekte per Prompt entfernen (kostenlos).
-- `image_upscaler` : Bilder 2x/4x vergrößern (kostenlos).
-- `image_enhancer` : KI-Bildverbesserung (kostenlos).
-- 🔐 **1-Klick-Login** : `/poll login` + `polli_login` (Device Flow wie `gh auth login`), Browser öffnet automatisch. `/poll connect sk_...` bleibt für permanente Schlüssel verfügbar.
-- 🇨🇳 **Chinesisch hinzugefügt** : Oberfläche in 6 Sprachen (en, fr, es, de, it, zh).
+- 🎯 **Quests & Gamification**: `polli_quests` + `/poll quests`. Plugin-Nutzung erfüllt Quests **rückwirkend**.
+- 🆓 **Kostenlose Tools (kein Schlüssel)** — für **jedes** OpenCode-Modell:
+  - `gen_edit_image_free` — generieren **und** bearbeiten (~20/Tag)
+  - `gen_video_free` — Text→Video (~5/Tag)
+  - `object_remover` / `image_upscaler` / `image_enhancer` — kostenlose Bildverarbeitung
+  - `remove_background` — kostenloses KI-Freistellen (rmbg / bgeraser)
+- 🔐 **1-Klick-Login**: `/poll login` + `polli_login`. `/poll connect sk_...` bleibt verfügbar.
+- 🧊 **Vollständiger Modellkatalog**: text, image, video, audio, **3D**, **embeddings**, realtime.
+- 🧪 **CI + Packaging**: Node ≥ 18, CLI `npx opencode-pollinations-plugin`, Unit- + i18n-Tests.
+- 🌍 **6 Sprachen**: en, fr, es, de, it, zh — Onboarding und Commands ausgerichtet.
 
 
 <div align="center">

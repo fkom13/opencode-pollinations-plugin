@@ -7,7 +7,7 @@
 
 // ─── Core Model Interface ────────────────────────────────────────────────
 
-export type ModelCategory = 'image' | 'video' | 'audio' | 'text';
+export type ModelCategory = 'image' | 'video' | 'audio' | 'text' | '3d' | 'embedding' | 'realtime';
 
 export interface ModelPricing {
     currency: string;  // Always 'pollen'

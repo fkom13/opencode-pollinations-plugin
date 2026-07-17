@@ -1,56 +1,49 @@
 # Dependencies
 node_modules/
-package-lock.json
 
-# Build output
+# Build output (published via npm prepare / files)
 dist/
 out/
 *.tgz
+*.vsix
 
 # IDE/Editor
 .vscode/
 .vscode-test/
 .idea/
-*.vsix
 .DS_Store
 Thumbs.db
 *.swp
 *.code-workspace
 
-# Environment & Config
+# Environment & secrets
 .env
 .env.*
 .npmrc
 config.json
 .pollinations/
 
-# Test & Debug
-tests/
-test_*.js
-test_*.ts
+# Logs & coverage
 coverage/
 logs/
 *.log
 npm-debug.log*
 
-# Documentation Generation
-docs/
-opencode-pollinations-plugin_tree_code.md
-
-# Tools Specific
+# Local docs generation / archives
 .gencodedoc/
 .gencodedoc.yaml
 _archs/
+docs/
 
-# Scripts Scratchpads (Keep only pertinent tools for GitHub)
+# Audit & PoC (may contain secrets — never commit)
+API_AUDIT_*.md
+test-api-poc.sh
+testjuillet/
+
+# Scratchpads under scripts (keep tests + i18n)
 scripts/*
 !scripts/tests/
 !scripts/tests/**
 !scripts/i18n/
 !scripts/i18n/**
 !scripts/set_key.cjs
-
-# Audit & PoC (contain secrets - never commit)
-API_AUDIT_*.md
-test-api-poc.sh
-testjuillet/

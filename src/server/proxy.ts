@@ -259,23 +259,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         const body: ChatRequest = JSON.parse(bodyRaw);
         const config = loadConfig();
 
-        // DEBUG: Trace Config State for Hot Reload verification
-        log(`[Proxy Request] Config Loaded. Mode: ${config.mode}, HasKey: ${!!config.apiKey}, KeyLength: ${config.apiKey ? config.apiKey.length : 0}`);
-
-        // TEMPORARY DIAGNOSTIC: Capture multimodal content format from OpenCode
-        if (body.messages && body.messages.length > 0) {
-            const lastUserMsg = [...body.messages].reverse().find((m: any) => m.role === 'user');
-            if (lastUserMsg) {
-                const contentType = typeof lastUserMsg.content;
-                const isArray = Array.isArray(lastUserMsg.content);
-                log(`[VISION DEBUG] Last user msg content type: ${contentType}, isArray: ${isArray}`);
-                if (isArray) {
-                    log(`[VISION DEBUG] Content parts: ${JSON.stringify(lastUserMsg.content.map((c: any) => ({ type: c.type, hasText: !!c.text, hasImageUrl: !!c.image_url, hasImage: !!c.image })))}`);
-                } else if (contentType === 'string') {
-                    log(`[VISION DEBUG] String content (first 200 chars): ${lastUserMsg.content.substring(0, 200)}`);
-                }
-            }
-        }
+        log(`[Proxy Request] Mode: ${config.mode}, HasKey: ${!!config.apiKey}`);
 
         // 0. COMMAND HANDLING
         if (body.messages && body.messages.length > 0) {

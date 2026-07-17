@@ -1,13 +1,10 @@
-# NPM Ignore
-# Files to exclude from the NPM package to keep it lightweight.
-
-# Source Code (we ship compiled dist/)
+# Source (ship compiled dist/ + bin/)
 src/
 scripts/
-tests/
 tsconfig.json
+package-lock.json
 
-# Documentation (Available on GitHub, redundant in package)
+# Docs (on GitHub)
 docs/
 _archs/
 TECHNICAL_MANUAL.md
@@ -18,8 +15,9 @@ CONTRIBUTING.md
 !README.md
 !LICENSE.md
 *.code-workspace
+opencode-pollinations-plugin.code-workspace
 
-# Versioning & Dev Tools
+# Versioning & dev tooling
 .gencodedoc/
 .gencodedoc.yaml
 .npmrc
@@ -30,7 +28,7 @@ CONTRIBUTING.md
 .vscode-test/
 .idea/
 
-# Logs & Environment
+# Logs & env
 logs/
 *.log
 npm-debug.log*
@@ -39,7 +37,14 @@ npm-debug.log*
 config.json
 .pollinations/
 
-# Editor Configs & OS
+# Tests & local scratch
+testjuillet/
+tests/
+coverage/
+API_AUDIT_*.md
+test-api-poc.sh
+
+# Editor / OS
 *.swp
 .DS_Store
 Thumbs.db

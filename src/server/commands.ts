@@ -968,6 +968,9 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
         { cat: 'video', emoji: '🎬', label: t('commands.models.cats.video') },
         { cat: 'audio', emoji: '🔊', label: t('commands.models.cats.audio') },
         { cat: 'text', emoji: '📝', label: t('commands.models.cats.text') },
+        { cat: '3d', emoji: '🧊', label: t('commands.models.cats.3d') },
+        { cat: 'embedding', emoji: '🔢', label: t('commands.models.cats.embedding') },
+        { cat: 'realtime', emoji: '⚡', label: t('commands.models.cats.realtime') },
     ];
 
     for (const { cat, emoji, label } of categories) {

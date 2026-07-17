@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v6.4)
+# 🌸 Pollinations AI Plugin for OpenCode (v6.4.9)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -27,18 +27,18 @@
 
 ---
 
-## ✨ What's new in v6.4?
+## ✨ What's new in v6.4.9?
 
-- 🎯 **Quests & Gamification**: New `polli_quests` tool + `/poll quests` command. See your Pollinations quests by category and the **free Pollen waiting to be claimed**. Just using this plugin (text, image & audio models) completes several quests **retroactively** — you may already have free Pollen waiting!
-- 🆓 **Free Image & Video Tools (no key required!)**: Bonus tools usable by **any** OpenCode model, even without a Pollinations account:
+- 🎯 **Quests & Gamification**: `polli_quests` + `/poll quests`. Using this plugin completes several quests **retroactively** — free Pollen may already be waiting.
+- 🆓 **Free tools (no key required)** — usable by **any** OpenCode model:
   - `gen_edit_image_free` — generate **and edit** images (~20/day).
-  - `gen_video_free` — text-to-video with optional first-frame image & audio (~5/day).
-  - `object_remover` — remove objects by prompt for free.
-  - `image_upscaler` — upscale images 2x/4x for free.
-  - `image_enhancer` — AI image enhancement (denoise, sharpen) for free.
-- 🔐 **1-Click Device Login**: New `/poll login` command + `polli_login` tool (like `gh auth login`). Opens your browser automatically and connects the plugin — no manual key copy-paste needed. The old `/poll connect sk_...` still works for permanent keys.
-- 🇨🇳 **Chinese added**: The interface is now available in **6 languages** (en, fr, es, de, it, **zh**).
-- 🛠️ **Tier fixes**: Full alignment with the official Pollinations tier config (added `router` 🐝, `anonymous`), crash fixes on no-refill tiers, and quest-based progression replacing the deprecated dev-points system.
+  - `gen_video_free` — text-to-video (~5/day), optional first frame & audio.
+  - `object_remover` / `image_upscaler` / `image_enhancer` — free image processing.
+  - `remove_background` — free AI cutout (rmbg / bgeraser).
+- 🔐 **1-Click Device Login**: `/poll login` + `polli_login` (like `gh auth login`). Manual `/poll connect sk_...` still works.
+- 🧊 **Full model catalog**: text, image, video, audio, **3D**, **embeddings**, realtime.
+- 🧪 **CI + packaging**: Node 18+ only (no VS Code leftovers), `npx opencode-pollinations-plugin` setup CLI restored, unit + i18n tests.
+- 🌍 **6 languages**: en, fr, es, de, it, zh — onboarding, commands, and free-tool strings aligned.
 
 ---
 
@@ -123,17 +123,18 @@ Pollinations for OpenCode natively speaks your language:
 ## 🚀 Getting Started & Onboarding
 
 ### 🐧 1. Cross-Platform Configuration (NPM Installation)
-This plugin is **fully cross-platform** (Windows, macOS, Linux) and detects OpenCode ports dynamically.
+This plugin is **fully cross-platform** (Windows, macOS, Linux; Node **≥ 18**) and starts a local proxy on a dynamic port.
 
-1. Global installation:
+1. Install (global or project-local):
    ```bash
    npm install -g opencode-pollinations-plugin
    ```
-2. Auto-Configuration:
+2. Auto-inject into OpenCode config:
    ```bash
    npx opencode-pollinations-plugin
+   # or: npx opencode-pollinations-plugin --check
    ```
-   *(Or inject it manually into `~/.config/opencode/opencode.json`)*
+   *(Writes `opencode-pollinations-plugin` into `~/.config/opencode/opencode.json` — or `$OPENCODE_CONFIG_DIR/opencode.json`.)*
 
 ### 🔑 2. Interactive Onboarding
 
