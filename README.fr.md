@@ -97,10 +97,11 @@ Le **Pollen 🌻** est notre système de crédit unifié (1$ ≈ 1 Pollen). En c
 
 | Tier | Recharge Horaire ⏱️ | Estimation Jour* | Condition |
 | :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / heure** | ~0.24 / jour | Vérification automatique |
-| 🌱 **Seed** | **0.15 Pollen / heure** | ~3.6 / jour | Développeur GitHub Actif (8+ points) |
-| 🌸 **Flower** | **0.40 Pollen / heure** | ~9.6 / jour | **Publier une App** (Comme ce plugin !) |
-| 🍯 **Nectar** | **0.80 Pollen / heure** | ~19.2 / jour | À venir 🔮 |
+| 🍄 **Spore** | **0.01 Pollen / heure** | ~0.24 / jour | Nouveau compte (par défaut) |
+| 🌱 **Seed** | **0.15 Pollen / heure** | ~3.6 / jour | Membre actif de la communauté |
+| 🌸 **Flower** | **0.40 Pollen / heure** | ~9.6 / jour | Compléter des Quêtes et contribuer |
+| 🍯 **Nectar** | **0.80 Pollen / heure** | ~19.2 / jour | Contributeur de premier plan |
+| 🐝 **Router** | **10 Pollen / heure** | ~240 / jour | Spécial / sur invitation |
 
 _*Les estimations quotidiennes sont approximatives (~24h × taux horaire). La réinitialisation réelle s'effectue automatiquement au début de chaque heure (XX:00)._
 

@@ -97,10 +97,11 @@ El **Pollen 🌻** dicta la ley unificada del crédito (1$ ≈ 1 Pollen). Sólo 
 
 | Tier | Recarga Hora ⏱️ | Aprox Diario* | Requisito a Cumplir |
 | :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / hora** | ~0.24 /día | Examen de perfil y verificación |
-| 🌱 **Seed** | **0.15 Pollen / hora** | ~3.6 /día | Desarrollador activo en Github (+8 pts) |
-| 🌸 **Flower** | **0.40 Pollen / hora** | ~9.6 /día | **Completar y Publicar una App** |
-| 🍯 **Nectar** | **0.80 Pollen / hora** | ~19.2 /día | Pendiente a futuras actualizaciones 🔮 |
+| 🍄 **Spore** | **0.01 Pollen / hora** | ~0.24 /día | Cuenta nueva (predeterminado) |
+| 🌱 **Seed** | **0.15 Pollen / hora** | ~3.6 /día | Miembro activo de la comunidad |
+| 🌸 **Flower** | **0.40 Pollen / hora** | ~9.6 /día | Completa Misiones y contribuye |
+| 🍯 **Nectar** | **0.80 Pollen / hora** | ~19.2 /día | Principal contribuidor |
+| 🐝 **Router** | **10 Pollen / hora** | ~240 /día | Especial / solo por invitación |
 
 _*Los cálculos diarios solo son estimaciones teóricas (~24h × cuota/hora). El reinicio limpio sucede exacto en el minuto `:00` de las horas del reloj._
 

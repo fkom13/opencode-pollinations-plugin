@@ -488,7 +488,10 @@
     "condition": {
       "signup": "只需注册",
       "auto_verify": "自动验证",
+      "under_review": "账户审核中",
+      "default": "新账户（默认）",
       "community": "活跃的社区成员",
+      "quests": "完成任务并贡献",
       "publish_app": "发布一个应用",
       "top_contributor": "顶级贡献者",
       "special": "特殊 / 仅限邀请"

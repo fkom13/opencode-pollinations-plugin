@@ -10,22 +10,6 @@ import { t } from '../locales/index.js';
 import { getTierInfo, formatTierTable, getTierDescription } from './tier-info.js';
 import { buildQuestsReport } from '../tools/pollinations/polli_quests.js';
 
-// GET helper for /account/* JSON endpoints (used for quest-reward reconstruction).
-function fetchAccountJson(path: string, apiKey: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-        const req = https.request({
-            hostname: 'gen.pollinations.ai', path, method: 'GET',
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'User-Agent': 'opencode-pollinations-plugin' },
-        }, (res) => {
-            let data = '';
-            res.on('data', c => data += c);
-            res.on('end', () => { try { resolve(JSON.parse(data)); } catch (e) { reject(e); } });
-        });
-        req.on('error', reject);
-        req.setTimeout(10000, () => { req.destroy(); reject(new Error('Timeout')); });
-        req.end();
-    });
-}
 
 
 // --- HELPER: STRICT PERMISSION CHECK ---
@@ -315,41 +299,9 @@ export async function handleUsageCommand(args: string[]): Promise<CommandResult>
         response += t('commands.usage.quota', { remaining: formatPollen(quota.tierLimit - quota.tierRemaining), limit: formatPollen(quota.tierLimit) });
         response += t('commands.usage.usage_bar', { bar: progressBar(quota.tierLimit - quota.tierRemaining, quota.tierLimit) });
 
-        // Reconstructed Quest/Paid split by CROSS-REFERENCING exact data (no magic field needed):
-        //   • claimed quest rewards (tier bucket)      ← /account/quests   (exact)
-        //   • tier consumption since the first claim   ← /account/usage meter_source=='tier' (exact)
-        //   • current-hour floor remaining (≤ tierLimit) ← quota            (the only fuzzy term, ignored)
-        // Quest remaining ≈ claimedQuestTier − tierConsumedSinceClaim (+ floor); Paid = Total − Quest.
-        const total = quota.tierRemaining + quota.walletBalance; // true balance
-        let claimedQuestTier = 0;
-        let firstClaimMs = Infinity;
-        let tierConsumedSinceClaim = 0;
-        if (config.apiKey && config.keyHasAccessToProfile !== false) {
-            try {
-                const qres = await fetchAccountJson('/account/quests', config.apiKey);
-                for (const q of (qres?.quests || [])) {
-                    const r = q.reward;
-                    if (r && r.claimedAt && r.balanceBucket === 'tier') {
-                        claimedQuestTier += (r.pollenAmount || 0);
-                        const cms = new Date(r.claimedAt).getTime();
-                        if (!isNaN(cms) && cms < firstClaimMs) firstClaimMs = cms;
-                    }
-                }
-                // Sum tier-metered spend since the first claim (what actually ate the Quest stash).
-                if (claimedQuestTier > 0 && isFinite(firstClaimMs)) {
-                    const ures = await fetchAccountJson('/account/usage?limit=100', config.apiKey);
-                    for (const e of (ures?.usage || [])) {
-                        const ts = new Date(String(e.timestamp).replace(' ', 'T') + (String(e.timestamp).includes('Z') ? '' : 'Z')).getTime();
-                        if (e.meter_source === 'tier' && !isNaN(ts) && ts >= firstClaimMs) {
-                            tierConsumedSinceClaim += (e.cost_usd || 0);
-                        }
-                    }
-                }
-            } catch { /* fall back gracefully if unreachable */ }
-        }
-        // Quest stash = claimed − consumed, plus the current hourly floor still available.
-        const questPollen = Math.max(0, claimedQuestTier - tierConsumedSinceClaim) + quota.tierRemaining;
-        const paidPollen = Math.max(0, total - questPollen);
+        const total = quota.tierRemaining + quota.questStash + quota.walletBalance;
+        const questPollen = quota.tierRemaining + quota.questStash;
+        const paidPollen = quota.walletBalance;
         response += t('commands.usage.split', {
             quest: questPollen.toFixed(2),
             paid: paidPollen.toFixed(2),
@@ -919,12 +871,16 @@ ${t('commands.help.models_pricing')}
 // === MODELS & PRICING COMMANDS ===
 
 function parseNameDesc(m: PollinationsModel): { nom: string, desc: string } {
+    const displayName = m.title || m.description || m.name;
     const fullDesc = m.description || m.name;
-    const parts = fullDesc.split(" - ");
+    if (m.title && m.description) {
+        return { nom: m.title, desc: m.description };
+    }
+    const parts = displayName.split(" - ");
     if (parts.length > 1) {
         return { nom: parts[0].trim(), desc: parts.slice(1).join(" - ").trim() };
     }
-    return { nom: fullDesc, desc: "" };
+    return { nom: displayName, desc: "" };
 }
 
 export async function handleModelsCommand(args: string[]): Promise<CommandResult> {
@@ -1069,18 +1025,8 @@ function buildOutputCost(m: PollinationsModel): string {
 export async function handleInfosCommand(): Promise<CommandResult> {
     const config = loadConfig();
     let name = "Developer";
-    let tier = "anonymous";
-    let tierEmoji = '👤';
 
     if (config.apiKey) {
-        try {
-            const quota = await getQuotaStatus(true);
-            tier = quota.tier || 'anonymous';
-            tierEmoji = quota.tierEmoji || '👤';
-        } catch (e) {
-            // Ignorer l'erreur réseau et garder les valeurs par défaut
-        }
-
         try {
             const res = await fetch('https://gen.pollinations.ai/account/profile', {
                 headers: { 'Authorization': `Bearer ${config.apiKey}` }
@@ -1106,7 +1052,6 @@ ${t('commands.infos.features_pro')}
 
 ${t('commands.infos.features_config')}
 
-${t('commands.infos.tiers_title', { emoji: tierEmoji, tier: tier.toUpperCase() })}
 ${t('commands.infos.get_started')}
 
 ${t('commands.infos.about')}

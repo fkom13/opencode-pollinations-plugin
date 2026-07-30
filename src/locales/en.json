@@ -488,7 +488,10 @@
     "condition": {
       "signup": "Just register",
       "auto_verify": "Automatic verification",
+      "under_review": "Account under review",
+      "default": "New account (default)",
       "community": "Active community member",
+      "quests": "Complete Quests & contribute",
       "publish_app": "Publish an app",
       "top_contributor": "Top contributor",
       "special": "Special / invite-only"

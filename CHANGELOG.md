@@ -5,6 +5,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.4.10] — 2026-07-30
+
+### 🐛 Bug fixes (P0)
+
+- **Model display** — Use API `title` field as display name instead of `description` (PR #12692 upstream). Affects: OpenCode model selector, `/poll models`, `/poll pricing`.
+- **Fallback** — Default free fallback changed from `free/mistral` (removed upstream) to `free/openai-fast` (only remaining legacy free model).
+- **Paid-only guard** — Unified `pollinations-paid-models.json` path via `getConfigDir()` (was hardcoded `~/.pollinations` in proxy, XDG in config).
+- **Safety Net 502** — Added HTTP 502 to enterprise fallback conditions (upstream PR #12814 remaps provider 429 → 502).
+- **`/poll usage` split** — Fixed Quest/Paid calculation: was double-counting `tierRemaining` and re-fetching all quest claims, causing Paid to always show ~0. Now uses quota.ts pre-computed `questStash` + `walletBalance`.
+- **`/poll infos`** — Removed phantom tier display (API no longer returns `tier` in `/account/profile`).
+
+### 🌍 i18n
+
+- Added 3 missing `tier.condition.*` keys (`under_review`, `default`, `quests`) in all 6 locales.
+
+### 🛠 Internal
+
+- `PollinationsModel` interface: added `title?`, `brand?` fields.
+- Fetcher extracts `title` and `brand` from API.
+- Removed dead `fetchAccountJson` helper from commands.ts.
+- Live API test suite: `scripts/tests/test-api-live.cjs` (102 assertions).
+- GencodeDoc ignore rules updated (`.gencodedoc`, workspace file, `.tgz`).
+
+---
+
 ## [6.4.9] — 2026-07-17
 
 ### 🛠 Quality / Packaging / CI

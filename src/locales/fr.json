@@ -488,7 +488,10 @@
     "condition": {
       "signup": "Inscrivez-vous, c'est tout !",
       "auto_verify": "Vérification automatique",
+      "under_review": "Compte en cours d'examen",
+      "default": "Nouveau compte (par défaut)",
       "community": "Membre actif de la communauté",
+      "quests": "Compléter des Quêtes et contribuer",
       "publish_app": "Publier une app",
       "top_contributor": "Contributeur de premier plan",
       "special": "Spécial / sur invitation"

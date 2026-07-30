@@ -26,6 +26,8 @@ export interface ModelPricing {
 
 export interface PollinationsModel {
     name: string;
+    title?: string;
+    brand?: string;
     description: string;
     category: ModelCategory;
     aliases: string[];

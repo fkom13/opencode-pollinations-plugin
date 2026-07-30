@@ -129,12 +129,15 @@ function getCost(m: ApiModel, type: "text" | "image" | "video" | "audio"): numbe
 
 // ─── RENDU VISUEL ────────────────────────────────────────────────────────────
 function parseNameDesc(m: ApiModel): { nom: string, desc: string } {
-  const fullDesc = m.description || m.name;
-  const parts = fullDesc.split(" - ");
+  if (m.title && m.description) {
+    return { nom: m.title, desc: m.description };
+  }
+  const displayName = m.title || m.description || m.name;
+  const parts = displayName.split(" - ");
   if (parts.length > 1) {
     return { nom: parts[0].trim(), desc: parts.slice(1).join(" - ").trim() };
   }
-  return { nom: fullDesc, desc: "" };
+  return { nom: displayName, desc: "" };
 }
 
 function flags(m: ApiModel, overrides: string[] = []): string {

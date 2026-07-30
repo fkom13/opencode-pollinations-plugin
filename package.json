@@ -1,65 +1,65 @@
 {
-    "name": "opencode-pollinations-plugin",
-    "displayName": "Pollinations",
-    "version": "6.4.9",
-    "description": "Native Pollinations.ai Provider Plugin for OpenCode — free & premium AI models, media tools, quests, cost guards",
-    "author": "fkom13",
-    "license": "MIT",
-    "keywords": [
-        "opencode",
-        "pollinations",
-        "ai",
-        "plugin",
-        "image-generation",
-        "video-generation",
-        "llm",
-        "pollen"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/fkom13/opencode-pollinations-plugin.git"
-    },
-    "bugs": {
-        "url": "https://github.com/fkom13/opencode-pollinations-plugin/issues"
-    },
-    "homepage": "https://github.com/fkom13/opencode-pollinations-plugin#readme",
-    "type": "module",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "default": "./dist/index.js"
-        }
-    },
-    "bin": {
-        "opencode-pollinations-plugin": "./bin/setup.js"
-    },
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "engines": {
-        "node": ">=18"
-    },
-    "scripts": {
-        "build": "tsc",
-        "test": "npm run build && node scripts/tests/test-suite.cjs",
-        "test:unit": "node scripts/tests/test-suite.cjs",
-        "test:i18n": "node scripts/tests/test-i18n.cjs",
-        "prepare": "npm run build",
-        "prepublishOnly": "npm run build && npm run test:unit && npm run test:i18n"
-    },
-    "files": [
-        "dist",
-        "bin",
-        "README.md",
-        "LICENSE.md"
-    ],
-    "dependencies": {
-        "@opencode-ai/plugin": "^1.0.85",
-        "qrcode": "^1.5.4",
-        "zod": "^3.25.76"
-    },
-    "devDependencies": {
-        "@types/node": "^20.0.0",
-        "@types/qrcode": "^1.5.6",
-        "typescript": "^5.0.0"
+  "name": "opencode-pollinations-plugin",
+  "displayName": "Pollinations",
+  "version": "6.4.10",
+  "description": "Native Pollinations.ai Provider Plugin for OpenCode — free & premium AI models, media tools, quests, cost guards",
+  "author": "fkom13",
+  "license": "MIT",
+  "keywords": [
+    "opencode",
+    "pollinations",
+    "ai",
+    "plugin",
+    "image-generation",
+    "video-generation",
+    "llm",
+    "pollen"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fkom13/opencode-pollinations-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fkom13/opencode-pollinations-plugin/issues"
+  },
+  "homepage": "https://github.com/fkom13/opencode-pollinations-plugin#readme",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
+  },
+  "bin": {
+    "opencode-pollinations-plugin": "./bin/setup.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node scripts/tests/test-suite.cjs",
+    "test:unit": "node scripts/tests/test-suite.cjs",
+    "test:i18n": "node scripts/tests/test-i18n.cjs",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build && npm run test:unit && npm run test:i18n"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.0.85",
+    "qrcode": "^1.5.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/qrcode": "^1.5.6",
+    "typescript": "^5.0.0"
+  }
 }

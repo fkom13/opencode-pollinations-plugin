@@ -97,10 +97,11 @@ Das **Pollen 🌻** ist unser zentrales Kreditsystem (1$ ≈ 1 Pollen). Verbinde
 
 | Tier (Stufe) | Stündliche Aufladung ⏱️ | Schätzung Tag* | Voraussetzung |
 | :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / Std.** | ~0.24 / Tag | Automatische Verifikation |
-| 🌱 **Seed** | **0.15 Pollen / Std.** | ~3.6 / Tag | Aktiver GitHub-Entwickler (8+ Punkte) |
-| 🌸 **Flower** | **0.40 Pollen / Std.** | ~9.6 / Tag | **Eine App veröffentlichen** (Wie dieses Plugin!) |
-| 🍯 **Nectar** | **0.80 Pollen / Std.** | ~19.2 / Tag | Demnächst 🔮 |
+| 🍄 **Spore** | **0.01 Pollen / Std.** | ~0.24 / Tag | Neues Konto (Standard) |
+| 🌱 **Seed** | **0.15 Pollen / Std.** | ~3.6 / Tag | Aktives Community-Mitglied |
+| 🌸 **Flower** | **0.40 Pollen / Std.** | ~9.6 / Tag | Quests abschließen & beitragen |
+| 🍯 **Nectar** | **0.80 Pollen / Std.** | ~19.2 / Tag | Top-Mitwirkender |
+| 🐝 **Router** | **10 Pollen / Std.** | ~240 / Tag | Speziell / nur auf Einladung |
 
 _*Tägliche Schätzungen sind nur Näherungswerte (~24h × Stundenrate). Das Reset findet automatisch zur vollen Stunde (XX:00) statt._
 

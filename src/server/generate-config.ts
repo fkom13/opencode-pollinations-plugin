@@ -126,7 +126,7 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     } catch (e) {
         log(`Error fetching Free models: ${e}`);
         // Fallback Robust (Offline support)
-        modelsOutput.push({ id: "free/mistral", name: "Mistral Nemo (Fallback)", object: "model", variants: {} });
+        modelsOutput.push({ id: "free/openai-fast", name: "GPT-5 Nano (Fallback)", object: "model", variants: {} });
         modelsOutput.push({ id: "free/openai", name: "OpenAI (Fallback)", object: "model", variants: {} });
         modelsOutput.push({ id: "free/gemini", name: "Gemini Flash (Fallback)", object: "model", variants: {} });
     }
@@ -216,7 +216,7 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
     const rawId = raw.id || raw.name;
     const fullId = prefix + rawId; // ex: "free/gemini" or "enter/nomnom" (prefix passed is "enter/")
 
-    let baseName = raw.description;
+    let baseName = raw.title || raw.description;
     if (!baseName || baseName === rawId) {
         baseName = formatName(rawId, raw.censored !== false);
     }

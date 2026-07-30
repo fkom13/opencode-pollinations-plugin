@@ -488,7 +488,10 @@
     "condition": {
       "signup": "Einfach registrieren!",
       "auto_verify": "Automatische Verifizierung",
+      "under_review": "Konto wird überprüft",
+      "default": "Neues Konto (Standard)",
       "community": "Aktives Community-Mitglied",
+      "quests": "Quests abschließen & beitragen",
       "publish_app": "Eine App veröffentlichen",
       "top_contributor": "Top-Mitwirkender",
       "special": "Speziell / nur auf Einladung"

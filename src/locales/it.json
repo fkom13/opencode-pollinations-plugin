@@ -488,7 +488,10 @@
     "condition": {
       "signup": "Basta registrarsi!",
       "auto_verify": "Verifica automatica",
+      "under_review": "Account in revisione",
+      "default": "Nuovo account (predefinito)",
       "community": "Membro attivo della community",
+      "quests": "Completa le Missioni e contribuisci",
       "publish_app": "Pubblica un'app",
       "top_contributor": "Contributore di punta",
       "special": "Speciale / solo su invito"

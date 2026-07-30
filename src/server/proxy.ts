@@ -369,14 +369,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         // Check dynamic list saved by generate-config.ts
         if (isEnterprise) {
             try {
-                const paidListPath = path.join(config.gui ? path.dirname(path.join(process.env.HOME || '/tmp', '.config/opencode/pollinations-signature.json')) : '/tmp', 'pollinations-paid-models.json');
-                // Wait, logic above for config path is messy. Let's use standard path logic:
-                // config.ts uses ~/.pollinations/config.json usually.
-                // generate-config uses path.join(config.gui ? path.dirname(CONFIG_FILE) : '/tmp')
-                // Let's rely on standard ~/.pollinations location if possible, or try both.
-
-                const homedir = process.env.HOME || '/tmp';
-                const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
+                const standardPaidPath = path.join(getConfigDir(), 'pollinations-paid-models.json');
 
                 if (fs.existsSync(standardPaidPath)) {
                     const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
@@ -426,8 +419,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             if (isEnterprise) {
                 // Paid Only Check: BLOCK (not fallback) in AlwaysFree mode
                 try {
-                    const homedir = process.env.HOME || '/tmp';
-                    const standardPaidPath = path.join(homedir, '.pollinations', 'pollinations-paid-models.json');
+                    const standardPaidPath = path.join(getConfigDir(), 'pollinations-paid-models.json');
                     if (fs.existsSync(standardPaidPath)) {
                         const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
                         if (paidModels.includes(actualModel)) {
@@ -605,6 +597,9 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 const limit = (actualModel.includes("midijourney") || actualModel.includes("grok")) ? 128 : 120;
                 proxyBody.tools = truncateTools(proxyBody.tools, limit);
 
+                if (proxyBody.reasoning_effort) delete proxyBody.reasoning_effort;
+                if (proxyBody.reasoningEffort) delete proxyBody.reasoningEffort;
+
                 if (proxyBody.messages) {
                     proxyBody.messages.forEach((m: any) => {
                         if (m.tool_calls) {
@@ -754,7 +749,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             // TRANSPARENT FALLBACK LOGIC
             // 1. Enterprise Safety Net (Quota/Auth/RateLimit)
             // 2. Gemini Tools Fix (Gemini + Tools -> 401 -> Fallback to OpenAI)
-            const isEnterpriseFallback = (fetchRes.status === 402 || fetchRes.status === 429 || fetchRes.status === 401 || fetchRes.status === 403) && isEnterprise;
+            const isEnterpriseFallback = (fetchRes.status === 402 || fetchRes.status === 429 || fetchRes.status === 502 || fetchRes.status === 401 || fetchRes.status === 403) && isEnterprise;
             const isGeminiToolsFallback = fetchRes.status === 401 && actualModel.includes('gemini') && !isEnterprise && proxyBody.tools && proxyBody.tools.length > 0;
 
             // STRICT MANUAL MODE: Disable "Magic" Fallbacks

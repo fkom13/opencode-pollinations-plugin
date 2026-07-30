@@ -86,6 +86,8 @@ function mapRawToModel(raw: any, fallbackCategory: ModelCategory, averageCost?: 
 
     const model: PollinationsModel = {
         name: raw.name || raw.id || 'unknown',
+        title: raw.title || undefined,
+        brand: raw.brand || undefined,
         description: raw.description || raw.name || '',
         category,
         aliases: raw.aliases || [],

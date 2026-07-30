@@ -97,10 +97,11 @@ Il **Pollen 🌻** è un sistema universale (1$ ≈ 1 Pollen). Immettendo una pr
 
 | Tier (Livello) | Ricarica Oraria ⏱️ | Stima Giorno* | Requisito richiesto |
 | :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / ora** | ~0.24 / giorno | Essendo verificato dal sistema |
-| 🌱 **Seed** | **0.15 Pollen / ora** | ~3.6 / giorno | Operazioni su Github valide (+8 pts) |
-| 🌸 **Flower** | **0.40 Pollen / ora** | ~9.6 / giorno | **Aver prodotto una applicazione** (Come questo Plugin) |
-| 🍯 **Nectar** | **0.80 Pollen / ora** | ~19.2 / giorno | Arriverà prossimamente 🔮 |
+| 🍄 **Spore** | **0.01 Pollen / ora** | ~0.24 / giorno | Nuovo account (predefinito) |
+| 🌱 **Seed** | **0.15 Pollen / ora** | ~3.6 / giorno | Membro attivo della community |
+| 🌸 **Flower** | **0.40 Pollen / ora** | ~9.6 / giorno | Completa le Missioni e contribuisci |
+| 🍯 **Nectar** | **0.80 Pollen / ora** | ~19.2 / giorno | Contributore di punta |
+| 🐝 **Router** | **10 Pollen / ora** | ~240 / giorno | Speciale / solo su invito |
 
 _*La stima giornaliera è puramente teorica (~24h × quota oraria). I Pollen si rinfrescano in modo corretto all'istante di ogni cambio ora (`:00`)._
 
