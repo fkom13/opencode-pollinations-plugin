@@ -165,6 +165,18 @@ function truncateTools(tools: any[], limit: number = 120): any[] {
     return tools.slice(0, limit);
 }
 
+// v6.5: single source for the dynamic paid_only list (saved by generate-config.ts).
+function isPaidOnlyModel(model: string): boolean {
+    try {
+        const standardPaidPath = path.join(getConfigDir(), 'pollinations-paid-models.json');
+        if (fs.existsSync(standardPaidPath)) {
+            const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
+            return Array.isArray(paidModels) && paidModels.includes(model);
+        }
+    } catch (e) { log(`[Proxy] Error checking paid models: ${e}`); }
+    return false;
+}
+
 // --- INTERFACES ---
 
 interface ChatRequest {
@@ -185,35 +197,235 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ============================================================================
+// RETRY POLICY (v6.5) — double-billing safe.
+// Invariants:
+//   client timeout != upstream failure
+//   client abort   != upstream cancellation
+//   5xx ambiguous  != guaranteed "not submitted"
+// A request that may have been received upstream must NEVER be replayed
+// automatically only because the client did not receive a response.
+// ============================================================================
+type RetrySignal = 'abort' | 'network' | number;
+
+function classifyRetry(signal: RetrySignal): 'RETRY' | 'NO_RETRY' {
+    if (signal === 'abort' || signal === 'network') {
+        // Timeout / connection reset after possible submission → NO REPLAY.
+        return 'NO_RETRY';
+    }
+    if (signal === 429) {
+        // Rate limit is the only class we retry, conservatively (single
+        // retry). Chat streaming is NOT idempotent upstream, so we keep this
+        // minimal and never retry ambiguous 5xx/520.
+        return 'RETRY';
+    }
+    // 5xx / 520 / 402 / 4xx: ambiguous or billing-relevant → NO blind replay.
+    return 'NO_RETRY';
+}
+
 async function fetchWithRetry(url: string, options: any, retries: number = MAX_RETRIES): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response: Response;
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-        const response = await fetch(url, { ...options, signal: controller.signal });
+        response = await fetch(url, { ...options, signal: controller.signal });
+    } catch (error: any) {
         clearTimeout(timeoutId);
-
-        if (response.ok) return response;
-        if (response.status === 404 || response.status === 401 || response.status === 400) {
-            // Don't retry client errors (except rate limit)
-            return response;
-        }
-        if (retries > 0 && (response.status === 429 || response.status >= 500 || response.status === 520)) {
-            // Check for specific "Queue" message in 520/429 body if possible (async read?)
-            // For now, just retry blindly on 520/5xx
-            log(`[Retry] Upstream Error ${response.status}. Retrying in ${RETRY_DELAY_MS}ms... (${retries} left)`);
-            await sleep(RETRY_DELAY_MS);
-            return fetchWithRetry(url, options, retries - 1);
-        }
-        return response;
-    } catch (error) {
-        if (retries > 0) {
+        const isAbort = error?.name === 'AbortError' || controller.signal.aborted;
+        if (retries > 0 && classifyRetry(isAbort ? 'abort' : 'network') === 'RETRY') {
             log(`[Retry] Network Error: ${error}. Retrying... (${retries} left)`);
             await sleep(RETRY_DELAY_MS);
             return fetchWithRetry(url, options, retries - 1);
         }
         throw error;
     }
+    clearTimeout(timeoutId);
+
+    if (response.ok) return response;
+    if (response.status === 404 || response.status === 401 || response.status === 400) {
+        // Don't retry client errors (except rate limit)
+        return response;
+    }
+    if (retries > 0 && classifyRetry(response.status) === 'RETRY') {
+        log(`[Retry] Upstream Error ${response.status}. Retrying in ${RETRY_DELAY_MS}ms... (${retries} left)`);
+        await sleep(RETRY_DELAY_MS);
+        return fetchWithRetry(url, options, retries - 1);
+    }
+    return response;
+}
+
+// ============================================================================
+// REASONING NORMALIZATION (v6.5) — M8/M9
+// DeepSeek/Kimi expose `reasoning_content`; Qwen exposes `reasoning` +
+// `reasoning_details` (Responses hybrid). These must never leak into OpenCode
+// as text. Kimi also emits top-level `tool_calls[].name: null` (canonical is
+// `function.name`) and `message.tools: null`.
+// Rule: never merge reasoning* into content; strip the backend-specific fields;
+//       preserve usage.completion_tokens_details.reasoning_tokens.
+// ============================================================================
+const REASONING_KEYS = ['reasoning_content', 'reasoning', 'reasoning_details'];
+
+function stripReasoning(obj: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        for (const item of obj) stripReasoning(item);
+        return obj;
+    }
+    for (const key of REASONING_KEYS) {
+        if (key in obj) delete obj[key];
+    }
+    return obj;
+}
+
+function normalizeToolCallShape(obj: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        for (const item of obj) normalizeToolCallShape(item);
+        return obj;
+    }
+    // Kimi: top-level name === null is a parasite; function.name is canonical.
+    if ('name' in obj && obj.name === null) {
+        delete obj.name;
+    }
+    // deepseek/kimi: message.tools === null is a parasite.
+    if ('tools' in obj && obj.tools === null) {
+        delete obj.tools;
+    }
+    return obj;
+}
+
+function normalizeChatChunk(obj: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        for (const item of obj) normalizeChatChunk(item);
+        return obj;
+    }
+    const delta = obj.delta;
+    if (delta && typeof delta === 'object') {
+        stripReasoning(delta);
+        if (Array.isArray(delta.tool_calls)) {
+            for (const tc of delta.tool_calls) normalizeToolCallShape(tc);
+        }
+    }
+    const message = obj.message;
+    if (message && typeof message === 'object') {
+        stripReasoning(message);
+        normalizeToolCallShape(message);
+        if (Array.isArray(message.tool_calls)) {
+            for (const tc of message.tool_calls) normalizeToolCallShape(tc);
+        }
+    }
+    if (Array.isArray(obj.choices)) {
+        for (const ch of obj.choices) normalizeChatChunk(ch);
+    }
+    return obj;
+}
+
+/** Normalize a single raw SSE `data:` payload line (JSON). Non-JSON passes through. */
+function normalizeChunkLine(payload: string): string {
+    const trimmed = payload.trim();
+    if (!trimmed) return payload;
+    try {
+        const obj = JSON.parse(trimmed);
+        normalizeChatChunk(obj);
+        return JSON.stringify(obj);
+    } catch {
+        return payload; // e.g. [DONE]
+    }
+}
+
+// --- UNIFIED SSE STREAM PROCESSOR (v6.5) ---
+// Buffers SSE blocks (\n\n), normalizes each JSON chunk (reasoning strip +
+// Kimi tool_calls name:null), preserves finish_reason/signature semantics,
+// applies loop-detection guillotine, and injects the fallback warning.
+interface SseStreamOpts {
+    isFallbackActive: boolean;
+    actualModel: string;
+    fallbackReason: string;
+}
+
+async function streamSseUpstream(
+    res: http.ServerResponse,
+    stream: AsyncIterable<Uint8Array>,
+    opts: SseStreamOpts
+): Promise<string | null> {
+    let buffer = '';
+    let currentSignature: string | null = null;
+
+    const flushBlock = (block: string) => {
+        const lines = block.split('\n');
+        const outLines: string[] = [];
+        for (const ln of lines) {
+            if (ln.startsWith('data:')) {
+                const payload = ln.slice(5).trim();
+                const normalized = normalizeChunkLine(payload);
+                outLines.push(`data: ${normalized}`);
+                if (!currentSignature) {
+                    const m = normalized.match(/"thought_signature"\s*:\s*"([^"]+)"/);
+                    if (m && m[1]) currentSignature = m[1];
+                }
+            } else {
+                outLines.push(ln);
+            }
+        }
+        let out = outLines.join('\n');
+
+        // FIX: STOP REASON NORMALIZATION (kept from v6.4.10)
+        if (out.includes('"finish_reason": "tool_calls"') && out.includes('"tool_calls":null')) {
+            out = out.replace('"finish_reason": "tool_calls"', '"finish_reason": "stop"');
+        }
+        if (out.includes('"finish_reason"')) {
+            const stopRegex = /"finish_reason"\s*:\s*"(stop|STOP|did_not_finish|finished|end_turn|MAX_TOKENS)"/g;
+            if (stopRegex.test(out)) {
+                if (out.includes('"tool_calls":[') || out.includes('"tool_calls": [')) {
+                    out = out.replace(stopRegex, '"finish_reason": "tool_calls"');
+                } else {
+                    out = out.replace(stopRegex, '"finish_reason": "stop"');
+                }
+            }
+        }
+
+        res.write(out + '\n\n');
+    };
+
+    for await (const chunk of stream) {
+        buffer += Buffer.from(chunk).toString().replace(/\r\n/g, '\n');
+
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+            const block = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+
+            // SAFETY STOP: SERVER-SIDE LOOP DETECTION (GUILLOTINE)
+            if (block.includes("User:") || block.includes("\nUser") || block.includes("user:")) {
+                if (block.match(/(\n|^)\s*(User|user)\s*:/)) {
+                    res.end();
+                    return currentSignature;
+                }
+            }
+            flushBlock(block);
+        }
+    }
+    if (buffer.trim()) {
+        flushBlock(buffer);
+    }
+
+    // INJECT FALLBACK NOTIFICATION AT END
+    if (opts.isFallbackActive) {
+        const warningMsg = `\n\n> ⚠️ **Safety Net**: ${opts.fallbackReason}. Switched to \`${opts.actualModel}\`.`;
+        const safeId = "fallback-" + Date.now();
+        const warningChunk = {
+            id: safeId,
+            object: "chat.completion.chunk",
+            created: Math.floor(Date.now() / 1000),
+            model: opts.actualModel,
+            choices: [{ index: 0, delta: { role: "assistant", content: warningMsg }, finish_reason: null }]
+        };
+        res.write(`data: ${JSON.stringify(warningChunk)}\n\n`);
+    }
+
+    return currentSignature;
 }
 
 // --- MEDIA UPLOAD HELPER (Vision Support) ---
@@ -365,39 +577,48 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             actualModel = actualModel.replace('free/', '');
         }
 
-        // A.1 PAID MODEL ENFORCEMENT (V5.5 Strategy)
-        // Check dynamic list saved by generate-config.ts
-        if (isEnterprise) {
-            try {
-                const standardPaidPath = path.join(getConfigDir(), 'pollinations-paid-models.json');
+        // A.1 PAID-ONLY MODEL RESOLUTION (v6.5)
+        // Paid-only models always debit pack (upstream contract). The dynamic
+        // list is saved by generate-config.ts from the live catalog.
+        const paidOnlyRequested = isEnterprise && isPaidOnlyModel(actualModel);
 
-                if (fs.existsSync(standardPaidPath)) {
-                    const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
-                    if (paidModels.includes(actualModel)) {
-                        // IT IS A PAID ONLY MODEL.
-                        // STRICT CHECK: Wallet > 0 required. (Not just Tier)
-                        if (quota.walletBalance <= 0.001) { // Floating point safety
-                            log(`[SafetyNet] Paid Only Model (${actualModel}) requested but Wallet is Empty ($${quota.walletBalance}). BLOCKING.`);
+        // QUEST_ELIGIBLE_ONLY: hard-block paid_only models (no paid route).
+        if (paidOnlyRequested && config.mode === 'quest_only') {
+            log(`[QuestOnly] BLOCKED: Paid Only Model (${actualModel}).`);
+            emitStatusToast('warning', t('proxy.warnings.paid_blocked_questonly_title', { model: actualModel }), 'Quest-Only Mode');
 
-                            // Immediate Block or Fallback?
-                            // Text says: "💎 Paid Only models require purchased pollen only"
-                            // Blocking is safer/clearer than falling back to a free model which might not be what the user expects for a "Pro" feature?
-                            // Actually, Fallback to Free is usually better for UX if configured, BUT for specific "Paid Only" requests, the user explicitly chose a powerful model.
-                            // Falling back to Mistral might be confusing if they asked for Gemini-Large.
-                            // BUT we are failing gracefully.
-                            // Let's Fallback to Free Default and Warn.
+            const blockMsg = {
+                id: `chatcmpl-block-${Date.now()}`,
+                object: 'chat.completion',
+                created: Math.floor(Date.now() / 1000),
+                model: actualModel,
+                choices: [{
+                    index: 0,
+                    message: {
+                        role: 'assistant',
+                        content: t('proxy.warnings.paid_blocked_questonly_msg', { model: actualModel })
+                    },
+                    finish_reason: 'stop'
+                }],
+                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+            };
 
-                            actualModel = config.fallbacks.free.main.replace('free/', '');
-                            isEnterprise = false;
-                            isFallbackActive = true;
-                            fallbackReason = "Paid Only Model requires purchased credits";
-                        }
-                    }
-                }
-            } catch (e) { log(`[Proxy] Error checking paid models: ${e}`); }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(blockMsg));
+            return;
         }
 
-        // B. SAFETY NETS (The Core V5 Logic)
+        // Other modes: paid_only requires wallet (pack). If the wallet is
+        // empty, fall back to the free universe gracefully instead of a 402.
+        if (paidOnlyRequested && quota.walletBalance <= 0.001) { // Floating point safety
+            log(`[SafetyNet] Paid Only Model (${actualModel}) requested but Wallet is Empty ($${quota.walletBalance}). Falling back to free.`);
+            actualModel = config.fallbacks.free.main.replace('free/', '');
+            isEnterprise = false;
+            isFallbackActive = true;
+            fallbackReason = "Paid Only Model requires purchased credits";
+        }
+
+        // B. SAFETY NETS (v6.5 — Quest/Paid semantics)
 
         // 0. GLOBAL CHECK: Auth Limited (403 on Quota)
         // If we can't read quota because of 403, we downgrade to Manual but ALLOW the request.
@@ -410,106 +631,73 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
 
                 emitStatusToast('warning', 'Clé Limitée: Passage en Mode Manuel', 'Permissions (403)');
             }
-
-            // WE DO NOT RETURN 403. WE ALLOW THE REQUEST.
-            // Since config.mode is now 'manual', the next checks (alwaysfree/pro) will be skipped.
         }
 
-        if (config.mode === 'alwaysfree') {
-            if (isEnterprise) {
-                // Paid Only Check: BLOCK (not fallback) in AlwaysFree mode
-                try {
-                    const standardPaidPath = path.join(getConfigDir(), 'pollinations-paid-models.json');
-                    if (fs.existsSync(standardPaidPath)) {
-                        const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
-                        if (paidModels.includes(actualModel)) {
-                            log(`[AlwaysFree] BLOCKED: Paid Only Model (${actualModel}).`);
-                            emitStatusToast('warning', t('proxy.warnings.paid_blocked_alwaysfree_title', { model: actualModel }), 'AlwaysFree Mode');
+        const quotaReadable = quota.errorType !== 'network' && quota.errorType !== 'unknown';
 
-                            const blockMsg = {
-                                id: `chatcmpl-block-${Date.now()}`,
-                                object: 'chat.completion',
-                                created: Math.floor(Date.now() / 1000),
-                                model: actualModel,
-                                choices: [{
-                                    index: 0,
-                                    message: {
-                                        role: 'assistant',
-                                        content: t('proxy.warnings.paid_blocked_alwaysfree_msg', { model: actualModel })
-                                    },
-                                    finish_reason: 'stop'
-                                }],
-                                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-                            };
-
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(blockMsg));
-                            return;
-                        }
-                    }
-                } catch (e) { log(`[Proxy AlwaysFree] Error checking paid models: ${e}`); }
-
-                if (!isFallbackActive && quota.tier === 'error') {
-                    // Network error or unknown error (but NOT auth_limited, handled above)
-                    log(`[SafetyNet] AlwaysFree Mode: Quota Check Failed. Switching to Free Fallback.`);
-                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'AlwaysFree Mode');
+        if (config.mode === 'quest') {
+            // QUEST_PREFERRED: Quest first (server default), Paid fallback is
+            // allowed upstream. Client net only falls back to the free
+            // universe when the quota read failed, or when BOTH Quest and
+            // Paid look exhausted.
+            if (isEnterprise && !isFallbackActive) {
+                if (!quotaReadable) {
+                    log(`[SafetyNet] Quest Mode: Quota Check Failed. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'Quest Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = t('proxy.warnings.quota_unreachable_msg');
-                } else {
-                    const effectiveFree = config.questStashInFreeMode !== false
-                        ? quota.tierRemaining + (quota.questStash || 0)
-                        : quota.tierRemaining;
-                    const effectiveLimit = config.questStashInFreeMode !== false
-                        ? quota.tierLimit + (quota.questStash || 0)
-                        : quota.tierLimit;
-                    const tierRatio = effectiveLimit > 0 ? (effectiveFree / effectiveLimit) : 0;
-                    if (tierRatio <= (config.thresholds.tier / 100)) {
-                        log(`[SafetyNet] AlwaysFree Mode: Tier (${(tierRatio * 100).toFixed(1)}%) <= Threshold (${config.thresholds.tier}%). Switching.`);
-                        emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'AlwaysFree Mode');
-                        actualModel = config.fallbacks.free.main.replace('free/', '');
-                        isEnterprise = false;
-                        isFallbackActive = true;
-                        fallbackReason = t('proxy.warnings.tier_limit_msg', { threshold: config.thresholds.tier });
-                    }
+                } else if (!quota.canUseEnterprise) {
+                    log(`[SafetyNet] Quest Mode: Quest (~${quota.questBalance}) and Paid (~${quota.walletBalance}) exhausted. Switching.`);
+                    emitStatusToast('warning', t('proxy.warnings.balance_exhausted_title'), 'Quest Mode');
+                    actualModel = config.fallbacks.free.main.replace('free/', '');
+                    isEnterprise = false;
+                    isFallbackActive = true;
+                    fallbackReason = t('proxy.warnings.balance_exhausted_msg');
                 }
             }
         }
-        else if (config.mode === 'pro') {
-            if (isEnterprise) {
-                if (quota.tier === 'error') {
-                    // Network error or unknown
-                    log(`[SafetyNet] Pro Mode: Quota Unreachable. Switching to Free Fallback.`);
-                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'Pro Mode');
+        else if (config.mode === 'quest_only') {
+            // QUEST_ELIGIBLE_ONLY: best-effort client guard. Never send an
+            // enterprise request when Quest looks exhausted. NOTE: upstream
+            // can still debit pack in a race/real-cost — documented, not a
+            // server guarantee.
+            if (isEnterprise && !isFallbackActive) {
+                if (!quotaReadable) {
+                    log(`[SafetyNet] Quest-Only Mode: Quota Check Failed. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'Quest-Only Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = t('proxy.warnings.quota_unreachable_msg');
-                } else {
-                    const tierRatio = quota.tierLimit > 0 ? (quota.tierRemaining / quota.tierLimit) : 0;
-                    if (quota.walletBalance < config.thresholds.wallet && tierRatio <= (config.thresholds.tier / 100)) {
-                        log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet} AND Tier < ${config.thresholds.tier}%. Switching.`);
-                        emitStatusToast('warning', t('proxy.warnings.wallet_tier_critical_title', { wallet: config.thresholds.wallet, tier: config.thresholds.tier }), 'Pro Mode');
-                        actualModel = config.fallbacks.free.main.replace('free/', '');
-                        isEnterprise = false;
-                        isFallbackActive = true;
-                        fallbackReason = t('proxy.warnings.wallet_tier_critical_msg', { wallet: config.thresholds.wallet, tier: config.thresholds.tier });
-                    } else if (quota.walletBalance < config.thresholds.wallet) {
-                        log(`[SafetyNet] Pro Mode: Wallet < $${config.thresholds.wallet}. Switching.`);
-                        emitStatusToast('warning', t('proxy.warnings.wallet_limit_title', { wallet: config.thresholds.wallet }), 'Pro Mode');
-                        actualModel = config.fallbacks.free.main.replace('free/', '');
-                        isEnterprise = false;
-                        isFallbackActive = true;
-                        fallbackReason = t('proxy.warnings.wallet_limit_msg', { threshold: config.thresholds.wallet });
-                    } else if (tierRatio <= (config.thresholds.tier / 100)) {
-                        log(`[SafetyNet] Pro Mode: Tier < ${config.thresholds.tier}%. Switching.`);
-                        emitStatusToast('warning', t('proxy.warnings.tier_limit_title', { threshold: config.thresholds.tier }), 'Pro Mode');
-                        actualModel = config.fallbacks.free.main.replace('free/', '');
-                        isEnterprise = false;
-                        isFallbackActive = true;
-                        fallbackReason = t('proxy.warnings.tier_limit_msg', { threshold: config.thresholds.tier });
-                    }
+                } else if (quota.questBalance <= (config.thresholds.quest ?? 0.05)) {
+                    log(`[SafetyNet] Quest-Only Mode: Quest (~${quota.questBalance}) <= floor (${config.thresholds.quest ?? 0.05}). Switching.`);
+                    emitStatusToast('warning', t('proxy.warnings.quest_floor_title', { floor: config.thresholds.quest ?? 0.05 }), 'Quest-Only Mode');
+                    actualModel = config.fallbacks.free.main.replace('free/', '');
+                    isEnterprise = false;
+                    isFallbackActive = true;
+                    fallbackReason = t('proxy.warnings.quest_floor_msg', { floor: config.thresholds.quest ?? 0.05 });
+                }
+            }
+        }
+        else if (config.mode === 'paid') {
+            // PAID_ALLOWED: protect the wallet (like the old "pro" net).
+            if (isEnterprise && !isFallbackActive) {
+                if (!quotaReadable) {
+                    log(`[SafetyNet] Paid Mode: Quota Unreachable. Switching to Free Fallback.`);
+                    emitStatusToast('warning', t('proxy.warnings.quota_unreachable_title'), 'Paid Mode');
+                    actualModel = config.fallbacks.free.main.replace('free/', '');
+                    isEnterprise = false;
+                    isFallbackActive = true;
+                    fallbackReason = t('proxy.warnings.quota_unreachable_msg');
+                } else if (quota.walletBalance < (config.thresholds.wallet || 0.5)) {
+                    log(`[SafetyNet] Paid Mode: Wallet (~${quota.walletBalance}) < floor (${config.thresholds.wallet || 0.5}). Switching.`);
+                    emitStatusToast('warning', t('proxy.warnings.wallet_limit_title', { wallet: config.thresholds.wallet || 0.5 }), 'Paid Mode');
+                    actualModel = config.fallbacks.free.main.replace('free/', '');
+                    isEnterprise = false;
+                    isFallbackActive = true;
+                    fallbackReason = t('proxy.warnings.wallet_limit_msg', { threshold: config.thresholds.wallet || 0.5 });
                 }
             }
         }
@@ -810,29 +998,17 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     });
 
                     if (retryRes.body) {
-                        let accumulated = "";
-                        let currentSignature: string | null = null;
-
                         // @ts-ignore
-                        for await (const chunk of retryRes.body) {
-                            const buffer = Buffer.from(chunk);
-                            const chunkStr = buffer.toString();
-                            // ... (Copy basic stream logic or genericize? Copying safe for hotfix)
-                            accumulated += chunkStr;
-                            res.write(chunkStr);
+                        const sig = await streamSseUpstream(res, retryRes.body, {
+                            isFallbackActive: true,
+                            actualModel,
+                            fallbackReason
+                        });
+                        if (sig && currentRequestHash) {
+                            signatureMap[currentRequestHash] = sig;
+                            saveSignatureMap();
+                            lastSignature = sig;
                         }
-
-                        // INJECT NOTIFICATION AT END
-                        const warningMsg = `\n\n> ⚠️ **Safety Net**: ${fallbackReason}. Switched to \`${actualModel}\`.`;
-                        const safeId = "fallback-" + Date.now();
-                        const warningChunk = {
-                            id: safeId,
-                            object: "chat.completion.chunk",
-                            created: Math.floor(Date.now() / 1000),
-                            model: actualModel,
-                            choices: [{ index: 0, delta: { role: "assistant", content: warningMsg }, finish_reason: null }]
-                        };
-                        res.write(`data: ${JSON.stringify(warningChunk)}\n\n`);
 
                         // DASHBOARD UPDATE
                         const dashboardMsg = formatQuotaForToast(quota); // Quota is stale/empty but that's fine
@@ -846,66 +1022,14 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             }
         }
 
-        // Stream Loop
+        // Stream Loop — unified SSE processor (reasoning strip + Kimi normalization)
         if (fetchRes.body) {
-            let accumulated = "";
-            let currentSignature: string | null = null;
-
             // @ts-ignore
-            for await (const chunk of fetchRes.body) {
-                const buffer = Buffer.from(chunk);
-                let chunkStr = buffer.toString();
-
-                // FIX: STOP REASON NORMALIZATION using Regex Safely
-                // 1. If Kimi/Model sends "tool_calls" reason but "tool_calls":null, FORCE STOP.
-                if (chunkStr.includes('"finish_reason": "tool_calls"') && chunkStr.includes('"tool_calls":null')) {
-                    chunkStr = chunkStr.replace('"finish_reason": "tool_calls"', '"finish_reason": "stop"');
-                }
-
-                // 2. Original Logic: Ensure formatting but avoid false positives on null
-                // Only upgrade valid stops to tool_calls if we see actual tool array start
-                if (chunkStr.includes('"finish_reason"')) {
-                    const stopRegex = /"finish_reason"\s*:\s*"(stop|STOP|did_not_finish|finished|end_turn|MAX_TOKENS)"/g;
-                    if (stopRegex.test(chunkStr)) {
-                        if (chunkStr.includes('"tool_calls":[') || chunkStr.includes('"tool_calls": [')) {
-                            chunkStr = chunkStr.replace(stopRegex, '"finish_reason": "tool_calls"');
-                        } else {
-                            chunkStr = chunkStr.replace(stopRegex, '"finish_reason": "stop"');
-                        }
-                    }
-                }
-
-                // SIGNATURE CAPTURE
-                if (!currentSignature) {
-                    const match = chunkStr.match(/"thought_signature"\s*:\s*"([^"]+)"/);
-                    if (match && match[1]) currentSignature = match[1];
-                }
-
-                // SAFETY STOP: SERVER-SIDE LOOP DETECTION (GUILLOTINE)
-                if (chunkStr.includes("User:") || chunkStr.includes("\nUser") || chunkStr.includes("user:")) {
-                    if (chunkStr.match(/(\n|^)\s*(User|user)\s*:/)) {
-                        res.end();
-                        return; // HARD STOP
-                    }
-                }
-
-                accumulated += chunkStr;
-                res.write(chunkStr);
-            }
-
-            // INJECT NOTIFICATION AT END
-            if (isFallbackActive) {
-                const warningMsg = `\n\n> ⚠️ **Safety Net**: ${fallbackReason}. Switched to \`${actualModel}\`.`;
-                const safeId = "fallback-" + Date.now();
-                const warningChunk = {
-                    id: safeId,
-                    object: "chat.completion.chunk",
-                    created: Math.floor(Date.now() / 1000),
-                    model: actualModel,
-                    choices: [{ index: 0, delta: { role: "assistant", content: warningMsg }, finish_reason: null }]
-                };
-                res.write(`data: ${JSON.stringify(warningChunk)}\n\n`);
-            }
+            const currentSignature = await streamSseUpstream(res, fetchRes.body, {
+                isFallbackActive,
+                actualModel,
+                fallbackReason
+            });
 
             // END STREAM: SAVE MAP & EMIT TOAST
             if (currentSignature && currentRequestHash) {

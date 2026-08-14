@@ -73,7 +73,7 @@ export function emitStatusToast(
             getQuotaStatus(true).then(quota => {
                 const quotaMsg = formatQuotaForToast
                     ? formatQuotaForToast(quota)
-                    : `🌻 Freetier: ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} | Wallet: $${quota.walletBalance.toFixed(2)}`;
+                    : `🎁 Quest: ~${quota.questBalance.toFixed(2)} | 💎 Paid: ~${quota.walletBalance.toFixed(2)}`;
                 finalMessage += `\n${quotaMsg}`;
                 dispatchToast('status', type, finalMessage, title || 'Pollinations Status');
             }).catch(() => {

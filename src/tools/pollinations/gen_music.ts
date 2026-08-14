@@ -111,8 +111,9 @@ export const polliGenMusicTool: ToolDefinition = tool({
                 'Authorization': `Bearer ${apiKey}`,
             };
 
-            // Music generation takes time
-            const result = await httpsGet(url, headers);
+            // Music generation takes time (~1.2x duration). v6.5: bound generously.
+            const musicTimeoutMs = Math.min(Math.ceil((duration + 60) * 1000), 3600000);
+            const result = await httpsGet(url, headers, musicTimeoutMs);
             const audioData = result.data;
             const responseHeaders = result.headers;
 

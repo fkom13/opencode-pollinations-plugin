@@ -45,7 +45,8 @@ async function fetchOpenApiSchema(): Promise<any> {
     if (cachedSchema) return cachedSchema;
 
     try {
-        const response = await fetch(OPENAPI_URL);
+        // v6.5: bound the OpenAPI fetch (was unbounded → hang risk).
+        const response = await fetch(OPENAPI_URL, { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         cachedSchema = await response.json();
         return cachedSchema;

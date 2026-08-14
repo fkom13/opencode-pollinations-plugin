@@ -7,22 +7,22 @@ export async function buildConnectResponse(config: PollinationsConfigV5): Promis
     const mode = config.mode;
 
     let name = "Developer";
-    let tier = "anonymous";
-    let tierEmoji = '👤';
+    let questEmoji = '🎁';
+    let questText = 'Quest/Paid';
 
     if (hasKey) {
         try {
-            // Use getQuotaStatus which deduces allowance from usage (tier no longer in /account/profile)
+            // v6.5: Quest/Paid semantics (tier/refill model removed upstream).
             const quota = await getQuotaStatus(true);
-            tier = quota.tier || 'anonymous';
-            tierEmoji = quota.tierEmoji || '👤';
+            questText = `Quest ~${quota.questBalance.toFixed(2)} | Paid ~${quota.walletBalance.toFixed(2)}`;
         } catch (e) {
             // Ignorer l'erreur réseau et garder les valeurs par défaut
         }
 
         try {
             const res = await fetch('https://gen.pollinations.ai/account/profile', {
-                headers: { 'Authorization': `Bearer ${config.apiKey}` }
+                headers: { 'Authorization': `Bearer ${config.apiKey}` },
+                signal: AbortSignal.timeout(5000),
             });
             if (res.ok) {
                 const data: any = await res.json();
@@ -36,7 +36,7 @@ export async function buildConnectResponse(config: PollinationsConfigV5): Promis
     if (hasKey) {
         return `${t('connect_response.title_key', { name, mode })}
 
-> **Your Tier:** ${tierEmoji} ${tier.toUpperCase()}
+> **Your Pollen:** ${questEmoji} ${questText}
 
 ---
 

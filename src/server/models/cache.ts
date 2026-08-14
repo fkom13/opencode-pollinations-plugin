@@ -3,6 +3,9 @@
  * 
  * Central access point for all model metadata. Backed by the fetcher
  * with a configurable TTL. Falls back to static data if fetch fails.
+ * 
+ * v6.5: every read path (get/list/all) triggers a coalesced, non-blocking
+ * freshness check, so long sessions always converge to the live catalog.
  */
 
 import * as fs from 'fs';
@@ -31,6 +34,14 @@ const STATIC_FALLBACK: PollinationsModel[] = [
 ];
 
 const DEFAULT_TTL = 60 * 60 * 1000; // 1 hour
+
+export type RegistryFetcher = (apiKey?: string) => Promise<PollinationsModel[]>;
+
+export interface RegistryOptions {
+    ttlMs?: number;
+    fetcher?: RegistryFetcher;
+    diskCache?: boolean;
+}
 
 function getCacheFilePath(): string {
     const dir = getConfigDir();
@@ -70,37 +81,48 @@ function saveCacheToDisk(models: PollinationsModel[], timestamp: number): void {
 
 // ─── Registry Implementation ─────────────────────────────────────────────
 
-class ModelRegistryImpl implements ModelRegistryInterface {
+export class ModelRegistryImpl implements ModelRegistryInterface {
     private models: PollinationsModel[] = [];
     private lastRefresh: number = 0;
     private ttl: number = DEFAULT_TTL;
     private ready: boolean = false;
-    private refreshing: boolean = false;
+    private refreshing: Promise<void> | null = null;
+    private fetcher: RegistryFetcher;
+    private useDiskCache: boolean;
 
-    constructor() {
-        const diskCache = loadCacheFromDisk();
-        if (diskCache && (Date.now() - diskCache.timestamp) < this.ttl) {
-            this.models = diskCache.models;
-            this.lastRefresh = diskCache.timestamp;
-            this.ready = true;
-            log(`[ModelRegistry] Loaded ${this.models.length} models from disk cache.`);
+    constructor(options: RegistryOptions = {}) {
+        this.ttl = options.ttlMs ?? DEFAULT_TTL;
+        this.fetcher = options.fetcher ?? ((apiKey?: string) => fetchAllModels(apiKey));
+        this.useDiskCache = options.diskCache ?? true;
+
+        if (this.useDiskCache) {
+            const diskCache = loadCacheFromDisk();
+            if (diskCache && (Date.now() - diskCache.timestamp) < this.ttl) {
+                this.models = diskCache.models;
+                this.lastRefresh = diskCache.timestamp;
+                this.ready = true;
+                log(`[ModelRegistry] Loaded ${this.models.length} models from disk cache.`);
+            }
         }
     }
 
-    /** Get a single model by category and name */
+    /** Get a single model by category and name. Triggers lazy freshness check. */
     get(category: ModelCategory, name: string): PollinationsModel | undefined {
+        this.ensureFresh().catch(() => { });
         return this.models.find(m => m.category === category && m.name === name);
     }
 
-    /** Also search by alias */
+    /** Also search by alias. Triggers lazy freshness check. */
     getByNameOrAlias(category: ModelCategory, name: string): PollinationsModel | undefined {
+        this.ensureFresh().catch(() => { });
         return this.models.find(m =>
             m.category === category && (m.name === name || m.aliases.includes(name))
         );
     }
 
-    /** List all models in a category */
+    /** List all models in a category. Triggers lazy freshness check. */
     list(category: ModelCategory): PollinationsModel[] {
+        this.ensureFresh().catch(() => { });
         return this.models.filter(m => m.category === category);
     }
 
@@ -114,20 +136,30 @@ class ModelRegistryImpl implements ModelRegistryInterface {
         return Date.now() - this.lastRefresh > this.ttl;
     }
 
-    /** Force refresh from API */
-    async refresh(apiKey?: string): Promise<void> {
-        if (this.refreshing) return; // Prevent concurrent refreshes
-        this.refreshing = true;
+    /** Timestamp of last successful refresh (for tests/diagnostics). */
+    lastRefreshAt(): number {
+        return this.lastRefresh;
+    }
 
+    /** Force refresh from API. Concurrent calls are coalesced on one fetch. */
+    refresh(apiKey?: string): Promise<void> {
+        if (this.refreshing) return this.refreshing; // coalesce concurrent refreshes
+        this.refreshing = this.performRefresh(apiKey).finally(() => {
+            this.refreshing = null;
+        });
+        return this.refreshing;
+    }
+
+    private async performRefresh(apiKey?: string): Promise<void> {
         try {
             const key = apiKey || loadConfig().apiKey;
-            const fetched = await fetchAllModels(key);
+            const fetched = await this.fetcher(key);
 
             if (fetched.length > 0) {
                 this.models = fetched;
                 this.lastRefresh = Date.now();
                 this.ready = true;
-                saveCacheToDisk(this.models, this.lastRefresh);
+                if (this.useDiskCache) saveCacheToDisk(this.models, this.lastRefresh);
                 log(`[ModelRegistry] Refreshed: ${this.models.length} models cached to disk.`);
             } else {
                 // API returned empty — keep existing data or use fallback
@@ -147,21 +179,21 @@ class ModelRegistryImpl implements ModelRegistryInterface {
             } else {
                 log(`[ModelRegistry] Refresh failed, keeping cache: ${e}`);
             }
-        } finally {
-            this.refreshing = false;
         }
     }
 
-    /** Get all models across all categories */
+    /** Get all models across all categories. Triggers lazy freshness check. */
     all(): PollinationsModel[] {
+        this.ensureFresh().catch(() => { });
         return [...this.models];
     }
 
-    /** Auto-refresh if stale (non-blocking) */
-    ensureFresh(): void {
+    /** Auto-refresh if stale (non-blocking). Returns the refresh promise for tests. */
+    ensureFresh(): Promise<void> {
         if (this.isStale()) {
-            this.refresh().catch(() => { }); // Fire-and-forget
+            return this.refresh(); // coalesced; refresh() never rejects (handles offline)
         }
+        return Promise.resolve();
     }
 
     /** Get count per category (for logging) */

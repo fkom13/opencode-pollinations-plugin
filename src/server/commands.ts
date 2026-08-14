@@ -1,13 +1,12 @@
 import * as https from 'https';
 import { loadConfig, saveConfig, saveKeyToAuthJson, PollinationsConfigV5 } from './config.js';
-import { getQuotaStatus, QuotaStatus, fetchUsageForPeriod } from './quota.js';
+import { getQuotaStatus, QuotaStatus, fetchUsageForPeriod, calculateResetInfo } from './quota.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
 import { DetailedUsageEntry } from './pollinations-api.js';
 import { generatePollinationsConfig } from './generate-config.js';
 import { ModelRegistry } from './models/index.js';
 import type { PollinationsModel, ModelCategory } from './models/types.js';
 import { t } from '../locales/index.js';
-import { getTierInfo, formatTierTable, getTierDescription } from './tier-info.js';
 import { buildQuestsReport } from '../tools/pollinations/polli_quests.js';
 
 
@@ -82,19 +81,6 @@ function formatTokens(tokens: number): string {
     return tokens.toString();
 }
 
-function formatDuration(ms: number): string {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-}
-
-function progressBar(value: number, max: number): string {
-    const percentage = max > 0 ? Math.round((value / max) * 10) : 0;
-    const filled = '█'.repeat(percentage);
-    const empty = '░'.repeat(10 - percentage);
-    return `\`${filled}${empty}\` (${(value / max * 100).toFixed(0)}%)`;
-}
-
 // === STATISTICAL LOGIC ===
 
 interface CurrentPeriodStats {
@@ -111,17 +97,9 @@ function parseUsageTimestamp(timestamp: string): Date {
     return new Date(timestamp.replace(' ', 'T') + 'Z');
 }
 
-function calculateResetDate(nextResetAt: Date) {
-    // Hourly quota system (reset at :00). The "current period" is the last hour,
-    // matching the tier window computed in quota.ts. (Previously 24h — stale daily model.)
-    const lastReset = new Date(nextResetAt.getTime() - 60 * 60 * 1000);
-    return lastReset;
-}
-
 function calculateCurrentPeriodStats(
     usage: DetailedUsageEntry[],
-    lastReset: Date,
-    tierLimit: number
+    lastReset: Date
 ): CurrentPeriodStats {
     let tierUsed = 0;
     let packUsed = 0;
@@ -154,7 +132,7 @@ function calculateCurrentPeriodStats(
 
     return {
         tierUsed,
-        tierRemaining: Math.max(0, tierLimit - tierUsed),
+        tierRemaining: 0,
         packUsed,
         totalRequests,
         inputTokens,
@@ -231,7 +209,14 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
         };
     }
 
-    if (!['manual', 'alwaysfree', 'pro'].includes(mode)) {
+    // v6.5 Quest/Paid modes + legacy aliases (alwaysfree → quest, pro → paid).
+    const LEGACY_MODE_ALIASES: Record<string, string> = {
+        'alwaysfree': 'quest',
+        'pro': 'paid',
+    };
+    const resolvedMode = LEGACY_MODE_ALIASES[mode] || mode;
+
+    if (!['manual', 'quest', 'quest_only', 'paid'].includes(resolvedMode)) {
         return {
             handled: true,
             error: t('commands.mode.invalid', { mode })
@@ -240,45 +225,46 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
 
     const checkConfig = loadConfig();
 
-    // JIT VERIFICATION for PRO and ALWAYSFREE Mode
-    if (mode === 'pro' || mode === 'alwaysfree') {
-        const checkConfig = loadConfig(); // Reload to be sure
+    // JIT VERIFICATION for Quest/Paid modes (requires a valid key)
+    if (resolvedMode === 'quest' || resolvedMode === 'quest_only' || resolvedMode === 'paid') {
         const key = checkConfig.apiKey;
 
         if (!key) {
-            // If NO key, allow alwaysfree? Yes.
-            // If HAS key, verify it? Yes.
-            if (mode === 'pro') return { handled: true, error: t('commands.mode.pro_requires_key') };
-        }
-
-        emitStatusToast('info', t('commands.mode.verifying'), 'Mode Pro');
-        try {
-            // Force verify permissions NOW
-            const check = await checkKeyPermissions(key as string);
-            if (!check.ok) {
-                saveConfig({ mode: 'manual', keyHasAccessToProfile: false });
-                return {
-                    handled: true,
-                    error: t('commands.mode.denied', { status: check.status || '?', reason: check.reason || '?' })
-                };
+            if (resolvedMode === 'paid' || resolvedMode === 'quest_only') {
+                return { handled: true, error: t('commands.mode.key_required', { mode: resolvedMode }) };
             }
-            // Valid -> Ensure flag is true
-            saveConfig({ keyHasAccessToProfile: true });
-        } catch (e: any) {
-            return { handled: true, error: t('commands.mode.verify_error', { error: e.message }) };
+        } else {
+            emitStatusToast('info', t('commands.mode.verifying'), 'Mode');
+            try {
+                // Force verify permissions NOW
+                const check = await checkKeyPermissions(key);
+                if (!check.ok) {
+                    saveConfig({ mode: 'manual', keyHasAccessToProfile: false });
+                    return {
+                        handled: true,
+                        error: t('commands.mode.denied', { status: check.status || '?', reason: check.reason || '?' })
+                    };
+                }
+                // Valid -> Ensure flag is true
+                saveConfig({ keyHasAccessToProfile: true });
+            } catch (e: any) {
+                return { handled: true, error: t('commands.mode.verify_error', { error: e.message }) };
+            }
         }
     }
 
-    // Allow switch (if alwaysfree or manual, or verified pro)
-    saveConfig({ mode: mode as PollinationsConfigV5['mode'] });
+    // Allow switch
+    saveConfig({ mode: resolvedMode as PollinationsConfigV5['mode'] });
     const config = loadConfig();
     if (config.gui.status !== 'none') {
-        emitStatusToast('success', t('commands.mode.success', { mode }), 'Pollinations Config');
+        emitStatusToast('success', t('commands.mode.success', { mode: resolvedMode }), 'Pollinations Config');
     }
+
+    const aliasNote = LEGACY_MODE_ALIASES[mode] ? ` ${t('commands.mode.legacy_alias', { legacy: mode, mode: resolvedMode })}` : '';
 
     return {
         handled: true,
-        response: t('commands.mode.success', { mode })
+        response: t('commands.mode.success', { mode: resolvedMode }) + aliasNote
     };
 }
 
@@ -288,41 +274,37 @@ export async function handleUsageCommand(args: string[]): Promise<CommandResult>
     try {
         const quota = await getQuotaStatus(true);
         const config = loadConfig();
-        const resetDate = quota.nextResetAt.toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const timeUntilReset = quota.nextResetAt.getTime() - Date.now();
-        const durationStr = formatDuration(Math.max(0, timeUntilReset));
+        const resetInfo = calculateResetInfo();
 
         let response = t('commands.usage.title', { mode: config.mode.toUpperCase() });
 
         response += t('commands.usage.resources');
-        response += t('commands.usage.tier', { emoji: quota.tierEmoji, tier: quota.tier.toUpperCase(), limit: quota.tierLimit });
-        response += t('commands.usage.quota', { remaining: formatPollen(quota.tierLimit - quota.tierRemaining), limit: formatPollen(quota.tierLimit) });
-        response += t('commands.usage.usage_bar', { bar: progressBar(quota.tierLimit - quota.tierRemaining, quota.tierLimit) });
 
-        const total = quota.tierRemaining + quota.questStash + quota.walletBalance;
-        const questPollen = quota.tierRemaining + quota.questStash;
-        const paidPollen = quota.walletBalance;
+        const quest = quota.questBalance;
+        const paid = quota.walletBalance;
+        const total = quota.totalBalance || (quest + paid);
+
         response += t('commands.usage.split', {
-            quest: questPollen.toFixed(2),
-            paid: paidPollen.toFixed(2),
+            quest: quest.toFixed(2),
+            paid: paid.toFixed(2),
             total: total.toFixed(2),
         });
-        response += t('commands.usage.reset', { date: resetDate, duration: durationStr });
+        response += t('commands.usage.quest_note');
 
         if (isFull && config.apiKey) {
             if (config.keyHasAccessToProfile === false) {
                 response += t('commands.usage.restricted_key');
             } else {
-                const lastReset = calculateResetDate(quota.nextResetAt);
+                const lastReset = resetInfo.lastReset;
                 const usageData = await fetchUsageForPeriod(config.apiKey, lastReset);
                 if (usageData && usageData.length > 0) {
-                    const stats = calculateCurrentPeriodStats(usageData, lastReset, quota.tierLimit);
+                    const stats = calculateCurrentPeriodStats(usageData, lastReset);
 
                     response += t('commands.usage.period_detail', { time: lastReset.toLocaleTimeString() });
                     response += t('commands.usage.total_reqs', { reqs: stats.totalRequests, inTok: formatTokens(stats.inputTokens), outTok: formatTokens(stats.outputTokens) });
 
                     // Exact consumption split by meter_source (tier = Quest Pollen, pack = Paid).
-                    // This is the ONLY reliable split the API exposes (remaining split is dashboard/cookie-only).
+                    // This is the ONLY reliable split the API exposes.
                     response += t('commands.usage.source_split', {
                         tier: formatPollen(stats.tierUsed),
                         pack: formatPollen(stats.packUsed),
@@ -687,20 +669,18 @@ ${t('commands.config.intro')}
 ${t('commands.config.table_headers')}
 ${t('commands.config.table_divider')}
 | **apiKey** | \`${k}\` | ${t('commands.config.api_key_role')} | \`/poll connect <key>\` |
-| **mode** | \`${config.mode}\` | ${t('commands.config.mode_role')} | \`/poll mode <manual/pro/alwaysfree>\` |
+| **mode** | \`${config.mode}\` | ${t('commands.config.mode_role')} | \`/poll mode <quest/quest_only/paid/manual>\` |
 | **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | ${t('commands.config.enablePaidTools_role')} | \`/poll config enablePaidTools <true/false>\` |
 | **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | ${t('commands.config.costConfirmationRequired_role')} | \`/poll config costConfirmationRequired <true/false>\` |
 | **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | ${t('commands.config.costThreshold_role')} | \`/poll config costThreshold <X>\` |
 | **cost_estimator**| \`${config.costEstimator ?? true}\` | ${t('commands.config.cost_estimator_role')} | \`/poll config cost_estimator <true/false>\` |
-| **refillOverride**| \`${config.refillOverride ?? 'auto (déduit)'}\` | Quest Pollen refill horaire | \`/poll config refillOverride <0.01/0.15/0.4/0.8/10>\` |
-| **questStashInFreeMode**| \`${config.questStashInFreeMode ?? true}\` | Compte le stash dans alwaysfree | \`/poll config questStashInFreeMode <true/false>\` |
 | **fallbacks.free.main** | \`${config.fallbacks?.free?.main || 'free/mistral'}\` | ${t('commands.config.fallback_main_role')} | \`/poll fallback <main> <agent>\` |
 | **fallbacks.free.agent** | \`${config.fallbacks?.free?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_agent_role')} | \`/poll fallback <main> <agent>\` |
 | **fallbacks.enter.agent** | \`${config.fallbacks?.enter?.agent || 'free/openai-fast'}\`| ${t('commands.config.fallback_enter_role')} | *${t('commands.config.managed_auto')}* |
 | **status_gui** | \`${config.gui?.status || 'all'}\` | ${t('commands.config.status_gui_role')} | \`/poll config status_gui <all/alert/none>\` |
 | **logs_gui** | \`${config.gui?.logs || 'error'}\` | ${t('commands.config.logs_gui_role')} | \`/poll config logs_gui <verbose/error/none>\` |
-| **threshold_tier** | \`${config.thresholds?.tier || 80}%\` | ${t('commands.config.threshold_tier_role')} | \`/poll config threshold_tier <1-100>\` |
-| **threshold_wallet** | \`${config.thresholds?.wallet || 80}%\` | ${t('commands.config.threshold_wallet_role')} | \`/poll config threshold_wallet <1-100>\` |
+| **threshold_quest** | \`${config.thresholds?.quest ?? 0.05} 🌻\` | ${t('commands.config.threshold_quest_role')} | \`/poll config threshold_quest <pollen>\` |
+| **threshold_wallet** | \`${config.thresholds?.wallet ?? 0.5} 🌻\` | ${t('commands.config.threshold_wallet_role')} | \`/poll config threshold_wallet <pollen>\` |
 | **status_bar** | \`${config.statusBar ?? true}\` | ${t('commands.config.status_bar_role')} | \`/poll config status_bar <true/false>\` |
 | **lang** | \`${config.lang || 'en'}\` | ${t('commands.config.lang_role')} | \`/poll config lang <en/fr/es/de/it>\` |`;
 
@@ -747,24 +727,24 @@ ${t('commands.config.table_divider')}
         return { handled: true, response: `✅ logs_gui = ${value}` };
     }
 
-    if (key === 'threshold_tier' && value) {
-        const threshold = parseInt(value);
-        if (isNaN(threshold) || threshold < 0 || threshold > 100) {
-            return { handled: true, error: 'Valeur entre 0 et 100 requise' };
+    if (key === 'threshold_quest' && value) {
+        const threshold = parseFloat(value);
+        if (isNaN(threshold) || threshold < 0) {
+            return { handled: true, error: 'Valeur numérique positive requise (en pollen). Ex: 0.05' };
         }
         const config = loadConfig();
-        saveConfig({ thresholds: { ...config.thresholds, tier: threshold } });
-        return { handled: true, response: `✅ threshold_tier = ${threshold}%` };
+        saveConfig({ thresholds: { ...config.thresholds, quest: threshold } });
+        return { handled: true, response: `✅ threshold_quest = ${threshold} 🌻` };
     }
 
     if (key === 'threshold_wallet' && value) {
-        const threshold = parseInt(value);
-        if (isNaN(threshold) || threshold < 0 || threshold > 100) {
-            return { handled: true, error: 'Valeur entre 0 et 100 requise' };
+        const threshold = parseFloat(value);
+        if (isNaN(threshold) || threshold < 0) {
+            return { handled: true, error: 'Valeur numérique positive requise (en pollen). Ex: 0.5' };
         }
         const config = loadConfig();
         saveConfig({ thresholds: { ...config.thresholds, wallet: threshold } });
-        return { handled: true, response: `✅ threshold_wallet = ${threshold}%` };
+        return { handled: true, response: `✅ threshold_wallet = ${threshold} 🌻` };
     }
 
     if (key === 'status_bar' && value) {
@@ -801,33 +781,11 @@ ${t('commands.config.table_divider')}
         return { handled: true, response: `✅ costConfirmationRequired = ${enabled}` };
     }
 
-    if (key === 'refillOverride' && value) {
-        if (value === 'auto') {
-            saveConfig({ refillOverride: undefined });
-            return { handled: true, response: '✅ refillOverride = auto (déduction automatique)' };
-        }
-        const override = parseFloat(value);
-        if (isNaN(override) || ![0.01, 0.15, 0.4, 0.8, 10].includes(override)) {
-            return { handled: true, error: 'Valeurs supportées: auto, 0.01, 0.15, 0.4, 0.8, 10' };
-        }
-        saveConfig({ refillOverride: override });
-        return { handled: true, response: `✅ refillOverride = ${override} 🌻/h` };
-    }
-
-    if (key === 'questStashInFreeMode' && value) {
-        if (value !== 'true' && value !== 'false') {
-            return { handled: true, error: 'Valeurs supportées: true, false' };
-        }
-        const enabled = value === 'true';
-        saveConfig({ questStashInFreeMode: enabled });
-        return { handled: true, response: `✅ questStashInFreeMode = ${enabled}${enabled ? ' (le stash Quest compte comme free)' : ' (seul le refill horaire compte)'}` };
-    }
-
 
 
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_tier, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, refillOverride, questStashInFreeMode, lang`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_quest, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, lang`
     };
 }
 
@@ -838,15 +796,13 @@ function handleHelpCommand(): CommandResult {
         { key: 'lang',              values: 'en, fr, es, de, it, zh',             i18n: 'commands.help.config.lang' },
         { key: 'status_gui',        values: 'none, alert, all',                    i18n: 'commands.help.config.status_gui' },
         { key: 'logs_gui',          values: 'none, error, verbose',                i18n: 'commands.help.config.logs_gui' },
-        { key: 'threshold_tier',    values: '0-100',                               i18n: 'commands.help.config.threshold_tier' },
-        { key: 'threshold_wallet',  values: '0-100',                               i18n: 'commands.help.config.threshold_wallet' },
+        { key: 'threshold_quest',   values: 'pollen (e.g. 0.05)',                  i18n: 'commands.help.config.threshold_quest' },
+        { key: 'threshold_wallet',  values: 'pollen (e.g. 0.5)',                   i18n: 'commands.help.config.threshold_wallet' },
         { key: 'status_bar',        values: 'true/false',                          i18n: 'commands.help.config.status_bar' },
         { key: 'cost_estimator',    values: 'true/false',                          i18n: 'commands.help.config.cost_estimator' },
         { key: 'enablePaidTools',   values: 'true/false',                          i18n: 'commands.help.config.enablePaidTools' },
         { key: 'costThreshold',     values: 'number (pollen)',                     i18n: 'commands.help.config.costThreshold' },
         { key: 'costConfirmationRequired', values: 'true/false',                   i18n: 'commands.help.config.costConfirmationRequired' },
-        { key: 'refillOverride',    values: '0.01, 0.15, 0.4, 0.8, 10, auto',    i18n: 'commands.help.config.refillOverride' },
-        { key: 'questStashInFreeMode', values: 'true/false',                       i18n: 'commands.help.config.questStashInFreeMode' },
     ];
 
     const configSection = configKeys.map(k =>
@@ -1040,10 +996,8 @@ export async function handleInfosCommand(): Promise<CommandResult> {
         }
     }
 
-    // Get dynamic tier table based on user's language
-const userLang = (config.lang || 'en') as 'en' | 'fr' | 'es' | 'de' | 'it' | 'zh';
-const tierTable = formatTierTable(userLang);
-
+    // v6.5: Quest/Paid page (the old tier/refill table was removed upstream —
+    // hourly refills no longer exist).
 const response = `${t('commands.infos.title', { name })}
 ${t('commands.infos.features_title')}
 ${t('commands.infos.features_free')}
@@ -1056,11 +1010,9 @@ ${t('commands.infos.get_started')}
 
 ${t('commands.infos.about')}
 
-${t('commands.infos.levels_title')}
+${t('commands.infos.quest_paid_title')}
 
-${tierTable}
-
-${t('commands.infos.hourly_note')}
+${t('commands.infos.quest_paid_body')}
 
 ${t('commands.infos.quests')}
 

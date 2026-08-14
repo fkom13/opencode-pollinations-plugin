@@ -9,6 +9,5 @@ export function createStatusHooks(client: any) {
 }
 
 function formatStatus(quota: QuotaStatus): string {
-    const tierName = quota.tier === 'alwaysfree' ? 'Free' : quota.tier;
-    return `${tierName} ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} 🌼 | Wallet $${quota.walletBalance.toFixed(2)}`;
+    return `🎁 Quest ~${quota.questBalance.toFixed(2)} | 💎 Paid ~${quota.walletBalance.toFixed(2)}`;
 }

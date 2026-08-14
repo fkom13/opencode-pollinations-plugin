@@ -69,31 +69,11 @@ export const polliSttTool: ToolDefinition = tool({
             context.metadata({ title: t('tools.polli_transcribe_audio.toast_dl') });
 
             try {
-                const https = await import('https');
-                const http = await import('http');
-                const protocol = audioPath.startsWith('https') ? https : http;
-
-                audioBuffer = await new Promise<Buffer>((resolve, reject) => {
-                    const chunks: Buffer[] = [];
-                    protocol.get(audioPath, (res) => {
-                        if (res.statusCode === 301 || res.statusCode === 302) {
-                            // Follow redirect
-                            const redirectUrl = res.headers.location;
-                            if (redirectUrl) {
-                                const redirectProtocol = redirectUrl.startsWith('https') ? https : http;
-                                redirectProtocol.get(redirectUrl, (res2) => {
-                                    res2.on('data', chunk => chunks.push(chunk));
-                                    res2.on('end', () => resolve(Buffer.concat(chunks)));
-                                    res2.on('error', reject);
-                                }).on('error', reject);
-                                return;
-                            }
-                        }
-                        res.on('data', chunk => chunks.push(chunk));
-                        res.on('end', () => resolve(Buffer.concat(chunks)));
-                        res.on('error', reject);
-                    }).on('error', reject);
-                });
+                // v6.5: use a single bounded fetch (timeout) instead of unbounded http(s).get.
+                audioBuffer = Buffer.from(await (await fetch(audioPath, {
+                    signal: AbortSignal.timeout(60000),
+                    redirect: 'follow',
+                })).arrayBuffer());
 
                 // Extract filename from URL
                 try {

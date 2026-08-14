@@ -71,10 +71,21 @@ function getExternalConfigPaths() {
 const EXTERNAL_PATHS = getExternalConfigPaths();
 
 // === V5 CONFIGURATION SCHEMA ===
+// v6.5 billing modes (Quest/Paid semantics, honest policy names):
+//   quest      = QUEST_PREFERRED — default. Quest first (server default),
+//                Paid fallback allowed when the server switches bucket.
+//   quest_only = QUEST_ELIGIBLE_ONLY — blocks paid_only models locally, only
+//                sends when the client considers the call Quest-eligible.
+//                BEST-EFFORT: a pack debit can still occur (race/real cost).
+//   paid       = PAID_ALLOWED — Paid allowed, paid_only allowed per Cost Guard.
+//   manual     = MANUAL — existing manual behavior.
+// Legacy aliases (migrated on load): alwaysfree → quest, pro → paid.
+
+export type BillingMode = 'quest' | 'quest_only' | 'paid' | 'manual';
 
 export interface PollinationsConfigV5 {
     version: string | number;
-    mode: 'manual' | 'alwaysfree' | 'pro';
+    mode: BillingMode;
     apiKey?: string;
     keyHasAccessToProfile?: boolean;
 
@@ -83,8 +94,10 @@ export interface PollinationsConfigV5 {
         logs: 'none' | 'error' | 'verbose';
     };
 
+    // v6.5: absolute pollen floors (not percentages). quest = Quest alert
+    // floor, wallet = Paid wallet alert floor.
     thresholds: {
-        tier: number;
+        quest: number;
         wallet: number;
     };
 
@@ -98,9 +111,12 @@ export interface PollinationsConfigV5 {
     costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
     statusBar: boolean;
     costEstimator: boolean; // Show cost estimates in tool outputs (default: true)
-    refillOverride?: number; // Manual Quest Pollen refill override (0.01/0.15/0.4/0.8/10)
-    questStashInFreeMode?: boolean; // Count quest stash as free in alwaysfree Safety Net (default: true)
     lang?: string; // Interface language (en, fr, etc.)
+
+    // v6.5 purge: refillOverride / questStashInFreeMode removed (hourly
+    // refill no longer exists upstream). Kept as optional for disk migration.
+    refillOverride?: number;
+    questStashInFreeMode?: boolean;
 }
 
 // LOAD PACKAGE VERSION
@@ -115,9 +131,9 @@ try {
 
 const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     version: PKG_VERSION,
-    mode: 'manual',
+    mode: 'quest',
     gui: { status: 'alert', logs: 'none' },
-    thresholds: { tier: 10, wallet: 5 },
+    thresholds: { quest: 0.05, wallet: 0.5 },
     fallbacks: {
         free: { main: 'free/openai-fast', agent: 'free/openai-fast' },
         enter: { agent: 'free/openai-fast' }
@@ -128,9 +144,52 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     keyHasAccessToProfile: true, // Default true for legacy keys
     statusBar: true,
     costEstimator: true, // Show cost estimates by default
-    questStashInFreeMode: true, // Count quest stash as free in alwaysfree
     lang: 'en', // Default language is English
 };
+
+// v6.5 migration: legacy mode/threshold names → Quest/Paid semantics.
+// alwaysfree → quest (QUEST_PREFERRED), pro → paid (PAID_ALLOWED).
+// Legacy tier percentage thresholds are replaced by absolute pollen floors.
+function migrateV65Config(raw: any): any {
+    if (!raw || typeof raw !== 'object') return raw;
+
+    const legacyModeMap: Record<string, BillingMode> = {
+        'alwaysfree': 'quest',
+        'pro': 'paid',
+        'manual': 'manual',
+        'quest': 'quest',
+        'quest_only': 'quest_only',
+        'paid': 'paid',
+    };
+    if (raw.mode && legacyModeMap[raw.mode]) {
+        const mapped = legacyModeMap[raw.mode];
+        if (mapped !== raw.mode) {
+            logConfig(`Migrating legacy mode '${raw.mode}' → '${mapped}'`);
+            raw.mode = mapped;
+        }
+    }
+
+    if (raw.thresholds && typeof raw.thresholds === 'object') {
+        if (raw.thresholds.tier !== undefined && raw.thresholds.quest === undefined) {
+            // Old percentage-of-tier threshold cannot be converted to a
+            // meaningful absolute floor: use the v6.5 default.
+            logConfig('Migrating legacy thresholds.tier → thresholds.quest (default 0.05)');
+            raw.thresholds.quest = 0.05;
+            delete raw.thresholds.tier;
+        }
+    }
+
+    // Purge dead refill concepts from persisted config.
+    if ('refillOverride' in raw) {
+        logConfig('Removing deprecated refillOverride');
+        delete raw.refillOverride;
+    }
+    if ('questStashInFreeMode' in raw) {
+        logConfig('Removing deprecated questStashInFreeMode');
+        delete raw.questStashInFreeMode;
+    }
+    return raw;
+}
 
 import { log as logSystem } from './logger.js';
 
@@ -255,7 +314,7 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         // If user is in PRO without key, they get "Missing Key" error, which is correct.
     }
 
-    return { ...config, version: PKG_VERSION } as PollinationsConfigV5;
+    return migrateV65Config({ ...config, version: PKG_VERSION }) as PollinationsConfigV5;
 }
 
 export function saveConfig(updates: Partial<PollinationsConfigV5>) {

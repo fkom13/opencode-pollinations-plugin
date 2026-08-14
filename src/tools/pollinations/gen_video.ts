@@ -171,7 +171,9 @@ export const polliGenVideoTool: ToolDefinition = tool({
             }
 
             const promptEncoded = encodeURIComponent(args.prompt);
-            const url = `https://gen.pollinations.ai/image/${promptEncoded}?${params}`;
+            // v6.5: /video/{prompt} is the canonical route (SDK/CLI). /image/{prompt}
+            // remains compatible upstream but the plugin follows the semantic route.
+            const url = `https://gen.pollinations.ai/video/${promptEncoded}?${params}`;
 
             const headers: Record<string, string> = {
                 'Authorization': `Bearer ${apiKey}`,

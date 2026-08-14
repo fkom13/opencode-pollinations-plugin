@@ -416,7 +416,8 @@ function detectAudioType(m: PollinationsModel): 'tts' | 'stt' | 'both' {
 
 export function httpsGet(
     url: string,
-    headers: Record<string, string> = {}
+    headers: Record<string, string> = {},
+    timeoutMs: number = 300000
 ): Promise<{ data: Buffer; headers: Record<string, string> }> {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(url);
@@ -431,9 +432,9 @@ export function httpsGet(
         };
 
         const req = https.request(options, (res) => {
-            // Handle redirects
+            // Handle redirects (propagate the timeout on follow)
             if ([301, 302, 307].includes(res.statusCode || 0) && res.headers.location) {
-                httpsGet(res.headers.location, headers).then(resolve).catch(reject);
+                httpsGet(res.headers.location, headers, timeoutMs).then(resolve).catch(reject);
                 return;
             }
 
@@ -467,9 +468,11 @@ export function httpsGet(
         });
 
         req.on('error', reject);
-        req.setTimeout(300000, () => {
+        // v6.5: per-call timeout (clamped to 1h absolute max), no blind replay.
+        const clamped = Math.min(Math.max(timeoutMs, 10000), 3600000);
+        req.setTimeout(clamped, () => {
             req.destroy();
-            reject(new Error('Timeout (300s)'));
+            reject(new Error(`Timeout (${Math.round(clamped / 1000)}s)`));
         });
         req.end();
     });

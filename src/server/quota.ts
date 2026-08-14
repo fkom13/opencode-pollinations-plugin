@@ -7,39 +7,32 @@ import { DetailedUsageEntry } from './pollinations-api.js';
 
 interface BalanceResponse {
     total?: number;       // PR #12449 (new format)
-    allowance?: number;   // PR #12449 — hourly refill (0.01/0.15/0.4/0.8/10)
-    pack?: number;        // PR #12449 — paid pollen
+    allowance?: number;   // PR #12449 — Quest allowance if present (not in prod yet)
+    pack?: number;        // PR #12449 — paid pollen if present (not in prod yet)
     balance?: number;     // legacy format (single combined number)
     currency?: string;
 }
 
-interface ResetInfo {
-    nextReset: Date;
-    lastReset: Date;
-    timeUntilReset: number;
-    timeSinceReset: number;
-    resetHour: number;
-    resetMinute: number;
-    resetSecond: number;
-    progressPercent: number;
-}
-
+/**
+ * v6.5 — Quest/Paid semantics.
+ * The old tier/refill model (KNOWN_REFILLS, hourly allowance deduction,
+ * tierMetaForAllowance) has been removed: upstream deleted the hourly refill
+ * (cron disabled 2026-06, code removed 2026-07). The client cannot read a
+ * reliable Quest/Paid split from /account/balance in prod, so `questBalance`
+ * is a BEST-EFFORT estimate (claimed quest pollen minus tier-metered usage
+ * since claim). `walletBalance` is Paid pollen when exposed (pack), otherwise
+ * estimated as total minus quest. meter_source in /account/usage remains the
+ * only authoritative retrospective split.
+ */
 export interface QuotaStatus {
-    tierRemaining: number;
-    tierUsed: number;
-    tierLimit: number;       // hourly refill (deduced or native allowance)
-    questStash: number;      // accumulated quest pollen (claimed - consumed)
-    walletBalance: number;
-
-    nextResetAt: Date;
-    timeUntilReset: number;
+    questBalance: number;    // best-effort Quest pollen available
+    walletBalance: number;   // Paid pollen (pack) — best-effort when pack absent
+    totalBalance: number;    // raw {balance} total from /account/balance
 
     canUseEnterprise: boolean;
     isUsingWallet: boolean;
     needsAlert: boolean;
 
-    tier: string;
-    tierEmoji: string;
     errorType?: 'auth_limited' | 'network' | 'unknown';
 }
 
@@ -49,20 +42,11 @@ const CACHE_TTL = 30000;
 let cachedQuota: QuotaStatus | null = null;
 let lastQuotaFetch: number = 0;
 
-const STASH_CACHE_TTL = 5 * 60 * 1000; // 5 min — le stash Quest change rarement
+const STASH_CACHE_TTL = 5 * 60 * 1000; // 5 min — Quest stash changes rarely
 let cachedStash: { questStash: number; claimedQuestTier: number; tierConsumedSinceClaim: number } | null = null;
 let lastStashFetch: number = 0;
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
-
-const KNOWN_REFILLS = [
-    { pollen: 0,    emoji: '👤', label: 'anonymous' },
-    { pollen: 0.01, emoji: '🍄', label: 'spore' },
-    { pollen: 0.15, emoji: '🌱', label: 'seed' },
-    { pollen: 0.4,  emoji: '🌸', label: 'flower' },
-    { pollen: 0.8,  emoji: '🍯', label: 'nectar' },
-    { pollen: 10,   emoji: '🐝', label: 'router' },
-];
 
 // === LOGGING ===
 import { logApi } from './logger.js';
@@ -121,106 +105,13 @@ export async function fetchUsageForPeriod(apiKey: string, lastReset: Date): Prom
     return allUsage;
 }
 
-// === ALLOWANCE DEDUCTION ===
-
-async function fetchUsageForAllowance(apiKey: string): Promise<DetailedUsageEntry[]> {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * ONE_HOUR_MS);
-    const allUsage: DetailedUsageEntry[] = [];
-    let cursorEventId: string | null = null;
-    let pageCount = 0;
-    const maxPages = 20;
-
-    while (pageCount < maxPages) {
-        let path = `/account/usage?days=7&limit=500`;
-        if (cursorEventId) {
-            path += `&before_event_id=${encodeURIComponent(cursorEventId)}`;
-        }
-
-        const res = await fetchAPI<{ usage: DetailedUsageEntry[]; count: number }>(path, apiKey);
-
-        if (!res.usage || res.usage.length === 0) break;
-
-        let reachedCutoff = false;
-        for (const entry of res.usage) {
-            const ts = (entry.timestamp.includes('Z') ? entry.timestamp : entry.timestamp.replace(' ', 'T') + 'Z');
-            if (new Date(ts) < sevenDaysAgo) { reachedCutoff = true; break; }
-            allUsage.push(entry);
-        }
-
-        if (reachedCutoff || res.usage.length < 500) break;
-
-        const last = res.usage[res.usage.length - 1] as any;
-        cursorEventId = last?.cursor_event_id || null;
-        if (!cursorEventId) break;
-        pageCount++;
-    }
-
-    logQuota(`deduceAllowance: fetched ${allUsage.length} records over ${pageCount + 1} pages`);
-    return allUsage;
-}
-
-async function deduceAllowanceFromApi(apiKey: string): Promise<number> {
-    try {
-        const allUsage = await fetchUsageForAllowance(apiKey);
-        if (allUsage.length === 0) return 0;
-
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * ONE_HOUR_MS);
-        const hourlyBuckets = new Map<number, number>();
-
-        for (const entry of allUsage) {
-            if (entry.meter_source !== 'tier') continue;
-            const ts = entry.timestamp.includes('Z') ? entry.timestamp : entry.timestamp.replace(' ', 'T') + 'Z';
-            const entryTime = new Date(ts);
-            if (entryTime < sevenDaysAgo) continue;
-
-            const hourKey = entryTime.getUTCFullYear() * 1000000
-                + entryTime.getUTCMonth() * 10000
-                + entryTime.getUTCDate() * 100
-                + entryTime.getUTCHours();
-            hourlyBuckets.set(hourKey, (hourlyBuckets.get(hourKey) || 0) + entry.cost_usd);
-        }
-
-        const maxHourlyTier = Math.max(0, ...hourlyBuckets.values());
-        const match = KNOWN_REFILLS.slice().reverse().find(r => r.pollen <= maxHourlyTier + 0.02);
-
-        logQuota(`deduceAllowance: ${allUsage.length} records, ${hourlyBuckets.size} hourly buckets, max=${maxHourlyTier.toFixed(4)}, deduced=${match?.pollen ?? 0} (${match?.label})`);
-        return match ? match.pollen : 0;
-    } catch (e) {
-        logQuota(`deduceAllowance failed: ${e}`);
-        return 0;
-    }
-}
-
-function deduceAllowanceFromUsage(usage: DetailedUsageEntry[]): number {
-    const tierCosts = usage
-        .filter(u => u.meter_source === 'tier')
-        .map(u => u.cost_usd);
-    const maxHourlyTier = Math.max(0, ...tierCosts);
-    const match = KNOWN_REFILLS.slice().reverse().find(r => r.pollen <= maxHourlyTier + 0.02);
-    return match ? match.pollen : 0;
-}
-
-/** Map hourly refill amount → display meta (exported for unit tests). */
-export function tierMetaForAllowance(allowance: number): { label: string; emoji: string } {
-    const match = KNOWN_REFILLS.find(r => r.pollen === allowance)
-        || KNOWN_REFILLS.findLast(r => r.pollen <= allowance);
-    return match
-        ? { label: match.label, emoji: match.emoji }
-        : { label: 'unknown', emoji: '❓' };
-}
-
-/** Known hourly refill ladder (read-only, for tests / UI). */
-export function getKnownRefills(): ReadonlyArray<{ pollen: number; emoji: string; label: string }> {
-    return KNOWN_REFILLS;
-}
-
 // === MAIN QUOTA FUNCTION ===
 
 export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus> {
     const config = loadConfig();
 
     if (!config.apiKey) {
-        return createDefaultQuota('none', 0);
+        return createDefaultQuota(0);
     }
 
     const now = Date.now();
@@ -233,24 +124,6 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
 
         const balanceRes = await fetchAPI<BalanceResponse>('/account/balance', config.apiKey);
 
-        const resetInfo = calculateResetInfo();
-        const periodUsage = await fetchUsageForPeriod(config.apiKey, resetInfo.lastReset);
-
-        const allowance = balanceRes.allowance
-            ?? (config as any).refillOverride
-            ?? await deduceAllowanceFromApi(config.apiKey);
-
-        const tierMeta = tierMetaForAllowance(allowance);
-        const tierLimit = allowance;
-
-        const { tierUsed } = calculateCurrentPeriodUsage(periodUsage, resetInfo);
-        const tierRemaining = Math.max(0, tierLimit - tierUsed);
-        const cleanTierRemaining = Math.max(0, parseFloat(tierRemaining.toFixed(4)));
-
-        const totalBalance = balanceRes.total
-            ?? balanceRes.balance
-            ?? 0;
-
         // Fetch quest stash BEFORE paidPollen calculation (cached 5 min)
         const nowStash = Date.now();
         if (!cachedStash || (nowStash - lastStashFetch) > STASH_CACHE_TTL) {
@@ -259,34 +132,40 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
                 lastStashFetch = nowStash;
             } catch { /* keep previous */ }
         }
-        const questStash = cachedStash?.questStash ?? 0;
+        const questEstimate = cachedStash?.questStash ?? 0;
 
+        const totalBalance = balanceRes.total
+            ?? balanceRes.balance
+            ?? 0;
+
+        // Quest balance: native allowance when available (PR #12541 not in prod),
+        // else best-effort stash estimate.
+        const questBalance = balanceRes.allowance !== undefined
+            ? Math.max(0, balanceRes.allowance)
+            : questEstimate;
+
+        // Paid pollen: native pack when available, else total minus quest estimate.
         const paidPollenNative = balanceRes.pack;
-        const paidPollen = paidPollenNative !== undefined
-            ? paidPollenNative
-            : Math.max(0, totalBalance - cleanTierRemaining - questStash);
+        const walletBalance = paidPollenNative !== undefined
+            ? Math.max(0, paidPollenNative)
+            : Math.max(0, totalBalance - questBalance);
 
-        const cleanWalletBalance = Math.max(0, parseFloat(paidPollen.toFixed(4)));
+        const cleanQuestBalance = Math.max(0, parseFloat(questBalance.toFixed(4)));
+        const cleanWalletBalance = Math.max(0, parseFloat(walletBalance.toFixed(4)));
 
-        const tierAlertPercent = tierLimit > 0 ? (cleanTierRemaining / tierLimit * 100) : 0;
-        const tierNeedsAlert = tierLimit > 0 && tierAlertPercent <= config.thresholds.tier;
+        // Alerts (v6.5): thresholds are absolute pollen floors, not percentages.
+        const questNeedsAlert = cleanQuestBalance > 0 && cleanQuestBalance < (config.thresholds.quest ?? 0.05);
         const walletNeedsAlert = cleanWalletBalance > 0 && cleanWalletBalance < (config.thresholds.wallet || 0.5);
 
-        logQuota(`Fetch Success. Allowance: ${allowance}, Stash: ${questStash}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
+        logQuota(`Fetch Success. Quest: ${cleanQuestBalance}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
 
         cachedQuota = {
-            tierRemaining: cleanTierRemaining,
-            tierUsed,
-            tierLimit,
-            questStash,
+            questBalance: cleanQuestBalance,
             walletBalance: cleanWalletBalance,
-            nextResetAt: resetInfo.nextReset,
-            timeUntilReset: resetInfo.timeUntilReset,
-            canUseEnterprise: cleanTierRemaining > 0.05 || cleanWalletBalance > 0.05,
-            isUsingWallet: cleanTierRemaining <= 0.05 && cleanWalletBalance > 0.05,
-            needsAlert: tierNeedsAlert || walletNeedsAlert,
-            tier: tierMeta.label,
-            tierEmoji: tierMeta.emoji
+            totalBalance,
+            canUseEnterprise: cleanQuestBalance > 0.05 || cleanWalletBalance > 0.05,
+            isUsingWallet: cleanQuestBalance <= 0.05 && cleanWalletBalance > 0.05,
+            needsAlert: questNeedsAlert || walletNeedsAlert
         };
 
         lastQuotaFetch = now;
@@ -299,25 +178,18 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
         if (e.message && e.message.includes('403')) errorType = 'auth_limited';
         else if (e.message && e.message.includes('Network Error')) errorType = 'network';
 
-        return cachedQuota || { ...createDefaultQuota('error', 1), errorType };
+        return cachedQuota || { ...createDefaultQuota(0), errorType };
     }
 }
 
-function createDefaultQuota(tierName: string, limit: number): QuotaStatus {
-    const meta = tierMetaForAllowance(limit);
+function createDefaultQuota(_limit: number): QuotaStatus {
     return {
-        tierRemaining: 0,
-        tierUsed: 0,
-        tierLimit: limit,
-        questStash: 0,
+        questBalance: 0,
         walletBalance: 0,
-        nextResetAt: new Date(),
-        timeUntilReset: 0,
+        totalBalance: 0,
         canUseEnterprise: false,
         isUsingWallet: false,
-        needsAlert: false,
-        tier: tierName !== 'none' ? meta.label : 'none',
-        tierEmoji: meta.emoji
+        needsAlert: false
     };
 }
 
@@ -332,7 +204,7 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'User-Agent': 'opencode-pollinations-plugin/6.4.1'
+                'User-Agent': 'opencode-pollinations-plugin/6.5.0'
             }
         };
 
@@ -357,12 +229,17 @@ function fetchAPI<T>(endpoint: string, apiKey: string): Promise<T> {
             reject(new Error(`Network Error: ${e.message}`));
         });
 
+        // v6.5: bound the request (quota read was previously unbounded → hang risk).
+        req.setTimeout(10000, () => {
+            req.destroy(new Error('Timeout: quota API fetch exceeded 10s'));
+        });
+
         req.end();
     });
 }
 
-/** Next top-of-hour UTC reset window (exported for unit tests). */
-export function calculateResetInfo(): ResetInfo {
+/** Next top-of-hour UTC reset window (used for usage period windows only). */
+export function calculateResetInfo(): { nextReset: Date; lastReset: Date } {
     const now = new Date();
     const nextReset = new Date(Date.UTC(
         now.getUTCFullYear(),
@@ -372,68 +249,22 @@ export function calculateResetInfo(): ResetInfo {
         0, 0, 0
     ));
     const lastReset = new Date(nextReset.getTime() - ONE_HOUR_MS);
-
-    const timeUntilReset = Math.max(0, nextReset.getTime() - now.getTime());
-    const timeSinceReset = Math.max(0, now.getTime() - lastReset.getTime());
-    const progressPercent = Math.min(100, (timeSinceReset / ONE_HOUR_MS) * 100);
-
-    return {
-        nextReset,
-        lastReset,
-        timeUntilReset,
-        timeSinceReset,
-        resetHour: nextReset.getUTCHours(),
-        resetMinute: 0,
-        resetSecond: 0,
-        progressPercent
-    };
-}
-
-function calculateCurrentPeriodUsage(
-    usage: DetailedUsageEntry[],
-    resetInfo: ResetInfo
-): { tierUsed: number; packUsed: number } {
-    let tierUsed = 0;
-    let packUsed = 0;
-
-    const entriesAfterReset = usage.filter(entry => {
-        const timestamp = entry.timestamp.replace(' ', 'T') + 'Z';
-        const entryTime = new Date(timestamp);
-        return entryTime >= resetInfo.lastReset;
-    });
-
-    for (const entry of entriesAfterReset) {
-        if (entry.meter_source === 'tier') {
-            tierUsed += entry.cost_usd;
-        } else if (entry.meter_source === 'pack') {
-            packUsed += entry.cost_usd;
-        }
-    }
-
-    return { tierUsed, packUsed };
+    return { nextReset, lastReset };
 }
 
 export function formatQuotaForToast(quota: QuotaStatus): string {
     if (quota.errorType === 'auth_limited') {
-        return `🔑 CLE LIMITÉE (Génération Seule) | 💎 Wallet: N/A | ⏰ Reset: N/A`;
+        return `🔑 CLE LIMITÉE (Génération Seule) | 💎 Paid: N/A | 🎁 Quest: N/A`;
     }
 
-    const tierPercent = quota.tierLimit > 0
-        ? Math.round((quota.tierRemaining / quota.tierLimit) * 100)
-        : 0;
-
-    const ms = quota.timeUntilReset;
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    const resetIn = `${hours}h${minutes}m`;
-
-    const stashStr = quota.questStash > 0
-        ? ` | 🎁 ~${quota.questStash.toFixed(2)} (stash)`
-        : '';
-
-    return `${quota.tierEmoji} ${quota.tierRemaining.toFixed(2)}/${quota.tierLimit} (${tierPercent}%)${stashStr} | 💎 $${quota.walletBalance.toFixed(2)} | ⏰ ${resetIn}`;
+    return `🎁 Quest: ~${quota.questBalance.toFixed(2)} | 💎 Paid: ~${quota.walletBalance.toFixed(2)}${quota.needsAlert ? ' | ⚠️' : ''}`;
 }
 
+/**
+ * Best-effort Quest balance: claimed quest pollen (tier bucket) minus
+ * tier-metered consumption since the earliest claim. This is NOT a server
+ * guarantee — the authoritative split is meter_source in /account/usage.
+ */
 export async function fetchQuestStash(apiKey: string): Promise<{ questStash: number; claimedQuestTier: number; tierConsumedSinceClaim: number }> {
     let claimedQuestTier = 0;
     let firstClaimMs = Infinity;
