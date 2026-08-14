@@ -75,7 +75,7 @@ export function removePendingRequest(id: string) {
 
 // ─── Main Function ───────────────────────────────────────────────────────
 
-export function isTokenBased(category: 'image' | 'video' | 'audio' | 'text', modelName: string): boolean {
+export function isTokenBased(category: 'image' | 'video' | 'audio' | 'text' | '3d', modelName: string): boolean {
     const m = ModelRegistry.getByNameOrAlias(category, modelName);
     return !!(m?.pricing && (
         m.pricing.completionImageTokens !== undefined ||
@@ -103,7 +103,7 @@ export function checkCostControl(
     args: any,
     modelName: string,
     estimatedCost: number,
-    category: 'image' | 'video' | 'audio' = 'image'
+    category: 'image' | 'video' | 'audio' | '3d' = 'image'
 ): CostCheckResult {
     const config = loadConfig();
     const enablePaid = config.enablePaidTools !== false; // default true

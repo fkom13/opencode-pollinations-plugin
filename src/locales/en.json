@@ -42,7 +42,12 @@
       "lang_role": "Plugin Language",
       "not_configured": "Not configured",
       "managed_auto": "Managed automatically",
-      "threshold_quest_role": "Quest balance alert floor (pollen)"
+      "threshold_quest_role": "Quest balance alert floor (pollen)",
+      "timeouts_default_role": "Global timeout for remote operations",
+      "timeouts_long_role": "Timeout for long-running generations",
+      "timeouts_max_role": "Absolute timeout ceiling",
+      "timeouts_video_role": "Video generation timeout",
+      "timeouts_3d_role": "3D generation timeout"
     },
     "generic": {
       "add_key_hint": "💡 Use /poll connect <key> to add an API key.",
@@ -204,7 +209,9 @@
       "res_i2i_src": "I2I Source: {src}",
       "res_file": "File: {path}",
       "res_size": "Size: {size}",
-      "cost_title": "\n💰 **Financial Report :**"
+      "cost_title": "\n💰 **Financial Report :**",
+      "arg_timeout": "Per-call timeout in seconds (10–3600).",
+      "invalid_timeout": "❌ Invalid timeout_seconds: {reason}"
     },
     "config": {
       "no_values": "No configuration values provided to update. Please specify at least one setting via the arguments.",
@@ -294,7 +301,9 @@
       "err_invalid": "❌ Invalid parameters: {msg}",
       "err_520": "⚠️ LTX-2 returned an intermittent 520 error.\n💡 Retry in a few seconds.",
       "err_timeout": "❌ Timeout - Video generation took too long.\n💡 Retry with a shorter duration.",
-      "err_gen": "❌ Video generation error: {error}"
+      "err_gen": "❌ Video generation error: {error}",
+      "arg_timeout": "Per-call timeout in seconds (10–3600). No automatic resubmit on timeout.",
+      "invalid_timeout": "❌ Invalid timeout_seconds: {reason}"
     },
     "polli_gen_audio": {
       "desc": "Convert text to speech using Pollinations AI.\n\n**🔊 Models:**\n\n| Model | Type | Voices | Format | Cost | Notes |\n|-------|------|--------|--------|------|-------|\n| openai-audio | TTS + STT | 6 | mp3, wav, pcm16 | Lowest | **DEFAULT** - GPT-4o Audio |\n| elevenlabs | TTS | 34 | mp3, wav, etc. | Higher | Expressive voices |\n\n**🎵 OpenAI Audio (Default, Recommended):**\n- Voices: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`\n- Formats: `mp3` (default), `wav`, `pcm16`\n- Uses GPT-4o Audio Preview modalities endpoint\n- Lowest cost option\n\n**🎤 ElevenLabs:**\n- 34 expressive voices including: rachel, domi, bella, adam, etc.\n- Higher quality natural-sounding speech\n- More expensive but more expressive\n\n**💡 Tips:**\n- Use `openai-audio` for cost-effective TTS\n- Use `elevenlabs` for more expressive/character voices\n- For STT (transcription), use the `transcribe_audio` tool.",
@@ -462,6 +471,43 @@
       "file_not_found": "❗ File not found: {path}",
       "no_result": "❗ No result received.",
       "error": "❗ Error: {error}"
+    },
+    "gen3d": {
+      "desc": "Generate a 3D object from a text prompt or reference image using Pollinations AI.\n\n**🧊 3D Models** :\n- `trellis-2` — default, ~0.24 pollen (low), GLB output, image-to-3D (1 reference image max).\n- `hyper3d-rodin` — paid_only, ~0.10 pollen, GLB output.\n\n**⏱️ Long-running** : generation can take 20s–150s+ (LONG_BLOCKING). Use `timeout_seconds` to control the local wait.\n\n**♻️ Recovery** : after a timeout, the generation may still be running and billed. Re-running with the SAME seed returns the artifact from cache (not rebilled).",
+      "arg_prompt": "Text description of the 3D object (optional when image is provided)",
+      "arg_image": "Optional reference image URL (1 image max)",
+      "arg_model": "Model to use (default: trellis-2).",
+      "arg_resolution": "Resolution: low / medium / high (default: low)",
+      "arg_seed": "Seed for reproducibility and cache recovery",
+      "arg_save_to": "Custom output directory or file path",
+      "arg_filename": "Custom output filename (without extension)",
+      "arg_timeout": "Per-call timeout in seconds (10–3600). No automatic resubmit on timeout.",
+      "req_key": "❌ polli_gen_3d requires an API key (/poll login).",
+      "unknown_model": "Model '{model}' not in the 3D registry — beta passthrough",
+      "invalid_image_url": "❌ Invalid image URL. Use http:// or https://",
+      "invalid_timeout": "❌ Invalid timeout_seconds: {reason}",
+      "blocked": "🚫 3D generation blocked by the Cost Guard.",
+      "generating": "Generating 3D: {model} ({resolution})...",
+      "success": "3D generated ✓ ({model})",
+      "err_format": "❌ Artifact validation failed: expected GLB (glTF-binary), got '{detected}'. File NOT saved.",
+      "err_toast": "Error: {error}",
+      "err_timeout": "⏱️ **3D generation timed out after {seconds}s.**\n\n⚠️ The generation may still be running upstream and **may still be billed** (client timeout ≠ upstream cancellation). We did NOT resubmit automatically.\n\n♻️ **Recovery** : re-run with the SAME parameters and seed `{seed}` (model `{model}`) — the result is served from cache and is not rebilled.",
+      "err_pollen": "❌ Insufficient pollen credits to run {model}.\n💡 Complete quests or top up at enter.pollinations.ai.",
+      "err_auth": "❌ Invalid or unauthorized API key.",
+      "err_gen": "❌ 3D generation error: {error}",
+      "res_title": "### 🧊 3D Generation Result",
+      "res_prompt": "- **Prompt**     : {prompt}",
+      "res_model": "- **Model**      : `{model}`",
+      "res_resolution": "- **Resolution** : {resolution}",
+      "res_seed": "- **Seed**       : {seed}",
+      "res_image": "- **Ref. image** : {src}",
+      "res_file": "- **File**       : `{path}`",
+      "res_size": "- **Size**       : {size}",
+      "res_format": "- **Format**     : {ext} (magic-bytes validated)",
+      "res_cost_est": "- **Est. Cost**  : {cost}",
+      "res_cost_real": "- **Real Cost**  : **{cost}**",
+      "res_model_used": "- **Model used** : {model}",
+      "res_request_id": "- **Request ID** : {id}"
     }
   },
   "connect_response": {

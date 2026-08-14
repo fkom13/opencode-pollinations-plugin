@@ -208,7 +208,7 @@ function sleep(ms: number) {
 // ============================================================================
 type RetrySignal = 'abort' | 'network' | number;
 
-function classifyRetry(signal: RetrySignal): 'RETRY' | 'NO_RETRY' {
+export function classifyRetry(signal: RetrySignal): 'RETRY' | 'NO_RETRY' {
     if (signal === 'abort' || signal === 'network') {
         // Timeout / connection reset after possible submission → NO REPLAY.
         return 'NO_RETRY';
@@ -323,7 +323,7 @@ function normalizeChatChunk(obj: any): any {
 }
 
 /** Normalize a single raw SSE `data:` payload line (JSON). Non-JSON passes through. */
-function normalizeChunkLine(payload: string): string {
+export function normalizeChunkLine(payload: string): string {
     const trimmed = payload.trim();
     if (!trimmed) return payload;
     try {

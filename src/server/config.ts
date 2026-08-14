@@ -113,6 +113,16 @@ export interface PollinationsConfigV5 {
     costEstimator: boolean; // Show cost estimates in tool outputs (default: true)
     lang?: string; // Interface language (en, fr, etc.)
 
+    // v6.5 timeout hierarchy (per-call > model override > capability > global).
+    // Partial: merged over DEFAULT_TIMEOUT_HIERARCHY (timeout-policy.ts).
+    timeouts?: {
+        default?: number;
+        longRunning?: number;
+        max?: number;
+        capabilities?: Record<string, number>;
+        overrides?: Record<string, number>;
+    };
+
     // v6.5 purge: refillOverride / questStashInFreeMode removed (hourly
     // refill no longer exists upstream). Kept as optional for disk migration.
     refillOverride?: number;
@@ -150,7 +160,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
 // v6.5 migration: legacy mode/threshold names → Quest/Paid semantics.
 // alwaysfree → quest (QUEST_PREFERRED), pro → paid (PAID_ALLOWED).
 // Legacy tier percentage thresholds are replaced by absolute pollen floors.
-function migrateV65Config(raw: any): any {
+export function migrateV65Config(raw: any): any {
     if (!raw || typeof raw !== 'object') return raw;
 
     const legacyModeMap: Record<string, BillingMode> = {

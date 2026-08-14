@@ -31,6 +31,10 @@ import {
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
+import { validateTimeoutSeconds, mergeTimeoutHierarchy } from './timeout-policy.js';
+import { resolveCapabilityTimeout } from './tool-capability-registry.js';
+import { persistArtifact } from './artifact-core.js';
+import { parsePolliErrorFromThrow } from './error-parser.js';
 import { emitStatusToast } from '../../server/toast.js';
 import { t } from '../../locales/index.js';
 
@@ -54,6 +58,7 @@ export const polliGenImageTool: ToolDefinition = tool({
         transparent: tool.schema.boolean().optional().describe(t('tools.image.arg_trans')),
         save_to: tool.schema.string().optional().describe(t('tools.image.arg_save_to')),
         filename: tool.schema.string().optional().describe(t('tools.image.arg_filename')),
+        timeout_seconds: tool.schema.number().optional().describe(t('tools.image.arg_timeout')),
     },
 
     async execute(args, context) {
@@ -92,6 +97,12 @@ export const polliGenImageTool: ToolDefinition = tool({
                     .join(', ');
                 return t('tools.image.no_i2i', { model, models });
             }
+        }
+
+        // Per-call timeout validation (v6.5: >= 10s, <= 3600s)
+        const timeoutCheck = validateTimeoutSeconds(args.timeout_seconds);
+        if (!timeoutCheck.ok) {
+            return t('tools.image.invalid_timeout', { reason: timeoutCheck.reason || '' });
         }
 
         // Estimate cost
@@ -156,7 +167,8 @@ export const polliGenImageTool: ToolDefinition = tool({
             // 1. Fetch balance avant génération
             const balBefore = await fetchEnterBalance();
 
-            const result = await httpsGet(url, headers);
+            const timeoutSeconds = resolveCapabilityTimeout('gen_image', model, args.timeout_seconds, mergeTimeoutHierarchy(config.timeouts));
+            const result = await httpsGet(url, headers, timeoutSeconds * 1000);
             imageData = result.data;
             responseHeaders = result.headers;
 
@@ -165,7 +177,8 @@ export const polliGenImageTool: ToolDefinition = tool({
                 usedModel = responseHeaders['x-model-used'];
             }
 
-            // Save the image
+            // Save the image — extension follows REAL magic bytes (a b64
+            // response can be JPEG even when the caller assumed PNG).
             let outputDir = getDefaultOutputDir('images');
             let filename = args.filename ? sanitizeFilename(args.filename) : undefined;
 
@@ -180,10 +193,14 @@ export const polliGenImageTool: ToolDefinition = tool({
 
             ensureDir(outputDir);
 
-            filename = filename || generateFilename('image', usedModel, 'png');
-            const filePath = path.join(outputDir, filename.includes('.') ? filename : `${filename}.png`);
-
-            fs.writeFileSync(filePath, imageData);
+            if (!filename) filename = generateFilename('image', usedModel, 'png');
+            const persisted = persistArtifact(imageData, {
+                outputDir,
+                filename,
+                preferredExt: 'png',
+                detectExt: true,
+            });
+            const filePath = persisted.filePath;
             // 2. Fetch balance après génération (delay for API sync)
             let balAfter: number | null = null;
             let realCost: number | undefined;
@@ -251,16 +268,17 @@ export const polliGenImageTool: ToolDefinition = tool({
         } catch (err: any) {
             emitStatusToast('error', t('tools.image.error', { error: err.message?.substring(0, 60) }), '🎨 gen_image');
 
-            if (err.message?.includes('402') || err.message?.includes('Payment')) {
+            const parsed = parsePolliErrorFromThrow(err);
+            if (parsed.kind === 'payment') {
                 return t('tools.image.insufficient_funds', { model });
             }
-            if (err.message?.includes('401') || err.message?.includes('403')) {
+            if (parsed.kind === 'auth') {
                 return t('tools.image.invalid_key');
             }
-            if (err.message?.includes('400')) {
-                return t('tools.image.invalid_params', { error: err.message });
+            if (parsed.kind === 'bad_request') {
+                return t('tools.image.invalid_params', { error: parsed.message });
             }
-            return t('tools.image.gen_error_msg', { error: err.message });
+            return t('tools.image.gen_error_msg', { error: parsed.message });
         }
     },
 });

@@ -681,6 +681,11 @@ ${t('commands.config.table_divider')}
 | **logs_gui** | \`${config.gui?.logs || 'error'}\` | ${t('commands.config.logs_gui_role')} | \`/poll config logs_gui <verbose/error/none>\` |
 | **threshold_quest** | \`${config.thresholds?.quest ?? 0.05} 🌻\` | ${t('commands.config.threshold_quest_role')} | \`/poll config threshold_quest <pollen>\` |
 | **threshold_wallet** | \`${config.thresholds?.wallet ?? 0.5} 🌻\` | ${t('commands.config.threshold_wallet_role')} | \`/poll config threshold_wallet <pollen>\` |
+| **timeouts.default** | \`${config.timeouts?.default ?? 300}s\` | ${t('commands.config.timeouts_default_role')} | \`/poll config timeouts.default <s>\` |
+| **timeouts.longRunning** | \`${config.timeouts?.longRunning ?? 900}s\` | ${t('commands.config.timeouts_long_role')} | \`/poll config timeouts.longRunning <s>\` |
+| **timeouts.max** | \`${config.timeouts?.max ?? 3600}s\` | ${t('commands.config.timeouts_max_role')} | \`/poll config timeouts.max <s>\` |
+| **timeouts.video** | \`${config.timeouts?.capabilities?.video ?? 1800}s\` | ${t('commands.config.timeouts_video_role')} | \`/poll config timeouts.video <s>\` |
+| **timeouts.threeD** | \`${config.timeouts?.capabilities?.threeD ?? 1800}s\` | ${t('commands.config.timeouts_3d_role')} | \`/poll config timeouts.threeD <s>\` |
 | **status_bar** | \`${config.statusBar ?? true}\` | ${t('commands.config.status_bar_role')} | \`/poll config status_bar <true/false>\` |
 | **lang** | \`${config.lang || 'en'}\` | ${t('commands.config.lang_role')} | \`/poll config lang <en/fr/es/de/it>\` |`;
 
@@ -745,6 +750,51 @@ ${t('commands.config.table_divider')}
         const config = loadConfig();
         saveConfig({ thresholds: { ...config.thresholds, wallet: threshold } });
         return { handled: true, response: `✅ threshold_wallet = ${threshold} 🌻` };
+    }
+
+    // v6.5 timeout hierarchy: timeouts.default / longRunning / max /
+    // timeouts.<capability> (image|video|audio|threeD|realtime|embed) /
+    // timeouts.model.<name> / reset
+    if (key.startsWith('timeouts') && value) {
+        const parts = key.split('.');
+        const config = loadConfig();
+        const timeouts: any = { ...(config.timeouts || {}) };
+
+        if (parts.length === 2 && ['default', 'longRunning', 'max'].includes(parts[1])) {
+            const seconds = parseFloat(value);
+            if (isNaN(seconds) || seconds < 1 || seconds > 3600) {
+                return { handled: true, error: 'Valeur en secondes requise (1-3600)' };
+            }
+            timeouts[parts[1]] = seconds;
+            saveConfig({ timeouts });
+            return { handled: true, response: `✅ timeouts.${parts[1]} = ${seconds}s` };
+        }
+
+        const CAP_KEYS = ['image', 'video', 'audio', 'threeD', 'realtime', 'embed'];
+        if (parts.length === 2 && CAP_KEYS.includes(parts[1])) {
+            const seconds = parseFloat(value);
+            if (isNaN(seconds) || seconds < 10 || seconds > 3600) {
+                return { handled: true, error: 'Valeur en secondes requise (10-3600)' };
+            }
+            timeouts.capabilities = { ...(timeouts.capabilities || {}), [parts[1]]: seconds };
+            saveConfig({ timeouts });
+            return { handled: true, response: `✅ timeouts.${parts[1]} = ${seconds}s` };
+        }
+
+        if (parts.length === 3 && parts[1] === 'model') {
+            const seconds = parseFloat(value);
+            if (isNaN(seconds) || seconds < 10 || seconds > 3600) {
+                return { handled: true, error: 'Valeur en secondes requise (10-3600)' };
+            }
+            timeouts.overrides = { ...(timeouts.overrides || {}), [parts[2]]: seconds };
+            saveConfig({ timeouts });
+            return { handled: true, response: `✅ timeouts.model.${parts[2]} = ${seconds}s` };
+        }
+    }
+
+    if (key === 'timeouts.reset') {
+        saveConfig({ timeouts: undefined });
+        return { handled: true, response: '✅ timeouts = defaults (reset)' };
     }
 
     if (key === 'status_bar' && value) {

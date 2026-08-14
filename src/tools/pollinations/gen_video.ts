@@ -38,6 +38,8 @@ import {
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
+import { validateTimeoutSeconds, mergeTimeoutHierarchy } from './timeout-policy.js';
+import { resolveCapabilityTimeout } from './tool-capability-registry.js';
 import { emitStatusToast } from '../../server/toast.js';
 import { t } from '../../locales/index.js';
 
@@ -59,6 +61,7 @@ export const polliGenVideoTool: ToolDefinition = tool({
         aspect_ratio: tool.schema.enum(['16:9', '9:16', '1:1', '4:3']).optional().describe(t('tools.polli_gen_video.arg_aspect')),
         reference_image: tool.schema.string().optional().describe(t('tools.polli_gen_video.arg_ref')),
         seed: tool.schema.number().optional().describe(t('tools.polli_gen_video.arg_seed')),
+        timeout_seconds: tool.schema.number().optional().describe(t('tools.polli_gen_video.arg_timeout')),
         save_to: tool.schema.string().optional().describe(t('tools.polli_gen_video.arg_save_to')),
         filename: tool.schema.string().optional().describe(t('tools.polli_gen_video.arg_filename')),
     },
@@ -117,6 +120,12 @@ export const polliGenVideoTool: ToolDefinition = tool({
                 .map(([name]) => name)
                 .join(', ');
             return t('tools.polli_gen_video.no_i2v', { model, models });
+        }
+
+        // Per-call timeout validation (v6.5: >= 10s, <= 3600s, no auto resubmit)
+        const timeoutCheck = validateTimeoutSeconds(args.timeout_seconds);
+        if (!timeoutCheck.ok) {
+            return t('tools.polli_gen_video.invalid_timeout', { reason: timeoutCheck.reason || '' });
         }
 
         // Estimate cost
@@ -183,7 +192,8 @@ export const polliGenVideoTool: ToolDefinition = tool({
             const balBefore = await fetchEnterBalance();
 
             // Video generation takes time (30-70 seconds depending on model)
-            const result = await httpsGet(url, headers);
+            const timeoutSeconds = resolveCapabilityTimeout('gen_video', model, args.timeout_seconds, mergeTimeoutHierarchy(config.timeouts));
+            const result = await httpsGet(url, headers, timeoutSeconds * 1000);
             const videoData = result.data;
             const responseHeaders = result.headers;
 

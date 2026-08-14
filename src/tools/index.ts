@@ -35,6 +35,7 @@ import { polliGenVideoTool } from './pollinations/gen_video.js';
 import { polliGenAudioTool } from './pollinations/gen_audio.js';
 import { polliSttTool } from './pollinations/transcribe_audio.js';
 import { polliGenMusicTool } from './pollinations/gen_music.js';
+import { polliGen3dTool } from './pollinations/gen_3d.js';
 import { polliWebSearchTool } from './pollinations/polli_web_search.js';
 import { polliBetaDiscoveryTool } from './pollinations/beta_discovery.js';
 import { polliGenConfirmTool } from './pollinations/polli_gen_confirm.js';
@@ -103,6 +104,7 @@ export function createToolRegistry(): Record<string, any> {
         tools['polli_gen_audio'] = polliGenAudioTool;
         tools['polli_stt'] = polliSttTool;
         tools['polli_gen_music'] = polliGenMusicTool;
+        tools['polli_gen_3d'] = polliGen3dTool;
 
         // Unified search tool
         tools['polli_web_search'] = polliWebSearchTool;
@@ -139,6 +141,7 @@ export {
     polliGenAudioTool,
     polliSttTool,
     polliGenMusicTool,
+    polliGen3dTool,
     polliWebSearchTool,
     polliBetaDiscoveryTool,
     polliGenConfirmTool,

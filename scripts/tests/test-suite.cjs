@@ -124,53 +124,42 @@ async function testConfig() {
     const config = mod.loadConfig();
     assert(typeof config === 'object', 'loadConfig returns object');
     assert(typeof config.mode === 'string', 'config.mode is string');
-    assert(['manual', 'alwaysfree', 'pro'].includes(config.mode), 'mode is valid');
+    assert(['manual', 'quest', 'quest_only', 'paid'].includes(config.mode), 'mode is valid (v6.5 modes)');
 }
 
 async function testQuotaUnit() {
-    log.section('Quota Unit Tests');
+    log.section('Quota Unit Tests (v6.5 Quest/Paid)');
 
     const mod = await importDist('server/quota.js');
-    assert(typeof mod.tierMetaForAllowance === 'function', 'tierMetaForAllowance exported');
-    assert(typeof mod.getKnownRefills === 'function', 'getKnownRefills exported');
+    assert(typeof mod.getQuotaStatus === 'function', 'getQuotaStatus exported');
     assert(typeof mod.calculateResetInfo === 'function', 'calculateResetInfo exported');
     assert(typeof mod.formatQuotaForToast === 'function', 'formatQuotaForToast exported');
-
-    const refills = mod.getKnownRefills();
-    assert(Array.isArray(refills) && refills.length >= 5, `known refills ladder (${refills.length})`);
-    assert(refills.some((r) => r.label === 'flower' && r.pollen === 0.4), 'flower = 0.4');
-    assert(refills.some((r) => r.label === 'router' && r.pollen === 10), 'router = 10');
-
-    const flower = mod.tierMetaForAllowance(0.4);
-    assert(flower.label === 'flower' && flower.emoji === '🌸', 'tierMeta flower');
-    const spore = mod.tierMetaForAllowance(0.01);
-    assert(spore.label === 'spore', 'tierMeta spore');
-    const unknown = mod.tierMetaForAllowance(999);
-    assert(unknown.label === 'router' || unknown.emoji, 'tierMeta high maps to router or known');
+    // v6.5 purge: legacy tier/refill APIs must NOT exist anymore
+    assert(typeof mod.tierMetaForAllowance === 'undefined', 'tierMetaForAllowance removed (v6.5)');
+    assert(typeof mod.getKnownRefills === 'undefined', 'getKnownRefills removed (v6.5)');
+    assert(typeof mod.deduceAllowanceFromApi === 'undefined', 'deduceAllowanceFromApi removed (v6.5)');
 
     const reset = mod.calculateResetInfo();
     assert(reset.nextReset instanceof Date, 'nextReset is Date');
     assert(reset.lastReset instanceof Date, 'lastReset is Date');
-    assert(typeof reset.timeUntilReset === 'number' && reset.timeUntilReset >= 0, 'timeUntilReset >= 0');
-    assert(reset.timeUntilReset <= 60 * 60 * 1000 + 1000, 'timeUntilReset within ~1h');
-    assert(typeof reset.progressPercent === 'number', 'progressPercent number');
 
     const toast = mod.formatQuotaForToast({
-        tierRemaining: 0.3,
-        tierUsed: 0.1,
-        tierLimit: 0.4,
-        questStash: 5,
+        questBalance: 0.3,
         walletBalance: 2.5,
-        nextResetAt: reset.nextReset,
-        timeUntilReset: reset.timeUntilReset,
+        totalBalance: 2.8,
         canUseEnterprise: true,
         isUsingWallet: false,
         needsAlert: false,
-        tier: 'flower',
-        tierEmoji: '🌸',
     });
     assert(typeof toast === 'string' && toast.length > 5, 'formatQuotaForToast returns string');
-    assert(/🌸|Quest|Paid|Reset|🌻|0\.3|0\.4/i.test(toast), 'toast contains quota fields');
+    assert(/Quest|Paid|🎁|💎/i.test(toast), 'toast contains Quest/Paid fields');
+
+    const authLimitedToast = mod.formatQuotaForToast({
+        questBalance: 0, walletBalance: 0, totalBalance: 0,
+        canUseEnterprise: false, isUsingWallet: false, needsAlert: false,
+        errorType: 'auth_limited',
+    });
+    assert(/CL(E|É)/i.test(authLimitedToast), 'auth_limited toast marked');
 }
 
 async function testProxyModule() {

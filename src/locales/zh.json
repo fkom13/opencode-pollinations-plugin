@@ -42,7 +42,12 @@
       "lang_role": "插件语言",
       "not_configured": "未配置",
       "managed_auto": "自动管理",
-      "threshold_quest_role": "Quest 余额告警阈值（pollen）"
+      "threshold_quest_role": "Quest 余额告警阈值（pollen）",
+      "timeouts_default_role": "远程操作的全局超时",
+      "timeouts_long_role": "长时间生成的超时",
+      "timeouts_max_role": "绝对超时上限",
+      "timeouts_video_role": "视频生成超时",
+      "timeouts_3d_role": "3D 生成超时"
     },
     "generic": {
       "add_key_hint": "💡 使用 /poll connect <key> 添加 API 密钥。",
@@ -204,7 +209,9 @@
       "res_i2i_src": "I2I 源：{src}",
       "res_file": "文件：{path}",
       "res_size": "大小：{size}",
-      "cost_title": "\n💰 **财务报告：**"
+      "cost_title": "\n💰 **财务报告：**",
+      "arg_timeout": "每次调用的超时秒数（10–3600）。",
+      "invalid_timeout": "❌ timeout_seconds 无效：{reason}"
     },
     "config": {
       "no_values": "未提供要更新的配值。请通过参数指定至少一项设置。",
@@ -294,7 +301,9 @@
       "err_invalid": "❌ 无效参数：{msg}",
       "err_520": "⚠️ LTX-2 返回了间歇性 520 错误。\n💡 几秒后重试。",
       "err_timeout": "❌ 超时 - 视频生成耗时过长。\n💡 用更短的时长重试。",
-      "err_gen": "❌ 视频生成错误：{error}"
+      "err_gen": "❌ 视频生成错误：{error}",
+      "arg_timeout": "每次调用的超时秒数（10–3600）。超时后不自动重试。",
+      "invalid_timeout": "❌ timeout_seconds 无效：{reason}"
     },
     "polli_gen_audio": {
       "desc": "使用 Pollinations AI 将文本转为语音。\n\n**🔊 模型：**\n\n| 模型 | 类型 | 语音 | 格式 | 费用 | 备注 |\n|-------|------|--------|--------|------|-------|\n| openai-audio | TTS + STT | 6 | mp3, wav, pcm16 | 最低 | **默认** - GPT-4o Audio |\n| elevenlabs | TTS | 34 | mp3, wav 等 | 较高 | 富有表现力的语音 |\n\n**🎵 OpenAI Audio (默认，推荐)：**\n- 语音：`alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`\n- 格式：`mp3` (默认), `wav`, `pcm16`\n- 使用 GPT-4o Audio Preview modalities 端点\n- 最低成本选项\n\n**🎤 ElevenLabs：**\n- 34 种富有表现力的语音，包括：rachel, domi, bella, adam 等\n- 更高质量的自然语音\n- 更贵但更有表现力\n\n**💡 提示：**\n- 使用 `openai-audio` 获得高性价比 TTS\n- 使用 `elevenlabs` 获得更有表现力/角色化的语音\n- 对于 STT (转录)，使用 `transcribe_audio` 工具。",
@@ -462,6 +471,43 @@
       "file_not_found": "❗ File not found: {path}",
       "no_result": "❗ No result received.",
       "error": "❗ Error: {error}"
+    },
+    "gen3d": {
+      "desc": "使用 Pollinations AI 从文本提示或参考图像生成 3D 对象。\n\n**🧊 3D 模型**：\n- `trellis-2` — 默认，约 0.24 pollen（low），输出 GLB，图生 3D（最多 1 张参考图）。\n- `hyper3d-rodin` — paid_only，约 0.10 pollen，输出 GLB。\n\n**⏱️ 长时运行**：生成可能需要 20s–150s+（LONG_BLOCKING）。使用 `timeout_seconds` 控制本地等待。\n\n**♻️ 恢复**：超时后生成可能仍在运行并计费。使用相同 seed 重新运行将从缓存返回结果（不重复计费）。",
+      "arg_prompt": "3D 对象的文本描述（提供图像时可省略）",
+      "arg_image": "可选的参考图像 URL（最多 1 张）",
+      "arg_model": "使用的模型（默认：trellis-2）。",
+      "arg_resolution": "分辨率：low / medium / high（默认：low）",
+      "arg_seed": "用于可复现性和缓存恢复的 seed",
+      "arg_save_to": "自定义输出目录或文件路径",
+      "arg_filename": "自定义输出文件名（不含扩展名）",
+      "arg_timeout": "每次调用的超时秒数（10–3600）。超时后不自动重试。",
+      "req_key": "❌ polli_gen_3d 需要 API 密钥（/poll login）。",
+      "unknown_model": "模型 '{model}' 不在 3D 注册表中 — beta 透传",
+      "invalid_image_url": "❌ 无效的图像 URL。请使用 http:// 或 https://",
+      "invalid_timeout": "❌ timeout_seconds 无效：{reason}",
+      "blocked": "🚫 3D 生成被 Cost Guard 阻止。",
+      "generating": "正在生成 3D：{model} ({resolution})...",
+      "success": "3D 生成成功 ✓ ({model})",
+      "err_format": "❌ 产物验证失败：预期 GLB（glTF-binary），实际为 '{detected}'。文件未保存。",
+      "err_toast": "错误：{error}",
+      "err_timeout": "⏱️ **3D 生成在 {seconds}s 后超时。**\n\n⚠️ 上游生成可能仍在运行，**可能已被计费**（客户端超时 ≠ 上游取消）。我们没有自动重新提交。\n\n♻️ **恢复**：使用相同参数和 seed `{seed}`（模型 `{model}`）重新运行 — 结果从缓存返回，不重复计费。",
+      "err_pollen": "❌ 运行 {model} 的 pollen 积分不足。\n💡 完成任务或在 enter.pollinations.ai 充值。",
+      "err_auth": "❌ API 密钥无效或未授权。",
+      "err_gen": "❌ 3D 生成错误：{error}",
+      "res_title": "### 🧊 3D 生成结果",
+      "res_prompt": "- **提示词**     : {prompt}",
+      "res_model": "- **模型**       : `{model}`",
+      "res_resolution": "- **分辨率**     : {resolution}",
+      "res_seed": "- **Seed**       : {seed}",
+      "res_image": "- **参考图**     : {src}",
+      "res_file": "- **文件**       : `{path}`",
+      "res_size": "- **大小**       : {size}",
+      "res_format": "- **格式**       : {ext}（magic bytes 验证）",
+      "res_cost_est": "- **预估成本**   : {cost}",
+      "res_cost_real": "- **实际成本**   : **{cost}**",
+      "res_model_used": "- **实际模型**   : {model}",
+      "res_request_id": "- **Request ID** : {id}"
     }
   },
   "connect_response": {
