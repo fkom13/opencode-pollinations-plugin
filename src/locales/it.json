@@ -3,7 +3,7 @@
     "help": {
       "title": "### 🌸 Plugin Pollinations - Comandi V6",
       "alias_note": "*(L'alias `/poll` è supportato e raccomandato al posto di `/pollinations` !)*",
-      "mode_usage": "**Modalità e Uso**\n- **`/poll mode [modo]`**: Cambia la modalità (manual, alwaysfree, pro).\n- **`/poll usage [full]`**: Mostra la dashboard (full = dettagli).\n- **`/poll fallback <main> [agent]`**: Configura la rete di sicurezza.",
+      "mode_usage": "**Modalità e Uso**\n- **`/poll mode [modo]`**: Cambia la modalità (manual, quest, quest_only, paid).\n- **`/poll usage [full]`**: Mostra la dashboard (full = dettagli).\n- **`/poll fallback <main> [agent]`**: Configura la rete di sicurezza.",
       "configuration": "**Configurazione**\n- **`/poll config [chiave] [valore]`**:\n   - `lang`: en, fr, de, es, it, etc.\n   - `status_gui`: none, alert, all\n   - `logs_gui`: none, error, verbose\n   - `threshold_tier` / `threshold_wallet`: 0-100\n   - `status_bar`: true/false\n   - `cost_estimator`: true/false (mostra i costi nell'output)\n   - `enablePaidTools`: true/false (protezione del portafoglio)\n   - `costThreshold`: limite in pollen (predefinito: 0.15)\n   - `costConfirmationRequired`: true/false (conferma di spesa)",
       "models_pricing": "**Modelli e Prezzi**\n- **`/poll models [tipo]`**: Elenca i modelli (tipo: image, video, audio, text)\n- **`/poll pricing`**: Tabella prezzi dettagliata\n- **`/poll infos`**: Spiegazioni su Tiers e Pollen\n- **`/poll quests`**: Visualizza le tue quest e il Pollen gratuito da riscattare\n\n> 💡 **Chiavi RMBG**: Usa lo strumento `rmbg_keys` (funziona con qualsiasi modello).",
       "configuration_intro": "**Configurazione**\n- **`/poll config [chiave] [valore]`**:",
@@ -11,15 +11,13 @@
         "lang": "Lingua del plugin",
         "status_gui": "Verbosità notifiche",
         "logs_gui": "Verbosità log",
-        "threshold_tier": "Soglia di avviso tier gratuito (%)",
-        "threshold_wallet": "Soglia di avviso wallet (%)",
+        "threshold_wallet": "Soglia di allerta del wallet (pollen)",
         "status_bar": "Mostra icona nella barra",
         "cost_estimator": "Mostra stime dei costi",
         "enablePaidTools": "Protezione wallet (blocca strumenti a pagamento)",
         "costThreshold": "Soglia di avviso costo",
         "costConfirmationRequired": "Chiedi conferma prima di spendere",
-        "refillOverride": "Refill manuale Quest Pollen",
-        "questStashInFreeMode": "Conta stash Quest come free in alwaysfree"
+        "threshold_quest": "Soglia di allerta saldo Quest (pollen)"
       }
     },
     "config": {
@@ -29,7 +27,7 @@
       "table_headers": "| Parametro | Valore Attuale | Ruolo | Comando |",
       "table_divider": "|-----------|----------------|-------|--------|",
       "api_key_role": "La tua chiave API (BYOK)",
-      "mode_role": "Modalità di accesso",
+      "mode_role": "Modalità di fatturazione (quest/quest_only/paid/manual)",
       "enablePaidTools_role": "Sicurezza: Strumenti a pagamento",
       "costConfirmationRequired_role": "Conferma alla soglia superata",
       "costThreshold_role": "Soglia di allerta costi",
@@ -39,12 +37,12 @@
       "fallback_enter_role": "Modello Agente principale",
       "status_gui_role": "Notifiche di stato",
       "logs_gui_role": "Livello di log",
-      "threshold_tier_role": "Allerta limite giornaliero",
-      "threshold_wallet_role": "Allerta Premium Wallet",
+      "threshold_wallet_role": "Soglia di allerta wallet a pagamento (pollen)",
       "status_bar_role": "Mostra icona nella barra",
       "lang_role": "Lingua del plugin",
       "not_configured": "Non configurato",
-      "managed_auto": "Gestito automaticamente"
+      "managed_auto": "Gestito automaticamente",
+      "threshold_quest_role": "Soglia di allerta saldo Quest (pollen)"
     },
     "generic": {
       "add_key_hint": "💡 Usa /poll connect <key> per aggiungere una chiave API.",
@@ -55,21 +53,17 @@
     },
     "mode": {
       "current": "Current mode: {mode}",
-      "invalid": "❌ Invalid mode '{mode}'. Use: manual, alwaysfree, pro",
-      "pro_requires_key": "❌ 'pro' mode requires an API key.",
+      "invalid": "❌ Modalità non valida '{mode}'. Usa: manual, quest, quest_only, paid",
       "verifying": "Verifying permissions...",
-      "denied": "❌ Access denied to pro/alwaysfree ({status}: {reason})",
+      "denied": "❌ Accesso negato a quest/quest_only/paid ({status}: {reason})",
       "verify_error": "❌ Verification error: {error}",
-      "success": "✅ Switched to mode: {mode}"
+      "success": "✅ Switched to mode: {mode}",
+      "key_required": "❌ La modalità '{mode}' richiede una chiave API.",
+      "legacy_alias": " (alias legacy '{legacy}' → '{mode}')"
     },
     "usage": {
       "title": "## 📊 Statistiche Pollinations (Modalità: {mode})\n\n",
       "resources": "### 🌻 Risorse Base\n",
-      "tier": "- **Livello:** {emoji} {tier} (Limite: {limit} 🌻)\n",
-      "quota": "- **Utilizzo:** {remaining} consumati su {limit}\n",
-      "usage_bar": "- **Utilizzo:** {bar}\n",
-      "wallet": "- **Saldo (Pagato + Quest):** {balance} 🌻\n\n",
-      "reset": "### 🕒 Ripristino\n- **Prossimo reset:** {date} (in {duration})\n\n",
       "restricted_key": "⚠️ Chiave limitata. Dettagli non disponibili.\n",
       "period_detail": "### 📈 Dettagli periodo (dal {time})\n",
       "total_reqs": "- **Richieste:** {reqs} ({inTok} in | {outTok} out)\n\n",
@@ -79,7 +73,8 @@
       "full_requires_key": "⚠️ `/poll usage full` richiede una chiave API.\n",
       "hint_full": "💡 Usa `/poll usage full` per i dettagli.",
       "source_split": "- **Consumato questo periodo:** 🎁 Quest {tier} · 💎 Pagato {pack}\n",
-      "split": "- **Saldo:** {total} 🌻  ·  🎁 Quest ~{quest}  ·  💎 Pagato ~{paid}\n\n"
+      "split": "- **Saldo:** {total} 🌻  ·  🎁 Quest ~{quest}  ·  💎 Pagato ~{paid}\n\n",
+      "quest_note": "> ⚠️ Il saldo Quest è una stima locale best-effort (il server non espone la suddivisione). La suddivisione affidabile è `meter_source` in `/account/usage`.\n"
     },
     "fallback": {
       "current": "Current fallbacks:\n- {free}\n- {enter}",
@@ -122,16 +117,14 @@
       "features_free": "**🛠️ Strumenti Gratuiti (Sempre Disponibili):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : Visual e dev.\n- `remove_background` : Rimozione sfondo IA (rmbg / bgeraser — gratuito).\n- `extract_frames` / `extract_audio` : Estrazione media rapida.\n- `file_to_url` : Hosting online istantaneo.\n- `gen_edit_image_free` : Gen e modifica immagini gratis (~20/giorno).\n- `gen_video_free` : Gen video gratis (~5/giorno).\n- `object_remover` : Rimozione oggetti tramite prompt (gratuito, diretto).\n- `image_upscaler` : Upscale 2x/4x (gratuito, diretto).\n- `image_enhancer` : Miglioramento immagini IA (gratuito, diretto).",
       "features_pro": "**💎 Strumenti Pollinations (Premium - Automatizzato con Chiave):**\n- `polli_gen_image` : Gen immagine (Flux, Gemini) + Image-to-Image.\n- `polli_gen_video` : Text-to-Video / Image-to-Video (Veo, Wan...).\n- `polli_gen_audio`/`polli_stt` : Whisper STT, ElevenLabs TTS.\n- `polli_gen_music` : Motore di musica generativa.\n- `polli_web_search` : Ricerca web connessa.",
       "features_config": "- **Configurazione granulare**, gestione di modalità/token, protezioni costi...",
-      "tiers_title": "> **Il tuo refill Quest Pollen:** {emoji} {tier}",
       "about": "## 🌍 Cos'è pollinations.ai?\npollinations.ai è una piattaforma IA open-source costruita per la community. Offriamo un'API per Immagini, Testo, Audio e Video. Tutto è aperto: codice, roadmap, conversazioni. Unisciti a noi!\n\nNessuna scatola nera. Nessun lock-in. Solo un'API amichevole.",
-      "levels_title": "## 📈 Refill Quest Pollen Orario",
-      "levels_list": "Il tuo refill orario dipende dal tuo livello di contributo. Il Quest Pollen si accumula e non scade (finche il tuo account resta attivo).\n\n{tier_table}\n\n> ⚠️ Il refill e **orario** (reset alle :00). Il totale giornaliero e una stima (~24h x tariffa oraria).",
       "pollen_title": "## 💎 Cos'è il Pollen?",
       "pollen_get": "L'esecuzione di modelli costa denaro. Il Pollen è il nostro modo per mantenere attivi i server senza pubblicità o vendere dati. Un credito semplice e unificato per tutti i modelli.\n\n**$1 ≈ 1 Pollen**. Lo spendi per le chiamate API.",
       "pollen_spend": "## 🛒 Come ottenere Pollen?\n1. 🎯 **Quests** — Completa attivita sulla dashboard (`/poll quests`).\n2. 💳 **Acquista** — Con carta su enter.pollinations.ai.\n3. 🌻 **Dev earnings** — Attiva i guadagni sviluppatore sulla tua App Key.",
       "quests": "## 🎯 Quest — Guadagna Pollen gratis\nIl Pollen ora si guadagna principalmente completando le **Quest**. Buone notizie: usare questo plugin (modelli di testo, immagini e audio) completa diverse quest **retroattivamente** — potresti già avere Pollen gratis in attesa!\n\n👉 Controlla e richiedi le tue ricompense sulla [dashboard](https://enter.pollinations.ai). _Il riscatto avviene solo dalla dashboard._\n\n> 💡 Il Pollen delle quest funziona su tutti i modelli standard. I modelli 💎 a pagamento richiedono comunque Pollen acquistato.",
-      "hourly_note": "> ⚠️ Le quote sono **orarie** (ricarica alle :00). Il valore giornaliero è una stima (~24h × tasso orario).",
-      "get_started": "## 🔑 Per iniziare\n\n**1.** Crea un account gratuito su enter.pollinations.ai\n**2.** Connettiti in 1 clic: `/poll login`\n**3.** Oppure usa una chiave manuale: `/poll connect sk_...`\n\nDigita `/poll help` per tutti i comandi."
+      "get_started": "## 🔑 Per iniziare\n\n**1.** Crea un account gratuito su enter.pollinations.ai\n**2.** Connettiti in 1 clic: `/poll login`\n**3.** Oppure usa una chiave manuale: `/poll connect sk_...`\n\nDigita `/poll help` per tutti i comandi.",
+      "quest_paid_title": "## 🎁 Quest & 💎 Pollen a Pagamento",
+      "quest_paid_body": "Il pollen è diviso in due colonne:\n\n- **🎁 Pollen Quest** — guadagnato completando le **Quests** (gratuito). Consumato per primo dal server.\n- **💎 Pollen a Pagamento** — acquistato (carta). Usato quando il Quest è insufficiente, o per i modelli `paid_only`.\n\n> ⚠️ Il plugin non può leggere la suddivisione lato server; stima Quest/Paid localmente e legge la suddivisione reale (`meter_source`) da `/account/usage`.\n\n**Modalità:**\n- `quest` (QUEST_PREFERRED) — predefinita: prima Quest, fallback a Paid consentito.\n- `quest_only` (QUEST_ELIGIBLE_ONLY) — blocca i modelli paid_only, solo Quest best-effort.\n- `paid` (PAID_ALLOWED) — Paid consentito.\n- `manual` — nessuna politica automatica."
     },
     "pricing_units": {
       "tokens": "~tokens",
@@ -159,11 +152,16 @@
       "no_enter_models": "Nessun modello Enterprise rilevato per questa chiave."
     },
     "warnings": {
-      "paid_blocked_alwaysfree_title": "🚫 Modello a pagamento bloccato: {model}",
-      "paid_blocked_alwaysfree_msg": "🚫 **Modello a pagamento non disponibile nella modalità AlwaysFree**\n\nIl modello `{model}` consuma direttamente dal tuo portafoglio (💎 Solo a Pagamento).\n\n**Soluzioni:**\n• `/poll config mode pro` — Permette modelli a pagamento con protezione del portafoglio\n• `/poll config mode manual` — Nessuna restrizione, controllo totale",
-      "paid_blocked_empty_wallet_msg": "⚠️ **Avviso: Modello a Pagamento (💎) richiesto, ma quota Premium esaurita (o Modalità Gratuita).**\n\nHai richiesto il modello `{model}` che richiede fondi nel tuo Portafoglio Premium.\n\n🔄 **Azione di ripiego (Rete di sicurezza)**:\nIl gestore dell'energia ha reindirizzato automaticamente la tua richiesta all'universo gratuito `{fallback}` per evitare un errore.\n\n_Nota: Ricarica il tuo portafoglio su pollinations.ai per usare questo modello._",
-      "tier_limit_msg": "⚠️ **Avviso Limite Quota Gratuita (Tier) Superato**\n\nSei sceso sotto al {threshold}% della tua riserva giornaliera gratuita.\n\n🔄 **Azione di ripiego (Rete di sicurezza)**:\nL'agente è stato passato sulla rete universale di emergenza.",
-      "wallet_limit_msg": "⚠️ **Avviso Limite Portafoglio Premium**\n\nTi rimane meno del {threshold}% del portafoglio pollen acquistato.\n\n🔄 **Azione di ripiego (Rete di sicurezza)**:\nL'agente è stato passato sulla rete gratuita."
+      "wallet_limit_msg": "⚠️ **Avviso Limite Portafoglio Premium**\n\nTi rimane meno del {threshold}% del portafoglio pollen acquistato.\n\n🔄 **Azione di ripiego (Rete di sicurezza)**:\nL'agente è stato passato sulla rete gratuita.",
+      "quota_unreachable_title": "⚠️ Quota non raggiungibile",
+      "quota_unreachable_msg": "⚠️ **Verifica quota fallita** (errore di rete).\n\n🔄 **Fallback (Safety Net)**:\nL'agente è passato all'universo gratuito per evitare un errore.",
+      "balance_exhausted_title": "⚠️ Quest e Paid esauriti",
+      "balance_exhausted_msg": "⚠️ **I pollen Quest e a pagamento sembrano esauriti.**\n\n🔄 **Fallback (Safety Net)**:\nL'agente è passato all'universo gratuito. Guadagna pollen Quest con `/poll quests` o ricarica su enter.pollinations.ai.",
+      "quest_floor_title": "⚠️ Saldo Quest basso",
+      "quest_floor_msg": "⚠️ **Il pollen Quest è pari o inferiore alla tua soglia ({floor} 🌻).**\n\nLa modalità Quest-Only non spende pollen a pagamento. 🔄 **Fallback**: L'agente è passato all'universo gratuito.\n\n> ⚠️ Best-effort: un addebito Paid (pack) può comunque verificarsi lato server (race).",
+      "paid_blocked_questonly_title": "🚫 Modello a pagamento bloccato: {model}",
+      "paid_blocked_questonly_msg": "🚫 **Modello a pagamento non disponibile in modalità Quest-Only**\n\nIl modello `{model}` consuma sempre pollen a pagamento (💎 paid_only).\n\n**Soluzioni:**\n• `/poll config mode paid` — Consente modelli a pagamento con protezione del wallet\n• `/poll config mode quest` — Prima Quest con fallback a Paid consentito\n• `/poll config mode manual` — Nessuna restrizione, controllo totale",
+      "wallet_limit_title": "⚠️ Wallet a pagamento basso"
     }
   },
   "toasts": {
@@ -246,7 +244,8 @@
       "result_recency": "📅 Data limite: {recency}",
       "result_cost": "🪙 Costo: {cost}",
       "result_cost_max": "🪙 Costo max: {maxCost}",
-      "error_prefix": "❌ Errore: {error}"
+      "error_prefix": "❌ Errore: {error}",
+      "warn_beta": "⚠️ (beta) La ricerca web tramite i modelli Pollinations è sperimentale."
     },
     "polli_gen_video": {
       "desc": "Genera video da testo o img con Pollinations.\n\n💡 **Modelli Dinamici.**\n\n- `veo`: Usa `reference_image=url1,url2`.",
@@ -483,18 +482,5 @@
     "reason_fixed": "Il costo stimato di questa azione ({cost}) supera la soglia definita ({limit}).",
     "estimated_max": "💰 Costo medio stimato: {cost} (Max: {maxCost})",
     "estimated": "💰 Costo stimato: {cost}"
-  },
-  "tier": {
-    "condition": {
-      "signup": "Basta registrarsi!",
-      "auto_verify": "Verifica automatica",
-      "under_review": "Account in revisione",
-      "default": "Nuovo account (predefinito)",
-      "community": "Membro attivo della community",
-      "quests": "Completa le Missioni e contribuisci",
-      "publish_app": "Pubblica un'app",
-      "top_contributor": "Contributore di punta",
-      "special": "Speciale / solo su invito"
-    }
   }
 }

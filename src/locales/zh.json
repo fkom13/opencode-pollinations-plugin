@@ -3,7 +3,7 @@
     "help": {
       "title": "### 🌸 Pollinations 插件 - 命令 V6",
       "alias_note": "*(支持并推荐使用别名 `/poll` 代替 `/pollinations`！)*",
-      "mode_usage": "**模式与用法**\n- **`/poll mode [模式]`**：切换模式 (manual, alwaysfree, pro)。\n- **`/poll usage [full]`**：显示仪表盘 (full = 详情)。\n- **`/poll fallback <main> [agent]`**：配置安全网。",
+      "mode_usage": "**模式与用法**\n- **`/poll mode [模式]`**：切换模式 (manual, quest, quest_only, paid)。\n- **`/poll usage [full]`**：显示仪表盘 (full = 详情)。\n- **`/poll fallback <main> [agent]`**：配置安全网。",
       "configuration": "**配置**\n- **`/poll config [键] [值]`**：\n   - `lang`：en, fr, es, de, it, zh 等\n   - `status_gui`：none, alert, all\n   - `logs_gui`：none, error, verbose\n   - `threshold_tier` / `threshold_wallet`：0-100\n   - `status_bar`：true/false\n   - `cost_estimator`：true/false (在输出中显示费用)\n   - `enablePaidTools`：true/false (钱包保护)\n   - `costThreshold`：Pollen 限额 (默认：0.15)\n   - `costConfirmationRequired`：true/false (花费确认)",
       "models_pricing": "**模型与定价**\n- **`/poll models [类型]`**：列出模型 (类型：image, video, audio, text)\n- **`/poll pricing`**：详细定价表\n- **`/poll infos`**：关于等级和 Pollen 的说明\n- **`/poll quests`**：查看你的任务和可领取的免费 Pollen\n\n> 💡 **RMBG 密钥**：使用 `rmbg_keys` 工具 (适用于任何模型)。",
       "configuration_intro": "**配置**\n- **`/poll config [键] [值]`**:",
@@ -11,15 +11,13 @@
         "lang": "插件语言",
         "status_gui": "状态通知详细程度",
         "logs_gui": "日志详细程度",
-        "threshold_tier": "免费层级警告阈值 (%)",
-        "threshold_wallet": "钱包警告阈值 (%)",
+        "threshold_wallet": "钱包告警阈值（pollen）",
         "status_bar": "显示状态栏图标",
         "cost_estimator": "显示费用估算",
         "enablePaidTools": "钱包保护（阻止付费工具）",
         "costThreshold": "费用警告阈值",
         "costConfirmationRequired": "消费前请求确认",
-        "refillOverride": "手动 Quest Pollen 补充",
-        "questStashInFreeMode": "在 alwaysfree 中计算 Quest 储备"
+        "threshold_quest": "Quest 余额告警阈值（pollen）"
       }
     },
     "config": {
@@ -29,7 +27,7 @@
       "table_headers": "| 参数 | 当前值 | 作用 | 命令 |",
       "table_divider": "|-----------|---------------|------|---------|",
       "api_key_role": "你的密钥 API key (BYOK)",
-      "mode_role": "访问模式",
+      "mode_role": "计费模式 (quest/quest_only/paid/manual)",
       "enablePaidTools_role": "安全：禁用付费工具",
       "costConfirmationRequired_role": "超过阈值时请求确认",
       "costThreshold_role": "工具费用警报阈值",
@@ -39,12 +37,12 @@
       "fallback_enter_role": "主代理模型 (free/* 或 enter/*) -> *自动管理*",
       "status_gui_role": "状态通知详细程度",
       "logs_gui_role": "日志详细程度",
-      "threshold_tier_role": "免费每日限额警报",
-      "threshold_wallet_role": "高级钱包下降警报",
+      "threshold_wallet_role": "付费钱包告警阈值（pollen）",
       "status_bar_role": "在状态栏显示图标",
       "lang_role": "插件语言",
       "not_configured": "未配置",
-      "managed_auto": "自动管理"
+      "managed_auto": "自动管理",
+      "threshold_quest_role": "Quest 余额告警阈值（pollen）"
     },
     "generic": {
       "add_key_hint": "💡 使用 /poll connect <key> 添加 API 密钥。",
@@ -55,21 +53,17 @@
     },
     "mode": {
       "current": "当前模式：{mode}",
-      "invalid": "❌ 无效模式 '{mode}'。可用：manual, alwaysfree, pro",
-      "pro_requires_key": "❌ 'pro' 模式需要 API 密钥。",
+      "invalid": "❌ 无效模式 '{mode}'。可用：manual, quest, quest_only, paid",
       "verifying": "正在验证权限...",
-      "denied": "❌ 拒绝访问 pro/alwaysfree ({status}：{reason})",
+      "denied": "❌ 拒绝访问 quest/quest_only/paid ({status}：{reason})",
       "verify_error": "❌ 验证错误：{error}",
-      "success": "✅ 已切换到模式：{mode}"
+      "success": "✅ 已切换到模式：{mode}",
+      "key_required": "❌ '{mode}' 模式需要 API 密钥。",
+      "legacy_alias": "（旧别名 '{legacy}' → '{mode}'）"
     },
     "usage": {
       "title": "## 📊 Pollinations 统计 (模式：{mode})\n\n",
       "resources": "### 🌻 基础资源\n",
-      "tier": "- **等级：** {emoji} {tier} (限额：{limit} 🌻)\n",
-      "quota": "- **周期：** 已花费 {remaining} / 总限额 {limit}\n",
-      "usage_bar": "- **使用率：** {bar}\n",
-      "wallet": "- **余额 (付费 + 任务)：** {balance} 🌻\n\n",
-      "reset": "### 🕒 重置信息\n- **下次重置：** {date} (还有 {duration})\n\n",
       "restricted_key": "⚠️ 受限的 API 密钥。无法获取详情。\n",
       "period_detail": "### 📈 周期详情 (自 {time} 起)\n",
       "total_reqs": "- **请求数：** {reqs} ({inTok} 输入 | {outTok} 输出)\n\n",
@@ -79,7 +73,8 @@
       "full_requires_key": "⚠️ `/poll usage full` 需要已连接的 API 密钥。\n",
       "hint_full": "💡 使用 `/poll usage full` 查看详情 (需要密钥)。",
       "source_split": "- **本期已消耗：** 🎁 任务 {tier} · 💎 付费 {pack}\n",
-      "split": "- **余额：** {total} 🌻  ·  🎁 任务 ~{quest}  ·  💎 付费 ~{paid}\n\n"
+      "split": "- **余额：** {total} 🌻  ·  🎁 任务 ~{quest}  ·  💎 付费 ~{paid}\n\n",
+      "quest_note": "> ⚠️ Quest 余额是客户端的尽力估算（服务器不暴露拆分）。可靠拆分是 `/account/usage` 中的 `meter_source`。\n"
     },
     "fallback": {
       "current": "当前回退：\n- {free}\n- {enter}",
@@ -122,16 +117,14 @@
       "features_free": "**🛠️ 免费工具 (始终可用):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette` : 视觉和开发工具.\n- `remove_background` : AI 背景移除（rmbg / bgeraser — 免费）。\n- `extract_frames` / `extract_audio` : 快速媒体提取.\n- `file_to_url` : 即时在线托管.\n- `gen_edit_image_free` : 免费图像生成和编辑 (~20/天).\n- `gen_video_free` : 免费视频生成 (~5/天).\n- `object_remover` : 按提示词移除对象（免费，直连）。\n- `image_upscaler` : 放大 2x/4x（免费，直连）。\n- `image_enhancer` : AI 图像增强（免费，直连）。",
       "features_pro": "**💎 Pollinations 工具 (高级 - 使用密钥自动化)：**\n- `polli_gen_image`：图像生成 (Flux, Seedream, Gemini) + 图生图。\n- `polli_gen_video`：文生视频 / 图生视频 (Veo, Wan, LTX...)。\n- `polli_gen_audio`/`polli_stt`：Whisper 语音转文字, ElevenLabs 文字转语音。\n- `polli_gen_music`：生成式音乐引擎。\n- `polli_web_search`：联网搜索。",
       "features_config": "- **精细化配置**、模式与令牌管理、工具费用保护...",
-      "tiers_title": "> **你的 Quest Pollen 补充:** {emoji} {tier}",
       "about": "## 🌍 什么是 pollinations.ai？\npollinations.ai 是一个由社区为社区构建的开源 AI 平台。我们为图像、文本、音频和视频提供统一的 API。一切都是开放的：我们的代码、路线图、对话。已有数百名开发者在用我们构建应用、游戏、机器人和各种疯狂的实验。加入我们吧！\n\n没有黑箱。没有供应商锁定。只有友好的 API 和一个充满热心人的 Discord。",
-      "levels_title": "## 📈 每小时 Quest Pollen 补充",
-      "levels_list": "你的每小时补充取决于你的贡献等级. Quest Pollen 会累积且永不过期(只要你的账户保持活跃).\n\n{tier_table}\n\n> ⚠️ 补充是 **每小时** 的 (在 :00 重置). 每日总量是估算值 (~24h x 每小时速率).",
       "pollen_title": "## 💎 什么是 Pollen？",
       "pollen_get": "运行 AI 模型需要花钱。Pollen 是我们在不投放广告或出售数据的情况下维持服务器运行的方式。一种适用于所有模型的简单、统一的额度 — 可预测、透明、无意外。\n\n**$1 ≈ 1 Pollen** (价格可能变动)。你用它来调用 API。",
       "pollen_spend": "## 🛒 如何获取 Pollen?\n1. 🎯 **任务** — 在 dashboard 完成任务 (`/poll quests`).\n2. 💳 **购买** — 在 enter.pollinations.ai 用信用卡购买.\n3. 🌻 **开发者收益** — 在你的 App Key 上启用开发者收益.",
       "quests": "## 🎯 任务 — 赚取免费 Pollen\n现在 Pollen 主要通过完成**任务**来赚取。好消息：仅仅使用本插件 (文本、图像和音频模型) 就能**追溯性地**完成多个任务 — 你可能已经有免费 Pollen 在等着领取了！\n\n👉 在[仪表盘](https://enter.pollinations.ai)查看并领取你的奖励。_领取只能在仪表盘进行。_\n\n> 💡 任务 Pollen 适用于所有标准模型。💎 仅付费模型仍需要购买的 Pollen。",
-      "hourly_note": "> ⚠️ 配额按**小时**计算 (在 :00 充值)。每日数值为估算 (~24小时 × 每小时速率)。",
-      "get_started": "## 🔑 开始使用\n\n**1.** 在 enter.pollinations.ai 创建免费账户\n**2.** 一键连接: `/poll login`\n**3.** 或使用手动密钥: `/poll connect sk_...`\n\n输入 `/poll help` 查看所有命令."
+      "get_started": "## 🔑 开始使用\n\n**1.** 在 enter.pollinations.ai 创建免费账户\n**2.** 一键连接: `/poll login`\n**3.** 或使用手动密钥: `/poll connect sk_...`\n\n输入 `/poll help` 查看所有命令.",
+      "quest_paid_title": "## 🎁 Quest 与 💎 付费 Pollen",
+      "quest_paid_body": "Pollen 分为两列：\n\n- **🎁 Quest Pollen** — 通过完成**任务（Quests）**获得（免费）。服务器优先消耗。\n- **💎 Paid Pollen** — 购买（信用卡）。Quest 不足时使用，或用于 `paid_only` 模型。\n\n> ⚠️ 插件无法读取服务器端的拆分；它在本地估算 Quest/Paid，并从 `/account/usage` 读取真实拆分（`meter_source`）。\n\n**模式：**\n- `quest` (QUEST_PREFERRED) — 默认：优先 Quest，允许回退到 Paid。\n- `quest_only` (QUEST_ELIGIBLE_ONLY) — 阻止 paid_only 模型，仅尽力 Quest。\n- `paid` (PAID_ALLOWED) — 允许 Paid。\n- `manual` — 无自动策略。"
     },
     "pricing_units": {
       "tokens": "~tokens",
@@ -159,11 +152,16 @@
       "no_enter_models": "未检测到此密钥的 Enterprise 模型。"
     },
     "warnings": {
-      "paid_blocked_alwaysfree_title": "🚫 付费模型已被拦截：{model}",
-      "paid_blocked_alwaysfree_msg": "🚫 **付费模型在 AlwaysFree 模式下不可用**\n\n`{model}` 模型直接从你的钱包消费 (💎 仅付费)。\n\n**解决方案：**\n• `/poll config mode pro` — 允许付费模型并提供钱包保护\n• `/poll config mode manual` — 无限制，完全控制",
-      "paid_blocked_empty_wallet_msg": "⚠️ **警告：请求了付费模型 (💎 仅付费) 但高级配额已耗尽 (或处于免费模式)。**\n\n你请求的 `{model}` 模型需要你的高级钱包中有资金。\n\n🔄 **回退操作 (安全网)**：\n能量管理器已自动将你的请求重定向到免费宇宙 `{fallback}` 以避免失败。\n\n_注意：在 pollinations.ai 充值你的钱包以使用此模型。_",
-      "tier_limit_msg": "⚠️ **免费配额 (等级) 警报已超出**\n\n你已低于每日免费储备的 {threshold}%。\n\n🔄 **回退操作 (安全网)**：\n代理已切换到通用备用网络。",
-      "wallet_limit_msg": "⚠️ **高级钱包警报已超出**\n\n你购买的 Pollen 钱包余额已不足 {threshold}%。\n\n🔄 **回退操作 (安全网)**：\n代理已切换到免费网络。"
+      "wallet_limit_msg": "⚠️ **高级钱包警报已超出**\n\n你购买的 Pollen 钱包余额已不足 {threshold}%。\n\n🔄 **回退操作 (安全网)**：\n代理已切换到免费网络。",
+      "quota_unreachable_title": "⚠️ 无法访问额度",
+      "quota_unreachable_msg": "⚠️ **额度检查失败**（网络错误）。\n\n🔄 **回退（安全网）**：\n代理已切换到免费宇宙以避免失败。",
+      "balance_exhausted_title": "⚠️ Quest 与付费余额耗尽",
+      "balance_exhausted_msg": "⚠️ **Quest 和付费 pollen 似乎已耗尽。**\n\n🔄 **回退（安全网）**：\n代理已切换到免费宇宙。通过 `/poll quests` 赚取 Quest pollen 或在 enter.pollinations.ai 充值。",
+      "quest_floor_title": "⚠️ Quest 余额不足",
+      "quest_floor_msg": "⚠️ **Quest pollen 等于或低于你的阈值（{floor} 🌻）。**\n\nQuest-Only 模式不消耗付费 pollen。🔄 **回退**：代理已切换到免费宇宙。\n\n> ⚠️ 尽力而为：服务器端仍可能发生付费（pack）扣费（竞争条件）。",
+      "paid_blocked_questonly_title": "🚫 付费模型已被阻止：{model}",
+      "paid_blocked_questonly_msg": "🚫 **付费模型在 Quest-Only 模式下不可用**\n\n模型 `{model}` 始终消耗付费 pollen（💎 paid_only）。\n\n**解决方案：**\n• `/poll config mode paid` — 允许付费模型并提供钱包保护\n• `/poll config mode quest` — 优先 Quest，允许回退到 Paid\n• `/poll config mode manual` — 无限制，完全控制",
+      "wallet_limit_title": "⚠️ 付费钱包余额低"
     }
   },
   "toasts": {
@@ -246,7 +244,8 @@
       "result_recency": "📅 时效：{recency}",
       "result_cost": "🪙 预估费用：{cost}",
       "result_cost_max": "🪙 预估费用：{cost} (最大分配：{maxCost})",
-      "error_prefix": "❌ 搜索时出错：{error}"
+      "error_prefix": "❌ 搜索时出错：{error}",
+      "warn_beta": "⚠️（beta）通过 Pollinations 模型的网络搜索是实验性的。"
     },
     "polli_gen_video": {
       "desc": "使用 Pollinations AI 从文本提示或图像生成视频。\n\n💡 **动态视频模型**：\nPollinations 视频 API 持续演进。可用模型 (T2V/I2V)、时长限制、宽高比和定价实时注入于下方。\n\n**常见选项示例**：\n- `veo` 插值：使用 `reference_image=url1,url2` 进行过渡。",
@@ -483,18 +482,5 @@
     "reason_fixed": "此操作的预估费用 ({cost}) 超过了设定的阈值 ({limit})。",
     "estimated_max": "💰 平均预估费用：{cost} (最大：{maxCost})",
     "estimated": "💰 预估费用：{cost}"
-  },
-  "tier": {
-    "condition": {
-      "signup": "只需注册",
-      "auto_verify": "自动验证",
-      "under_review": "账户审核中",
-      "default": "新账户（默认）",
-      "community": "活跃的社区成员",
-      "quests": "完成任务并贡献",
-      "publish_app": "发布一个应用",
-      "top_contributor": "顶级贡献者",
-      "special": "特殊 / 仅限邀请"
-    }
   }
 }
