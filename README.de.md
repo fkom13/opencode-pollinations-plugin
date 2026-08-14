@@ -82,36 +82,39 @@ Verwenden Sie jederzeit den Alias **`/poll`** oder **`/pollinations`** in Ihrem 
 
 Wir haben grundlegende Schutzmechanismen entwickelt, um zu garantieren, dass Ihr Workflow niemals unterbrochen wird und Ihr Budget in Ihrer Kontrolle bleibt:
 
-- 🛟 **Safety Net (Sicherheitsnetz)**: Wenn Sie Premium-Modelle verwenden und Ihre stündliche Pollen-Quote mitten in der Chat-Sitzung leer ist, wechselt das Plugin lautlos auf ein kostenloses Fallback-Modell. *Keine blockierenden Limits (429) mehr.*
+- 🛟 **Safety Net (Sicherheitsnetz)**: Wenn Sie Premium-Modelle verwenden und Ihr Quest-/Paid-Guthaben mitten in der Chat-Sitzung leer ist, wechselt das Plugin lautlos auf ein kostenloses Fallback-Modell. *Keine blockierenden Limits (429) mehr.*
 - 🚦 **Cost Guard für Tools**: OpenCode-Agenten können sehr eifrig sein. Möchte ein Agent zu viele Pollen (z. B. für lange Videos) ausgeben, schaltet sich das Plugin dazwischen. Ein asynchroner Vorgang fragt erst nach Ihrer manuellen Bestätigung. Sie behalten die Kontrolle.
 
 ---
 
-## 🐝 Pollen & "Free Tiers" verstehen
+## 🐝 Quest Pollen & Paid Pollen verstehen
 
-Früher stützte sich Pollinations vor allem auf werbefinanzierten Traffic. Große Modelle (wie Claude 3.5 Sonnet, Flux Pro) kosten jedoch Geld. Das **Enter-Universum** verlangt daher nach einem API-Schlüssel für Top-Modelle.
+Das Pollinations-Pollen ist in zwei Konten getrennt:
 
-**Aber keine Sorge, Sie brauchen keine Kreditkarte!**
+- **🎁 Quest Pollen** — kostenlos verdient durch das Abschließen von **Quests**. Vom Server auf regulären Modellen zuerst verbraucht.
+- **💎 Paid Pollen** — gekauft (Kreditkarte). Wird verwendet, wenn Quest nicht ausreicht, oder für `paid_only`-Modelle.
 
-Das **Pollen 🌻** ist unser zentrales Kreditsystem (1$ ≈ 1 Pollen). Verbinden Sie einen einfachen, kostenfreien API-Schlüssel, und Sie schalten **stündliche** Pollen-Aufladungen je nach Entwicklerstufe frei:
+> ⚠️ Das Plugin kann die Aufteilung serverseitig nicht auslesen; es schätzt Quest/Paid lokal und liest die echte Aufteilung (`meter_source`) aus `/account/usage`.
 
-| Tier (Stufe) | Stündliche Aufladung ⏱️ | Schätzung Tag* | Voraussetzung |
-| :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / Std.** | ~0.24 / Tag | Neues Konto (Standard) |
-| 🌱 **Seed** | **0.15 Pollen / Std.** | ~3.6 / Tag | Aktives Community-Mitglied |
-| 🌸 **Flower** | **0.40 Pollen / Std.** | ~9.6 / Tag | Quests abschließen & beitragen |
-| 🍯 **Nectar** | **0.80 Pollen / Std.** | ~19.2 / Tag | Top-Mitwirkender |
-| 🐝 **Router** | **10 Pollen / Std.** | ~240 / Tag | Speziell / nur auf Einladung |
+### Abrechnungsmodi (v6.5)
 
-_*Tägliche Schätzungen sind nur Näherungswerte (~24h × Stundenrate). Das Reset findet automatisch zur vollen Stunde (XX:00) statt._
+| Modus | Verhalten |
+| :--- | :--- |
+| `quest` (QUEST_PREFERRED, **Standard**) | Quest zuerst, Paid-Fallback erlaubt (Server-Standard). Fällt auf das Free Universe zurück, wenn beide erschöpft aussehen. |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | Blockiert `paid_only`-Modelle lokal; sendet nur Quest-berechtigte Aufrufe. **Best-effort** — eine Paid-Belastung kann im Wettlauf dennoch auftreten. |
+| `paid` (PAID_ALLOWED) | Paid erlaubt, `paid_only` laut Cost Guard erlaubt. Fällt auf Free zurück, wenn das Wallet niedrig ist. |
+| `manual` | Keine automatische Richtlinie — volle manuelle Kontrolle. |
 
-> 🎁 **Erhalten Sie Ihren kostenlosen persönlichen Schlüssel (BYOK) auf [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin), um OpenCode zu boosten!**
+Ändern mit `/poll mode <mode>` oder `/poll config mode <mode>`.
+
+> 🎯 **Verdienen Sie kostenloses Pollen durch das Abschließen von Quests!** Allein die Nutzung dieses Plugins erfüllt mehrere Quests rückwirkend. Führen Sie `/poll quests` aus, um zu sehen, was Sie beanspruchen können.
+
+> 🎁 **Erhalten Sie Ihren kostenlosen persönlichen Schlüssel (BYOK) auf [Pollinations](https://enter.pollinations.ai), um OpenCode zu boosten!**
 
 **Wie es funktioniert:**
-1. Zuerst wird Ihre kostenlose Quote verbraucht (z.B. 0.40 🌻/Std. für Flower).
-2. Ist die Quote ausgeschöpft, wechselt das Sicherheitsnetz sanft zu den Gratis-Modellen.
-3. Nur wenn der Account über bezahltes Guthaben (Wallet) verfügt, werden Premium-Modelle weiter bedient.
-4. Pünktlich zur Anbruch der nächsten Stunde wird die freie Quote komplett resettet! 💥
+1. Ihr Quest Pollen wird auf allen regulären Modellen zuerst verbraucht.
+2. 💎 Nur-Paid-Modelle verwenden immer gekauftes Pollen.
+3. Wenn beide Guthaben erschöpft sind, wechselt das Sicherheitsnetz sanft zu kostenlosen Fallback-Varianten.
 
 ---
 

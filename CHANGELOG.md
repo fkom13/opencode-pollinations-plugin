@@ -5,6 +5,48 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.5.0] — 2026-08-14
+
+### 🔒 Reliability & safety
+
+- **Double-billing fix (chat)** — the proxy no longer re-submits a request after a client timeout, abort, network error or ambiguous 5xx/520. Only 429 is retried, conservatively. (`classifyRetry`, Phase 3 R1.)
+- **Bounded timeouts everywhere** — quota fetch (10s), STT download (60s), OpenAPI discovery (10s), music (duration+60s), `httpsGet` per-call clamped 10s–3600s.
+- **Model Registry real refresh** — lazy TTL refresh on every read path, coalesced concurrent refreshes, offline static fallback preserved. Long sessions now converge to the live catalog.
+
+### 🧠 Model compatibility
+
+- **Reasoning normalization** — DeepSeek/Kimi `reasoning_content` and Qwen `reasoning`/`reasoning_details` are stripped before reaching OpenCode (no more reasoning text pollution). `usage.completion_tokens_details.reasoning_tokens` preserved.
+- **Kimi tool calls** — top-level `tool_calls[].name:null` parasite removed; `function.name` is canonical. `message.tools:null` ignored.
+- **Video canonical endpoint** — tools now use `/video/{prompt}` (SDK/CLI route).
+
+### 💰 Billing & BYOP
+
+- **Quest/Paid semantics** — new modes: `quest` (QUEST_PREFERRED, default), `quest_only` (QUEST_ELIGIBLE_ONLY, best-effort), `paid` (PAID_ALLOWED), `manual`. Legacy `alwaysfree`→`quest`, `pro`→`paid` migrated automatically.
+- **Tier/refill purge** — `KNOWN_REFILLS`, `deduceAllowance*`, `TIER_INFO` table, `refillOverride`, `questStashInFreeMode` removed (hourly refill no longer exists upstream). Thresholds are now absolute pollen floors.
+- **Honest docs** — strict Quest-only is not guaranteed upstream; a Paid (pack) debit can still occur in a race.
+
+### 🧰 Tool execution architecture
+
+- **Tool Capability Registry** — declarative, capability-centric (endpoint, execution mode, retry policy, recovery, backend overrides). Model Registry stays model-centric.
+- **Timeout hierarchy** — per-call > model override > capability > global; configurable via `/poll config timeouts.*`; new `timeout_seconds` arg on image/video/3D.
+- **Artifact core** — magic-bytes detection (JPEG/PNG/GLB/MP4/WebM/MP3…) and extension-follows-real-bytes saving (fixes b64-edit JPEG-saved-as-PNG).
+- **Structured errors** — single parser for the `{success,code,details}` envelope; `upstreamHost`/`upstreamBody` never exposed to users.
+
+### 🧊 3D
+
+- **`polli_gen_3d`** — trellis-2 (default, ~0.24 🌻 low) and hyper3d-rodin (~0.10 🌻, paid_only). GLB validated by magic bytes. No auto-resubmit on timeout; same-seed cache recovery.
+
+### 🧪 Testing
+
+- New v6.5 contract suite `scripts/tests/test-v65.cjs` (96 offline tests): retry no-double-submit, reasoning normalization on live fixtures, registry TTL/refresh/offline/coalescing, TCR precedence/clamp, artifact magic bytes, billing migration, structured errors.
+- Full chain: 101 unit + 96 v6.5 + 108 i18n — all green.
+
+### 📚 Docs
+
+- `docs/V65_MIGRATION.md`, implementation & test reports. READMEs updated in 3 languages (Quest/Paid + modes).
+
+---
+
 ## [6.4.10] — 2026-07-30
 
 ### 🐛 Bug fixes (P0)

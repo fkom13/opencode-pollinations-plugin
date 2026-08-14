@@ -79,36 +79,41 @@ Use the alias **`/poll`** or **`/pollinations`** anytime inside your conversatio
 
 ## 🛡️ The "Cost Guard" & the "Safety Net"
 
-We have introduced fundamental protections to ensure your workflow never interrupts and your budget (Wallet or Free Tiers) is under your control:
+We have introduced fundamental protections to ensure your workflow never interrupts and your budget (Quest & Paid Pollen) is under your control:
 
-- 🛟 **Safety Net**: If you use premium models and your hourly Pollen quota runs out in the middle of a chat session, the plugin silently and automatically switches to a free model. *No more blocking errors (429).*
+- 🛟 **Safety Net**: If you use premium models and your Quest/Paid balance runs out in the middle of a chat session, the plugin silently and automatically switches to a free model. *No more blocking errors (429).*
 - 🚦 **Cost Guard for Tools**: OpenCode Agents can be zealous. If an Agent tries to spend too many Pollens to generate a heavy video or music, the plugin intercepts the request. An asynchronous flow will ask for your manual confirmation before executing costly generations. You stay in control.
 
 ---
 
-## 🐝 Understanding Quest Pollen & Hourly Refill
+## 🐝 Understanding Quest Pollen & Paid Pollen
 
-In the past, Pollinations relied on tier grants. Today, you earn free Pollen by completing **Quests** and get **hourly refills** based on your contribution level:
+Pollinations pollen is split into two columns:
 
-| Level | Hourly Refill ⏱️ | Daily Estimate* | Condition |
-| :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / hour** | ~0.24 / day | New account (default) |
-| 🌱 **Seed** | **0.15 Pollen / hour** | ~3.6 / day | Active community member |
-| 🌸 **Flower** | **0.40 Pollen / hour** | ~9.6 / day | Complete Quests & contribute |
-| 🍯 **Nectar** | **0.80 Pollen / hour** | ~19.2 / day | Top contributor |
-| 🐝 **Router** | **10 Pollen / hour** | ~240 / day | Special / invite-only |
+- **🎁 Quest Pollen** — earned free by completing **Quests**. Consumed first by the server on regular models.
+- **💎 Paid Pollen** — purchased (credit card). Used when Quest is insufficient, or for `paid_only` models.
 
-_*Daily estimates are approximate (~24h × hourly rate). Refill resets automatically at the top of every hour (XX:00). Quest Pollen lasts 12 months since last account activity._
+> ⚠️ The plugin cannot read the split server-side; it estimates Quest/Paid locally and reads the real split (`meter_source`) from `/account/usage`.
+
+### Billing modes (v6.5)
+
+| Mode | Behavior |
+| :--- | :--- |
+| `quest` (QUEST_PREFERRED, **default**) | Quest first, Paid fallback allowed (server default). Falls back to the Free Universe when both look exhausted. |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | Blocks `paid_only` models locally; only sends Quest-eligible calls. **Best-effort** — a Paid debit can still occur in a race. |
+| `paid` (PAID_ALLOWED) | Paid allowed, `paid_only` allowed per Cost Guard. Falls back to Free when the wallet is low. |
+| `manual` | No automatic policy — full manual control. |
+
+Change with `/poll mode <mode>` or `/poll config mode <mode>`.
 
 > 🎯 **Earn free Pollen by completing Quests!** Just using this plugin completes several quests retroactively. Run `/poll quests` to see what you can claim.
 
 > 🎁 **Get your Free Personal Key (BYOK) on [Pollinations](https://enter.pollinations.ai) to boost OpenCode!**
 
 **How It Works:**
-1. Your Quest Pollen (hourly refill + accumulated quest rewards) is consumed first on all regular models.
+1. Your Quest Pollen is consumed first on all regular models.
 2. 💎 Paid-only models always use purchased Pollen.
-3. When Quest Pollen is exhausted, the safety net gracefully switches you to free fallback variants.
-4. ⏰ Refill resets at the top of the next hour.
+3. When both balances are exhausted, the safety net gracefully switches you to free fallback variants.
 
 ---
 

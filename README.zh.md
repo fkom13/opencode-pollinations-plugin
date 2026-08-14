@@ -82,36 +82,39 @@
 
 我们非常在乎您的私人资产和宝贵开发工序，因此设置了这些保护带确保您高枕无忧:
 
-- 🛟 **安全降落路线 (Safety Net)**: 如果你在写程序的深夜用光了每小时的高额度配给，此时你的所有 Premium 调度命令就会触发拦截，并安静快速的回退降落至 免费通用型大模型 (Free fallback models)。*拒绝让你因为 429 Error 失联。*
+- 🛟 **安全降落路线 (Safety Net)**: 如果你在写程序的深夜用光了 Quest/Paid 余额，此时你的所有 Premium 调度命令就会触发拦截，并安静快速的回退降落至 免费通用型大模型 (Free fallback models)。*拒绝让你因为 429 Error 失联。*
 - 🚦 **防爆预警 (Cost Guard)**: OpenCode的自动助手有时会擅作主张消耗运算生成特别复杂的超长视频，但在这里不存在被割韭菜。所有超出警戒阈值的资源任务均会被打断并冻结挂起。系统弹出安全质询通道（要求您必须亲自在公屏回复执行确认）它才能继续扣花粉工作。您可以完全把控每一笔帐目。
 
 ---
 
-## 🐝 快速掌握 Pollens 与 "开发者等级 (Free Tiers)"
+## 🐝 快速了解 Quest Pollen 与 Paid Pollen
 
-在过去，Pollinations 主要通过广告平台养活大量公益节点。但今天，超大体量模型 (Claude 3.5 Sonnet, Wan Video 甚至 Flux Pro等) 消耗服务器资源可谓燃烧。所以需要加入被称之为 **Enter Universe** 的世界获取凭证通行（这就需要有 API 密钥了）。
+Pollinations 的花粉 (Pollen) 分为两个账目：
 
-**别急，你不一定非要绑用那愚蠢或麻烦的银行卡支付验证！**
+- **🎁 Quest Pollen（任务花粉）** — 通过完成**任务**免费获得。在常规模型上由服务器优先消耗。
+- **💎 Paid Pollen（付费花粉）** — 通过购买获得（信用卡）。当 Quest 不足或用于 `paid_only` 模型时使用。
 
-**Pollen 🌻** (花粉) 是一种标准化凭证虚拟计费代币 (换算: 1$ 余额约 ≈ 1个 Pollen)。无论你是何许人，只要拥有一个完全免费申请通过的API KEY 并载入即可享受 **每个小时(Hourly)** 下放的补给白嫖指标！你的产出贡献越高（即下面列表中所达到的等级Tier阶段）每小时收复的资源越多：
+> ⚠️ 插件无法在服务端读取这一分配；它在本地估算 Quest/Paid，并从 `/account/usage` 读取真实的分配来源 (`meter_source`)。
 
-| Tier (称号) | 每小时获取补贴量 ⏱️ | 无限循环参考值* | 达成条件 |
-| :--- | :--- | :--- | :--- |
-| 🍄 **Spore (孢子)** | **0.01 Pollen / 小时** | 每天约 ~0.24 | 新账户（默认） |
-| 🌱 **Seed (树种)** | **0.15 Pollen / 小时** | 每天约 ~3.6 | 活跃的社区成员 |
-| 🌸 **Flower (花朵)** | **0.40 Pollen / 小时** | 每天约 ~9.6 | 完成任务并贡献 |
-| 🍯 **Nectar (花蜜)** | **0.80 Pollen / 小时** | 每天约 ~19.2 | 顶级贡献者 |
-| 🐝 **Router (路由)** | **10 Pollen / 小时** | 每天约 ~240 | 特殊 / 仅限邀请 |
+### 计费模式 (v6.5)
 
-_*所列出每天近似最大总额建立在前置满消(~24h × hourly rate)为理论上限。真实的花粉量都会准时在零点过的一分钟 (XX:00) 统一灌满池子里。_
+| 模式 | 行为 |
+| :--- | :--- |
+| `quest` (QUEST_PREFERRED，**默认**) | Quest 优先，允许 Paid 回退（服务器默认）。当两者看起来都已耗尽时，回退到 Free Universe。 |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | 在本地阻止 `paid_only` 模型；只发送符合 Quest 条件的调用。**尽力而为 (Best-effort)** — 在竞态下仍可能产生 Paid 扣费。 |
+| `paid` (PAID_ALLOWED) | 允许 Paid，`paid_only` 需经过 Cost Guard 审批。当钱包余额不足时回退到 Free。 |
+| `manual` | 无自动策略 — 完全手动控制。 |
 
-> 🎁 **请前往 [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) 搞定这把无敌的神庙钥匙 (BYOK) 以最大化您的 OpenCode 体验!**
+通过 `/poll mode <mode>` 或 `/poll config mode <mode>` 更改。
 
-**具体消费工作流循环顺序：**
-1. 优先使用每小时的零花钱基础等级 (例如你是Flower,那么前 0.40 🌻 的消费全由这块报销)。
-2. 报销券花完了?  系统立刻切为不用钱性能较慢一点点的免费通道为你打工。
-3. 倘若自己还买了增值储值 (Wallet), 然后遇到付费应用才使用 Wallet里真正的花粉。
-4. Boom! 💥 下个小时开始了, 所有的额度补给立刻拉到全满状态。爽！
+> 🎯 **通过完成任务赚取免费 Pollen！** 只要使用本插件即可追溯完成多项任务。运行 `/poll quests` 查看你可以领取的奖励。
+
+> 🎁 **前往 [Pollinations](https://enter.pollinations.ai) 获取你的免费个人密钥 (BYOK)，为 OpenCode 加速！**
+
+**工作原理：**
+1. 在常规模型上，你的 Quest Pollen 会被优先消耗。
+2. 💎 仅限付费的模型始终使用已购买的 Pollen。
+3. 当两个余额都已耗尽时，安全网会优雅地切换到免费的备用模型。
 
 ---
 
