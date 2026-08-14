@@ -111,7 +111,8 @@ export function getPaidImageModels(): Record<string, {
         }
         return result;
     }
-    return _STATIC_PAID_IMAGE_MODELS;
+    // v6.5: offline fallback is served by the Model Registry STATIC_FALLBACK.
+    return {};
 }
 
 /**
@@ -137,9 +138,11 @@ export function getVideoModels(): Record<string, {
             result[m.name] = {
                 desc: m.description,
                 cost: costStr,
-                t2v: !_STATIC_I2V_ONLY.has(m.name), // wan is I2V only
+                // wan is I2V-only upstream; manual.ts patches [image,text] +
+                // a T2V dummy-image hack, so t2v stays enabled for it.
+                t2v: !(m.supportsI2X && m.input_modalities.length === 1 && m.input_modalities[0] === 'image'),
                 i2v: m.supportsI2X,
-                audio: !_STATIC_NO_AUDIO.has(m.name),
+                audio: !VIDEO_NO_AUDIO_MODELS.has(m.name),
                 duration: m.durationRange || [1, 10],
                 aspectRatios: m.aspectRatios || ['16:9'],
                 costHeader: m.costHeader || 'x-usage-completion-video-seconds',
@@ -148,7 +151,7 @@ export function getVideoModels(): Record<string, {
         }
         return result;
     }
-    return _STATIC_VIDEO_MODELS;
+    return {};
 }
 
 /**
@@ -179,7 +182,7 @@ export function getAudioModels(): Record<string, {
         }
         return result;
     }
-    return _STATIC_AUDIO_MODELS;
+    return {};
 }
 
 /**
@@ -233,10 +236,16 @@ export function getMusicModel(): Record<string, {
 // For direct model lookup: use ModelRegistry.getByNameOrAlias()
 
 // ─── Private Static Fallback Data ─────────────────────────────────────────
-// Used ONLY when ModelRegistry is not ready (startup race, offline).
+// v6.5: the three big model tables (_STATIC_PAID_IMAGE_MODELS,
+// _STATIC_VIDEO_MODELS, _STATIC_AUDIO_MODELS) and the empty
+// _STATIC_I2V_ONLY set were removed — the Model Registry serves the
+// offline fallback (STATIC_FALLBACK in models/cache.ts) and the live
+// catalog provides paid_only/modalities/voices dynamically.
+// What remains are transport rules the catalogue does NOT expose.
 
-const _STATIC_I2V_ONLY = new Set<string>(); // Models that are I2V only (no T2V)
-const _STATIC_NO_AUDIO = new Set(['seedance', 'seedance-pro']); // Video models without audio
+// Video models without audio output (mirrors manual.ts; the catalogue's
+// video_capabilities.audio_output is not yet mapped to PollinationsModel).
+const VIDEO_NO_AUDIO_MODELS = new Set(['seedance', 'seedance-pro']);
 
 const _STATIC_AUDIO_ENDPOINTS: Record<string, string> = {
     'openai-audio': '/v1/chat/completions',
@@ -244,128 +253,6 @@ const _STATIC_AUDIO_ENDPOINTS: Record<string, string> = {
     'whisper': '/v1/audio/transcriptions',
     'scribe': '/v1/audio/transcriptions',
     'elevenmusic': '/audio/{text}',
-};
-
-const _STATIC_PAID_IMAGE_MODELS: Record<string, {
-    desc: string;
-    cost: string;
-    t2i: boolean;
-    i2i: boolean;
-    params: string[];
-    notes?: string;
-}> = {
-    'flux': { desc: 'Flux Schnell', cost: '0.0002 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
-    'sana': { desc: 'Sana (Efficient)', cost: '0.0002 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
-    'zimage': { desc: 'Z-Image Turbo (6B Flux 2x)', cost: '0.0002 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
-    'imagen-4': { desc: 'Imagen 4 (alpha)', cost: '0.0025 🌻', t2i: true, i2i: false, params: ['width', 'height'] },
-    'klein': { desc: 'FLUX.2 Klein 4B', cost: '0.008 🌻', t2i: true, i2i: true, params: ['width', 'height', 'image'] },
-    'klein-large': { desc: 'FLUX.2 Klein 9B', cost: '0.012 🌻', t2i: true, i2i: true, params: ['width', 'height', 'image'] },
-    'gptimage': { desc: 'GPT Image 1 Mini (OpenAI)', cost: 'tokens', t2i: true, i2i: false, params: ['width', 'height', 'quality', 'transparent'] },
-    'gptimage-large': { desc: 'GPT Image 1.5 (Advanced)', cost: 'tokens', t2i: true, i2i: false, params: ['width', 'height', 'quality', 'transparent'] },
-    'kontext': { desc: 'FLUX.1 Kontext', cost: '0.04 🌻 💎', t2i: true, i2i: true, params: ['width', 'height', 'image'], notes: 'In-Context Editing' },
-    'seedream': { desc: 'Seedream 4.0 (ByteDance ARK)', cost: '0.03 🌻', t2i: true, i2i: true, params: ['width', 'height', 'image'] },
-    'seedream-pro': { desc: 'Seedream 4.5 Pro (ARK 4K)', cost: '0.04 🌻 💎', t2i: true, i2i: true, params: ['width', 'height', 'image'], notes: '4K, Multi-Image' },
-    'nanobanana': { desc: 'NanoBanana (Gemini 2.5 Flash)', cost: 'tokens', t2i: true, i2i: true, params: ['width', 'height', 'image'] },
-    'nanobanana-pro': { desc: 'NanoBanana Pro (Gemini 3 Pro)', cost: 'tokens', t2i: true, i2i: true, params: ['width', 'height', 'image'], notes: 'Thinking Model' },
-};
-
-const _STATIC_VIDEO_MODELS: Record<string, {
-    desc: string;
-    cost: string;
-    t2v: boolean;
-    i2v: boolean;
-    audio: boolean;
-    duration: [number, number];
-    aspectRatios: string[];
-    costHeader: string;
-    genTime: string;
-}> = {
-    'grok-video': {
-        desc: 'Grok Video (alpha)',
-        cost: '0.0025/sec',
-        t2v: true, i2v: false, audio: true,
-        duration: [1, 15],
-        aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
-        costHeader: 'x-usage-completion-video-seconds',
-        genTime: '~10s'
-    },
-    'ltx-2': {
-        desc: 'LTX-2 (Lightricks)',
-        cost: '0.01/sec',
-        t2v: true, i2v: false, audio: true,
-        duration: [5, 20],
-        aspectRatios: ['16:9'],
-        costHeader: 'x-usage-completion-video-seconds',
-        genTime: '~35s'
-    },
-    'wan': {
-        desc: 'Wan 2.6 (Alibaba)',
-        cost: '0.025/sec',
-        t2v: false, i2v: true, audio: true,
-        duration: [5, 15],
-        aspectRatios: ['16:9', '9:16', '1:1', '4:3'],
-        costHeader: 'x-usage-completion-video-seconds',
-        genTime: '~30s'
-    },
-    'veo': {
-        desc: 'Veo 3.1 Fast (Google)',
-        cost: '0.15/sec 💎',
-        t2v: true, i2v: true, audio: true,
-        duration: [4, 8],
-        aspectRatios: ['16:9', '9:16', '1:1'],
-        costHeader: 'x-usage-completion-video-seconds',
-        genTime: '~45-68s',
-    },
-    'seedance': {
-        desc: 'Seedance Lite (BytePlus)',
-        cost: 'tokens',
-        t2v: true, i2v: true, audio: false,
-        duration: [4, 12],
-        aspectRatios: ['16:9', '9:16', '1:1'],
-        costHeader: 'x-usage-completion-video-tokens',
-        genTime: '~30s'
-    },
-    'seedance-pro': {
-        desc: 'Seedance Pro-Fast (BytePlus)',
-        cost: 'tokens',
-        t2v: true, i2v: true, audio: false,
-        duration: [4, 12],
-        aspectRatios: ['16:9', '9:16', '1:1'],
-        costHeader: 'x-usage-completion-video-tokens',
-        genTime: '~30s'
-    },
-};
-
-const _STATIC_AUDIO_MODELS: Record<string, {
-    desc: string;
-    type: 'tts' | 'stt' | 'both';
-    endpoint: string;
-    params: string[];
-    voices?: string[];
-    notes?: string;
-}> = {
-    'openai-audio': {
-        desc: 'GPT-4o Audio Preview',
-        type: 'both',
-        endpoint: '/v1/chat/completions',
-        params: ['voice', 'format'],
-        voices: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'],
-        notes: 'DEFAULT - least expensive'
-    },
-    'elevenlabs': {
-        desc: 'ElevenLabs v3',
-        type: 'tts',
-        endpoint: '/audio/{text}',
-        params: ['voice', 'response_format'],
-        voices: ['rachel', 'domi', 'bella', 'elli', 'charlotte', 'dorothy', 'sarah', 'emily', 'lily', 'matilda', 'adam', 'antoni', 'arnold', 'josh', 'sam', 'daniel', 'charlie', 'james', 'fin', 'callum', 'liam', 'george', 'brian', 'bill', 'ash', 'ballad', 'coral', 'sage', 'verse'],
-    },
-    'whisper': {
-        desc: 'OpenAI Whisper v3',
-        type: 'stt',
-        endpoint: '/v1/audio/transcriptions',
-        params: ['file'],
-        notes: 'POST ONLY (multipart)'
-    },
 };
 
 const _STATIC_MUSIC_MODEL = {
@@ -728,40 +615,34 @@ export function per1pollen(cost: number | null): string {
 }
 
 export function estimateImageCost(model: string): number {
-    // Try ModelRegistry first
+    // Try ModelRegistry first (averageCost or catalogue pricing)
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('image', model);
-        if (m && m.averageCost !== undefined) {
-            return m.averageCost;
+        if (m) {
+            if (m.averageCost !== undefined) return m.averageCost;
+            if (m.pricing.completionImageTokens !== undefined) return m.pricing.completionImageTokens;
         }
     }
-    // Fallback to static
-    const info = _STATIC_PAID_IMAGE_MODELS[model];
-    if (!info) return 0.0002;
-    const costMatch = info.cost.match(/[\d.]+/);
-    return costMatch ? parseFloat(costMatch[0]) : 0.0002;
+    return 0.0002;
 }
 
 export function estimateVideoCost(model: string, duration: number): number {
-    // Try ModelRegistry first
+    // Try ModelRegistry first (averageCost or catalogue pricing)
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('video', model);
-        if (m && m.averageCost !== undefined) {
-            return m.averageCost;
+        if (m) {
+            if (m.averageCost !== undefined) return m.averageCost;
+            if (m.pricing.completionVideoSeconds !== undefined) {
+                return duration * m.pricing.completionVideoSeconds;
+            }
+            if (m.pricing.completionVideoTokens !== undefined) {
+                // seedance-style token billing (~21780 tokens/s observed)
+                const tokensPerSecond = 21780;
+                return (duration * tokensPerSecond) * m.pricing.completionVideoTokens;
+            }
         }
     }
-    // Fallback to static
-    const info = _STATIC_VIDEO_MODELS[model];
-    if (!info) return duration * 0.01;
-
-    if (info.costHeader === 'x-usage-completion-video-tokens') {
-        const tokensPerSecond = 21780;
-        return (duration * tokensPerSecond) * 0.00001;
-    }
-
-    const costMatch = info.cost.match(/[\d.]+/);
-    const perSecond = costMatch ? parseFloat(costMatch[0]) : 0.01;
-    return duration * perSecond;
+    return duration * 0.01;
 }
 
 export function estimateTtsCost(textLength: number): number {
@@ -854,8 +735,7 @@ export function supportsI2I(model: string): boolean {
         const m = ModelRegistry.getByNameOrAlias('image', model);
         return m?.supportsI2X === true;
     }
-    const info = _STATIC_PAID_IMAGE_MODELS[model];
-    return info?.i2i === true;
+    return false;
 }
 
 /**
@@ -866,22 +746,23 @@ export function supportsI2V(model: string): boolean {
         const m = ModelRegistry.getByNameOrAlias('video', model);
         return m?.supportsI2X === true;
     }
-    const info = _STATIC_VIDEO_MODELS[model];
-    return info?.i2v === true;
+    return false;
 }
 
 /**
  * Check if video model requires Image-to-Video (no T2V)
  */
 export function requiresI2V(model: string): boolean {
+    // v6.5: I2V-only = accepts image input and no text input. manual.ts
+    // patches wan with [image,text] + T2V dummy-image hack, so no current
+    // model is strictly I2V-only.
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('video', model);
         if (m) {
-            return _STATIC_I2V_ONLY.has(m.name); // Only wan is I2V-only for now
+            return m.input_modalities.includes('image') && !m.input_modalities.includes('text');
         }
     }
-    const info = _STATIC_VIDEO_MODELS[model];
-    return info?.t2v === false && info?.i2v === true;
+    return false;
 }
 
 /**
@@ -892,8 +773,7 @@ export function validateAspectRatio(model: string, ratio: string): boolean {
         const m = ModelRegistry.getByNameOrAlias('video', model);
         return m?.aspectRatios?.includes(ratio) ?? false;
     }
-    const info = _STATIC_VIDEO_MODELS[model];
-    return info?.aspectRatios.includes(ratio) ?? false;
+    return false;
 }
 
 /**
@@ -904,6 +784,5 @@ export function getDurationRange(model: string): [number, number] {
         const m = ModelRegistry.getByNameOrAlias('video', model);
         return (m?.durationRange as [number, number]) ?? [1, 10];
     }
-    const info = _STATIC_VIDEO_MODELS[model];
-    return info?.duration ?? [1, 10];
+    return [1, 10];
 }
