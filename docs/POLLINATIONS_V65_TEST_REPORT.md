@@ -18,9 +18,10 @@ Commandes exécutées :
 ```text
 npx tsc --noEmit                → PASS (0 erreur)
 npm run build                   → PASS
-node scripts/tests/test-suite.cjs → 101/101 PASS
-node scripts/tests/test-v65.cjs   → 96/96 PASS
-node scripts/tests/test-i18n.cjs  → 108/108 PASS
+node scripts/tests/test-suite.cjs    → 101/101 PASS
+node scripts/tests/test-v65.cjs      → 166/166 PASS (Phase 3.1 gaps closed)
+node scripts/tests/test-i18n.cjs     → 108/108 PASS
+node scripts/tests/test-ux-vocab.cjs → PASS (0 violation vocabulaire legacy)
 npm pack                        → PASS (133 fichiers, 246.1 kB)
 npm publish --dry-run           → PASS (dry-run seulement)
 ```
@@ -33,7 +34,7 @@ structure du registry, quota v6.5 (vérifie que `tierMetaForAllowance`,
 formatQuotaForToast (Quest/Paid + auth_limited), proxy module, i18n légers,
 réseau optionnel.
 
-## 3. Contract tests v6.5 (test-v65.cjs) — 96 PASS (offline, CI-safe)
+## 3. Contract tests v6.5 (test-v65.cjs) — 166 PASS (offline, CI-safe)
 
 | Suite | Tests clés |
 |---|---|
@@ -46,6 +47,14 @@ réseau optionnel.
 | Billing migration | alwaysfree→quest, pro→paid, purge refillOverride/questStashInFreeMode, thresholds.tier→quest |
 | Erreurs structurées | enveloppe `{success:false,...}` → kind, upstreamHost jamais dans le message (sanitizé en debug), 402/401/429/500, timeout/HTTP 402/network |
 | Vidéo | endpoint `/video/{prompt}` dans TCR + code, `/3d/` dans gen_3d, pas de `if(model===)` dispersé |
+| Confirmation 3D (gap A) | Dispatcher réel testé : Cost Guard 0.24>0.15 → suspension → pending request `polli_gen_3d` → `polli_gen_confirm(confirm)` → exécution avec symbole `polli_confirmed` (exec mocké, aucune génération live) |
+| Extension stricte (gap B) | `my_image.png`+JPEG → `my_image.jpg`, `model.bin`+GLB → `model.glb`, `output.webm`+MP4 → `output.mp4` — chemin FS et ext retournée TOUJOURS d'accord |
+| Config→exécution (gap C) | `capabilities.threeD=2400` → 2400 ; `overrides['trellis-2']=2000` → 2000 ; per-call 500 → 500 ; USER model > USER capability > built-in > global |
+| Tentatives 429 (gap D) | fetch mocké : 429 = 1 initiale + 1 retry (MAX_RETRIES=1) ; timeout/réseau/5xx = 1 requête, aucune reprise |
+| Vocabulaire legacy (gap E) | `test-ux-vocab.cjs` scanne locales/READMEs/src/docs (whitelists CHANGELOG, V65_MIGRATION, alias maps config/commands) |
+| enablePaidTools (gap F) | Wording = blocage local paid_only + « pas de garantie serveur » — aucune promesse Quest-only |
+| Retry TCR (gap G) | embed/upload (POST facturables) = NO_AUTOMATIC_RETRY ; médias RECOVER_SAME_REQUEST+SERVER_DEDUP ; async REPOLL_JOB ; local SAFE_READ_ONLY |
+| Classification live (gap H) | Suites live marquées MANUAL/LIVE, exclues de npm test/prepublishOnly |
 
 **Aucun test ne déclenche une génération payante.** Mocks et fixtures
 runtime capturées uniquement.

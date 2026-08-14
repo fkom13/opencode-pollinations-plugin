@@ -82,7 +82,9 @@ Invariants : Model Registry = quoi existe · Tool Registry = comment l'utiliser
 | `src/tools/pollinations/artifact-core.ts` | Magic bytes, résolution d'input multi-source, persistance ext=réalité. |
 | `src/tools/pollinations/error-parser.ts` | Parsing d'erreurs structuré (enveloppe `{success,code,details}`), sanitisation upstreamHost/Body. |
 | `src/tools/pollinations/gen_3d.ts` | `polli_gen_3d` (trellis-2/hyper3d-rodin, GLB, recovery cache). |
-| `scripts/tests/test-v65.cjs` | Suite contract v6.5 (96 tests). |
+| `src/tools/pollinations/polli_gen_confirm.ts` | **Fix regression** : `polli_gen_3d` ajouté au dispatcher de confirmation (gap A). |
+| `scripts/tests/test-v65.cjs` | Suite contract v6.5 (166 tests — gaps Phase 3.1 fermés). |
+| `scripts/tests/test-ux-vocab.cjs` | Garde sémantique du vocabulaire legacy (tier/refill/alwaysfree) sur locales/READMEs/src/docs. |
 | `docs/V65_MIGRATION.md`, `docs/POLLINATIONS_V65_IMPLEMENTATION_REPORT.md`, `docs/POLLINATIONS_V65_TEST_REPORT.md` | Docs livrables Phase 3. |
 
 ## 3. Décisions de design
