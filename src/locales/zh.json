@@ -4,7 +4,7 @@
       "title": "### 🌸 Pollinations 插件 - 命令 V6",
       "alias_note": "*(支持并推荐使用别名 `/poll` 代替 `/pollinations`！)*",
       "mode_usage": "**模式与用法**\n- **`/poll mode [模式]`**：切换模式 (manual, quest, quest_only, paid)。\n- **`/poll usage [full]`**：显示仪表盘 (full = 详情)。\n- **`/poll fallback <main> [agent]`**：配置安全网。",
-      "configuration": "**配置**\n- **`/poll config [键] [值]`**：\n   - `lang`：en, fr, es, de, it, zh 等\n   - `status_gui`：none, alert, all\n   - `logs_gui`：none, error, verbose\n   - `threshold_tier` / `threshold_wallet`：0-100\n   - `status_bar`：true/false\n   - `cost_estimator`：true/false (在输出中显示费用)\n   - `enablePaidTools`：true/false (钱包保护)\n   - `costThreshold`：Pollen 限额 (默认：0.15)\n   - `costConfirmationRequired`：true/false (花费确认)",
+      "configuration": "**配置**\n- **`/poll config [键] [值]`**：\n   - `lang`：en, fr, es, de, it, zh 等\n   - `status_gui`：none, alert, all\n   - `logs_gui`：none, error, verbose\n   - `threshold_quest` / `threshold_wallet`：pollen 阈值 (默认 0.05 / 0.5)\n   - `status_bar`：true/false\n   - `cost_estimator`：true/false (在输出中显示费用)\n   - `enablePaidTools`：true/false (本地阻止 paid_only — 无服务器保证)\n   - `costThreshold`：Pollen 限额 (默认：0.15)\n   - `costConfirmationRequired`：true/false (花费确认)",
       "models_pricing": "**模型与定价**\n- **`/poll models [类型]`**：列出模型 (类型：image, video, audio, text)\n- **`/poll pricing`**：详细定价表\n- **`/poll infos`**：关于等级和 Pollen 的说明\n- **`/poll quests`**：查看你的任务和可领取的免费 Pollen\n\n> 💡 **RMBG 密钥**：使用 `rmbg_keys` 工具 (适用于任何模型)。",
       "configuration_intro": "**配置**\n- **`/poll config [键] [值]`**:",
       "config": {
@@ -138,7 +138,7 @@
       "tok": "🌻/tok"
     },
     "login": {
-      "prompt": "## 🔐 快速登录 (设备流程)\n\n**1.** 打开：**{uri_complete}**\n_(或访问 {uri} 并输入下面的代码)_\n\n**2.** 你的代码：**`{code}`**\n\n**3.** 用 GitHub 登录，然后在授权表单中：\n   • ✅ 保持授予 **Profile** + **Usage** (配额、任务和 always-free 所需)\n   • 💡 如需**无限制密钥**：清空 **Budget** 字段 (→ 无限) 和 **Expiry** 字段 (→ 永不过期)\n   • 点击 **Authorize**\n\n插件正在等待，批准后会**自动**连接 (有提示确认 ✅)。\n\n💡 _更喜欢手动创建的密钥？请改用 `/poll connect sk_...`。_",
+      "prompt": "## 🔐 快速登录 (设备流程)\n\n**1.** 打开：**{uri_complete}**\n_(或访问 {uri} 并输入下面的代码)_\n\n**2.** 你的代码：**`{code}`**\n\n**3.** 用 GitHub 登录，然后在授权表单中：\n   • ✅ 保持授予 **Profile** + **Usage** (配额、任务和免费回退所需)\n   • 💡 如需**无限制密钥**：清空 **Budget** 字段 (→ 无限) 和 **Expiry** 字段 (→ 永不过期)\n   • 点击 **Authorize**\n\n插件正在等待，批准后会**自动**连接 (有提示确认 ✅)。\n\n💡 _更喜欢手动创建的密钥？请改用 `/poll connect sk_...`。_",
       "already_running": "⏳ 已有登录正在进行中。请在浏览器中完成授权，或稍候。",
       "code_error": "❌ 无法启动登录：{error}\n💡 你仍可手动使用 `/poll connect sk_...`。",
       "expired": "⏱️ 登录代码已过期。请重新运行 /poll login。",
@@ -147,7 +147,7 @@
       "nothing_pending": "ℹ️ 没有正在进行的登录。请先运行 polli_login (不带 wait) 获取代码。",
       "opened": "🌐 正在打开浏览器进行授权…",
       "still_waiting": "⏳ 仍在等待你在浏览器中授权。批准后，请再次以 wait:true 调用 polli_login 以确认。",
-      "success_limited": "⚠️ 已连接，但你的密钥似乎受限 (未授予 Profile/Usage)。配额显示、always-free 回退和钱包控制可能无法工作。请重新登录并授予 Profile + Usage，或使用完整密钥。"
+      "success_limited": "⚠️ 已连接，但你的密钥似乎受限 (未授予 Profile/Usage)。配额显示、免费宇宙回退和钱包控制可能无法工作。请重新登录并授予 Profile + Usage，或使用完整密钥。"
     }
   },
   "proxy": {
@@ -517,7 +517,7 @@
     "resources": "### 📚 资源\n* **Dashboard:** enter.pollinations.ai\n* **Discord:** 加入社区\n* **Plugin:** github.com/fkom13/opencode-pollinations-plugin",
     "free_models_success": "可用免费模型：{models}",
     "free_models_error": "⚠️ 无法获取免费模型。",
-    "onboarding": "## 🌸 欢迎使用 Pollinations 插件\n\n**即时免费访问 — 无需密钥**\n本插件提供完整的聊天、代码生成和媒体处理环境 (图像、视频、音频生成、提取工具...)。\n\n从列表中选择一个 `pollinations/free/*` 模型并开始聊天。\n{freeText}\n\n**🆓 额外免费工具（无需密钥）：** `gen_edit_image_free`、`gen_video_free`、`object_remover`、`image_upscaler`、`image_enhancer`、`remove_background` — 免费图像/视频 + 本地处理工具。\n\n---\n\n## 🚀 为开发者集成的多媒体代理和工具\n\nClaude Opus, GPT-5, Gemini 3, Veo 和 Wan 视频生成, ElevenLabs 音乐... 释放 Pollinations API 的全部威力！\n\n本插件采用 **BYOK** (自带密钥) 模式：通过使用你自己的 API 密钥，OpenCode 代理获得直接与高级工具交互的能力，在你的工作区创建多媒体文件。\n\n**第 1 步 — 创建账户，获赠 $10！**\n通过此链接支持本插件：\n👉 **https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin**\n\n**第 2 步 — 生成你的 API 密钥**\n在 `enter.pollinations.ai` 的 **API Keys** 部分，创建一个 **Secret** 密钥 (`sk_...`)。\n\n**第 3 步 — 连接密钥**\n```bash\n/poll connect sk_your_key_here\n```\n*(密钥会立即注册到你的 OpenCode 环境，解锁 Pro 模型！)*\n\n---\n\n## 💰 Pollen 系统与任务\n现在 Pollen 主要通过完成**任务**来赚取 — 仅仅使用本插件就能追溯性地完成多个任务。在[仪表盘](https://enter.pollinations.ai)查看并领取你的免费 Pollen。\n\n你的等级提供每小时免费的 Pollen 充值额度，用于这些高级服务。免费额度耗尽后，你将从钱包消费 Pollen ($1 ≈ 1 Pollen，无订阅，无过期)。\n\n**需要帮助？**\n- 输入 `/poll help` 查看命令列表。\n- 官方 Discord：https://discord.gg/pollinations-ai-885844321461485618"
+    "onboarding": "## 🌸 欢迎使用 Pollinations 插件\n\n**即时免费访问 — 无需密钥**\n本插件提供完整的聊天、代码生成和媒体处理环境 (图像、视频、音频生成、提取工具...)。\n\n从列表中选择一个 `pollinations/free/*` 模型并开始聊天。\n{freeText}\n\n**🆓 额外免费工具（无需密钥）：** `gen_edit_image_free`、`gen_video_free`、`object_remover`、`image_upscaler`、`image_enhancer`、`remove_background` — 免费图像/视频 + 本地处理工具。\n\n---\n\n## 🚀 为开发者集成的多媒体代理和工具\n\nClaude Opus, GPT-5, Gemini 3, Veo 和 Wan 视频生成, ElevenLabs 音乐... 释放 Pollinations API 的全部威力！\n\n本插件采用 **BYOK** (自带密钥) 模式：通过使用你自己的 API 密钥，OpenCode 代理获得直接与高级工具交互的能力，在你的工作区创建多媒体文件。\n\n**第 1 步 — 创建账户，获赠 $10！**\n通过此链接支持本插件：\n👉 **https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin**\n\n**第 2 步 — 生成你的 API 密钥**\n在 `enter.pollinations.ai` 的 **API Keys** 部分，创建一个 **Secret** 密钥 (`sk_...`)。\n\n**第 3 步 — 连接密钥**\n```bash\n/poll connect sk_your_key_here\n```\n*(密钥会立即注册到你的 OpenCode 环境，解锁 Pro 模型！)*\n\n---\n\n## 💰 Quest 与付费 Pollen\n**Quest Pollen** 通过完成**任务**免费获得 — 仅使用本插件就能追溯性地完成多个任务！运行 `/poll quests` 查看。\n\n当 Quest 不足时（或使用付费模型时），将使用**付费 Pollen**（购买）。插件在本地估算两者，并从 `/account/usage` 读取真实拆分（`meter_source`）。\n\n**需要帮助？**\n- 输入 `/poll help` 查看命令列表。\n- 官方 Discord：https://discord.gg/pollinations-ai-885844321461485618"
   },
   "cost_guard": {
     "cost_validated_max": "💰 费用已验证 (理论最大值：{maxCost})",

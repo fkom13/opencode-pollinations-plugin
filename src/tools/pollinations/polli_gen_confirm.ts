@@ -7,6 +7,7 @@ import { polliGenImageTool } from './gen_image.js';
 import { polliGenVideoTool } from './gen_video.js';
 import { polliGenAudioTool } from './gen_audio.js';
 import { polliGenMusicTool } from './gen_music.js';
+import { polliGen3dTool } from './gen_3d.js';
 import { polliWebSearchTool } from './polli_web_search.js';
 import { formatCost } from './shared.js';
 
@@ -37,6 +38,7 @@ export const polliGenConfirmTool: ToolDefinition = tool({
             'polli_gen_video': polliGenVideoTool,
             'polli_gen_audio': polliGenAudioTool,
             'polli_gen_music': polliGenMusicTool,
+            'polli_gen_3d': polliGen3dTool,
             'polli_web_search': polliWebSearchTool,
         };
 

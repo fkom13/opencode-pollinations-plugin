@@ -31,7 +31,7 @@ import {
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
-import { validateTimeoutSeconds, mergeTimeoutHierarchy } from './timeout-policy.js';
+import { validateTimeoutSeconds } from './timeout-policy.js';
 import { resolveCapabilityTimeout } from './tool-capability-registry.js';
 import { persistArtifact } from './artifact-core.js';
 import { parsePolliErrorFromThrow } from './error-parser.js';
@@ -167,7 +167,7 @@ export const polliGenImageTool: ToolDefinition = tool({
             // 1. Fetch balance avant génération
             const balBefore = await fetchEnterBalance();
 
-            const timeoutSeconds = resolveCapabilityTimeout('gen_image', model, args.timeout_seconds, mergeTimeoutHierarchy(config.timeouts));
+            const timeoutSeconds = resolveCapabilityTimeout('gen_image', model, args.timeout_seconds, config.timeouts ?? null);
             const result = await httpsGet(url, headers, timeoutSeconds * 1000);
             imageData = result.data;
             responseHeaders = result.headers;

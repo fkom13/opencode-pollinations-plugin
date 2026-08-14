@@ -18,7 +18,7 @@ You must strictly understand the 3 INDEPENDENT categories of settings before exp
 *Note: 'enter.agent' or 'free.agent' are fallback conversational models for logic reasoning, THEY DO NOT GENERATE IMAGES OR VIDEOS!*
 
 === 2. TOOLS PROTECTION (Applies ONLY to independent 'polli_' tools like image, video, search) ===
-- enablePaidTools: Allow tools to execute models that consume 'Paid' pollen. If false, tools can only use models that consume 'Quest' pollen.
+- enablePaidTools: When false, tools that would use 'Paid' pollen are BLOCKED LOCALLY — models flagged paid_only are rejected before sending. IMPORTANT: this is a LOCAL client-side guard, NOT a server guarantee — a Paid (pack) debit can still occur in a race or on real-cost overage (the server picks the billing bucket at debit time).
 - costConfirmationRequired: Safety lock for tools. If true, the user MUST manually confirm BEFORE executing ANY tool whose cost estimate exceeds the 'costThreshold'.
 - costThreshold: 🌼 limit (cost of the tool execution) that triggers the confirmation lock.
 - costEstimator: Shows live cost estimates IN TOOL OUTPUTS (false = Silent Mode).
@@ -48,9 +48,6 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
             if (safeConfig.apiKey && safeConfig.apiKey.length > 10) {
                 safeConfig.apiKey = safeConfig.apiKey.substring(0, 5) + '...[REDACTED]';
             }
-            // Never expose legacy deprecated fields in the view
-            delete safeConfig.refillOverride;
-            delete safeConfig.questStashInFreeMode;
             return `Current Plugin Configuration:\n\n${JSON.stringify(safeConfig, null, 2)}`;
         }
 

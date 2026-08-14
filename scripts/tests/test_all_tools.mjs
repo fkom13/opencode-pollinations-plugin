@@ -4,6 +4,7 @@
  * 
  * Usage: node scripts/test_all_tools.mjs
  */
+MANUAL/LIVE ONLY — never run in CI. This suite performs REAL billable Pollinations generation or live-network probing. Run it manually with explicit balance tracking (Phase 3 canary protocol).
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);

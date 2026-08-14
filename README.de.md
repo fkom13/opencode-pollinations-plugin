@@ -17,7 +17,7 @@
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>Die ultimative Brücke zwischen OpenCode und dem Pollinations.ai Ökosystem</h3>
-  <p><em>Greifen Sie auf ein kontinuierliches Universum kostenloser Basis-KI-Modelle zu oder nutzen Sie Premium-Enterprise-Modelle mit unseren großzügigen <b>Stündlichen Freikontingenten (Hourly Free Tiers)</b> direkt über Ihr lokales Terminal.</em></p>
+  <p><em>Greifen Sie auf ein kontinuierliches Universum kostenloser Basis-KI-Modelle zu oder nutzen Sie Premium-Enterprise-Modelle mit unserem <b>Quest- & Paid-Pollen</b>-System direkt über Ihr lokales Terminal.</em></p>
 </div>
 
 <div align="center">

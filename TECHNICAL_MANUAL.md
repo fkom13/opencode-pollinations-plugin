@@ -213,10 +213,10 @@ interface PollinationsConfigV5 {
     apiKey?: string;
     
     // === CHAT MODELS & FALLBACKS ===
-    mode: 'manual' | 'alwaysfree' | 'pro';
+    mode: 'manual' | 'quest' | 'quest_only' | 'paid';
     thresholds: {
-        tier: number;       // % Threshold before Free Universe fallback (0-100)
-        wallet: number;     // % Threshold before Free Universe fallback (0-100)
+        quest: number;      // Absolute Quest pollen floor (default 0.05)
+        wallet: number;     // Absolute Paid pollen floor (default 0.5)
     };
     fallbacks: {
         free: { main: string; agent: string; };
@@ -276,13 +276,20 @@ const RETRY_DELAY_MS = 1000;
 model.startsWith('enter/') → isEnterprise = true
 model.startsWith('free/')  → isEnterprise = false
 
-MODE: alwaysfree
-  IF isEnterprise AND model is paid-only → Block + fallback to free/mistral
-  IF isEnterprise AND quota.tier == error → fallback to free/mistral
-  IF isEnterprise AND tierRatio ≤ threshold → fallback to free/mistral
+MODE: quest (QUEST_PREFERRED, default)
+  IF isEnterprise AND model is paid-only AND wallet empty → fallback to free
+  IF isEnterprise AND quota read failed → fallback to free
+  IF isEnterprise AND Quest+Paid both exhausted → fallback to free
 
-MODE: pro
-  IF quota.tier == error → fallback to free/mistral
+MODE: quest_only (QUEST_ELIGIBLE_ONLY, best-effort)
+  paid-only models are HARD-BLOCKED locally (no paid route)
+  IF isEnterprise AND quota read failed → fallback to free
+  IF isEnterprise AND questBalance ≤ floor → fallback to free
+  (a Paid pack debit can still occur server-side in a race)
+
+MODE: paid (PAID_ALLOWED)
+  IF quota read failed → fallback to free
+  IF walletBalance < wallet floor → fallback to free
   IF wallet < threshold AND tierRatio ≤ threshold → fallback to free/mistral
 
 MODE: manual
@@ -362,31 +369,28 @@ interface OpenCodeModel {
 
 ### 5. `server/quota.ts` — Quota Tracking
 
-**QuotaStatus Interface (v6.4.1):**
+**QuotaStatus Interface (v6.5):**
 ```typescript
 interface QuotaStatus {
-    tierRemaining: number;      // Quest Pollen remaining this hour
-    tierUsed: number;           // Quest Pollen consumed this hour
-    tierLimit: number;          // Hourly refill (deduced: 0.01/0.15/0.4/0.8/10)
-    walletBalance: number;      // Paid Pollen balance
-    nextResetAt: Date;
-    timeUntilReset: number;     // ms until next :00 UTC
-    canUseEnterprise: boolean;  // tier > 0 OR wallet > 0
-    isUsingWallet: boolean;     // tier === 0 AND wallet > 0
-    needsAlert: boolean;        // Below configured threshold
-    tier: string;               // 'spore' | 'seed' | 'flower' | 'nectar' (deduced)
-    tierEmoji: string;
+    questBalance: number;       // best-effort Quest pollen available
+    walletBalance: number;      // Paid pollen (pack) — best-effort when absent
+    totalBalance: number;       // raw {balance} total from /account/balance
+    canUseEnterprise: boolean;  // quest > 0.05 OR wallet > 0.05
+    isUsingWallet: boolean;     // quest exhausted AND wallet > 0
+    needsAlert: boolean;        // below configured floors
+    errorType?: 'auth_limited' | 'network' | 'unknown';
 }
 ```
 
-**Allowance Deduction (v6.4.1):**
-Since Pollinations removed `tier` and `nextResetAt` from `/account/profile` (PR #7618, commit #10255),
-the plugin deduces the hourly refill from usage data:
-1. Fetch `/account/balance` (format dual: legacy `{balance}` or new PR #12449 `{total, allowance, pack}`)
-2. If `allowance` is present (PR #12449 format) → use natively
-3. Otherwise, fetch `/account/usage?days=1`, filter `meter_source == 'tier'`, take max `cost_usd`
-4. Map to the closest known refill: `[0, 0.01, 0.15, 0.4, 0.8, 10]`
-5. `calculateResetInfo()` computes the next :00 UTC locally
+**Quest/Paid Balance (v6.5):**
+The old hourly-refill model was deleted upstream (cron disabled 2026-06, code
+removed 2026-07). The client CANNOT read the server-side Quest/Paid split
+(`/account/balance` returns only the total). The plugin therefore:
+1. Reads `/account/balance` for the total.
+2. Estimates Quest via claimed quest pollen minus tier-metered usage since claim.
+3. Estimates Paid as `pack` when exposed, else total − Quest estimate.
+4. Reads the authoritative split from `meter_source` in `/account/usage`
+   (`tier` = Quest, `pack` = Paid).
 
 **Paid-Only Model Strategy (v5.5+):**
 Models tagged `paid_only: true` (e.g., `gemini-large`, `veo`) always deduct from `packBalance`. Quest Pollen cannot be used for these models.
@@ -402,16 +406,6 @@ Some API keys allow generation but block access to `/account/usage` and `/accoun
 const CACHE_TTL = 30000; // 30 seconds
 ```
 
-**Hourly Refill Rates (deduced):**
-
-| Refill/h | Emoji | Label |
-|----------|:-----:|-------|
-| 0.01 | 🍄 | spore |
-| 0.15 | 🌱 | seed |
-| 0.4 | 🌸 | flower |
-| 0.8 | 🍯 | nectar |
-| 10 | 🐝 | router |
-
 **Smart Fetch Quota (v6.4.1 — updated):**
 `fetchUsageForPeriod` uses cursor-based pagination (`before_event_id`) instead of the deprecated `offset` parameter (silently ignored by the API since OpenAPI v0.3.0). Queries `/account/usage?limit=100` iteratively until reaching the hourly reset boundary.
 
@@ -424,7 +418,7 @@ const CACHE_TTL = 30000; // 30 seconds
 | Command | Alias | Arguments | Description |
 |---------|-------|-----------|-------------|
 | `/pollinations usage` | `/poll usage` | `[full]` | Show quota dashboard |
-| `/pollinations mode` | `/poll mode` | `[manual\|alwaysfree\|pro]` | Change routing mode |
+| `/pollinations mode` | `/poll mode` | `[manual\|quest\|quest_only\|paid]` | Change routing mode |
 | `/pollinations fallback` | `/poll fallback` | `<main> [agent]` | Configure fallback models |
 | `/pollinations config` | `/poll config` | `[key] [value]` | Read/write config values |
 | `/pollinations status` | `/poll status` | — | Plugin health check |
@@ -737,7 +731,7 @@ Inject "⚠️ Switched to free model" warning into stream
 |---------|-------|-------|
 | Free Universe proxy | v1.0 | text.pollinations.ai |
 | Enterprise proxy + API key | v4.0 | gen.pollinations.ai |
-| Safety Net (automatic fallback) | v5.0 | Pro and AlwaysFree modes |
+| Safety Net (automatic fallback) | v5.0 | quest / quest_only / paid modes |
 | Quota tracking | v5.0 | /account endpoints |
 | `/pollinations` commands | v5.0 | mode, usage, fallback, config |
 | Dynamic port allocation | v5.4.6 | Cross-platform, no conflicts |

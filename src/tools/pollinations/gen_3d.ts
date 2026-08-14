@@ -122,7 +122,7 @@ export const polliGen3dTool: ToolDefinition = tool({
         context.metadata({ title: `🧊 3D: ${model} (${resolution})` });
 
         // Effective timeout via hierarchy: per-call > model override > capability > global
-        const timeoutSeconds = resolveCapabilityTimeout('gen_3d', model, args.timeout_seconds);
+        const timeoutSeconds = resolveCapabilityTimeout('gen_3d', model, args.timeout_seconds, config.timeouts ?? null);
         const timeoutMs = timeoutSeconds * 1000;
 
         try {

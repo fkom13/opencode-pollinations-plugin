@@ -48,6 +48,15 @@ export const DEFAULT_TIMEOUT_HIERARCHY: TimeoutHierarchy = {
 export const MIN_TIMEOUT_SECONDS = 10;
 export const MAX_TIMEOUT_SECONDS = 3600;
 
+/** Raw user timeout config (config.timeouts) — merged OVER the built-ins. */
+export interface UserTimeoutConfig {
+    default?: number;
+    longRunning?: number;
+    max?: number;
+    capabilities?: Record<string, number>;
+    overrides?: Record<string, number>;
+}
+
 export interface ResolveTimeoutOptions {
     perCall?: number;
     model?: string;
@@ -77,8 +86,56 @@ export function validateTimeoutSeconds(value: number | undefined): TimeoutValida
     return { ok: true, seconds: value };
 }
 
+/** Exact or wildcard ("prefix-*") override lookup. */
+export function lookupTimeoutOverride(
+    overrides: Record<string, number> | undefined,
+    model: string | undefined
+): number | undefined {
+    if (!model || !overrides) return undefined;
+    if (overrides[model] !== undefined) return overrides[model];
+    for (const [pattern, value] of Object.entries(overrides)) {
+        if (pattern.endsWith('*') && model.startsWith(pattern.slice(0, -1))) {
+            return value;
+        }
+    }
+    return undefined;
+}
+
 /**
- * Resolve the effective timeout with full precedence:
+ * Resolve the effective timeout with the full v6.5 precedence:
+ *
+ *   per-call (timeout_seconds)
+ *   > USER model override          (config.timeouts.overrides[model])
+ *   > USER capability override     (config.timeouts.capabilities[cap])
+ *   > built-in model default       (DEFAULT hierarchy overrides)
+ *   > built-in capability default  (DEFAULT hierarchy capabilities)
+ *   > global                       (longRunning | default)
+ *
+ * Clamped to [10, user.max || builtin.max].
+ */
+export function resolveEffectiveTimeout(opts: {
+    perCall?: number;
+    model?: string;
+    capabilityKey?: string;
+    longRunning?: boolean;
+    user?: UserTimeoutConfig | null;
+    builtin?: TimeoutHierarchy;
+}): number {
+    const builtin = opts.builtin ?? DEFAULT_TIMEOUT_HIERARCHY;
+
+    let t: number | undefined = opts.perCall;                                                              // 1. per-call
+    if (t === undefined) t = lookupTimeoutOverride(opts.user?.overrides, opts.model);                       // 2. user model override
+    if (t === undefined && opts.capabilityKey) t = opts.user?.capabilities?.[opts.capabilityKey];           // 3. user capability
+    if (t === undefined) t = lookupTimeoutOverride(builtin.overrides, opts.model);                          // 4. built-in model default
+    if (t === undefined && opts.capabilityKey) t = builtin.capabilities[opts.capabilityKey];                // 5. built-in capability
+    if (t === undefined) t = opts.longRunning ? builtin.longRunning : builtin.default;                      // 6. global
+
+    const ceiling = opts.user?.max ?? builtin.max;
+    return Math.min(Math.max(t, MIN_TIMEOUT_SECONDS), ceiling);
+}
+
+/**
+ * Legacy resolution used by the TCR capability timeout test surface:
  * per-call > model override > capability > (longRunning ? longRunning : default).
  * Result is clamped to [10, hierarchy.max].
  */
@@ -93,16 +150,8 @@ export function resolveTimeoutSeconds(opts: ResolveTimeoutOptions): number {
     }
 
     if (opts.model) {
-        if (hierarchy.overrides[opts.model] !== undefined) {
-            t = hierarchy.overrides[opts.model];
-        } else {
-            for (const [pattern, value] of Object.entries(hierarchy.overrides)) {
-                if (pattern.endsWith('*') && opts.model.startsWith(pattern.slice(0, -1))) {
-                    t = value;
-                    break;
-                }
-            }
-        }
+        const modelOverride = lookupTimeoutOverride(hierarchy.overrides, opts.model);
+        if (modelOverride !== undefined) t = modelOverride;
     }
 
     if (opts.perCall !== undefined) t = opts.perCall;

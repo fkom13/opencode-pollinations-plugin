@@ -290,13 +290,27 @@ async function testArtifactCore() {
     // case confirmed Phase 2: b64 edit response is JPEG even if caller thinks PNG
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'v65-artifact-'));
     const persisted = core.persistArtifact(jpeg, { outputDir: tmpDir, filename: 'my_image.png', preferredExt: 'png', detectExt: true });
-    assert(path.extname(persisted.filePath) === '.png' || persisted.ext === 'jpg', 'persist: filename kept but detected ext reported');
-    assert(persisted.detected.format === 'jpeg', 'persist: detected format = jpeg (not PNG assumption)');
+    assert(path.extname(persisted.filePath) === '.jpg' && persisted.ext === 'jpg',
+        'persist STRICT: JPEG bytes + my_image.png → my_image.jpg (path & returned ext AGREE)');
+    assert(fs.existsSync(path.join(tmpDir, 'my_image.jpg')), 'persist STRICT: my_image.jpg written on disk');
+    assert(!fs.existsSync(path.join(tmpDir, 'my_image.png')), 'persist STRICT: my_image.png NOT written (wrong assumption)');
 
     const persistedAuto = core.persistArtifact(jpeg, { outputDir: tmpDir, preferredExt: 'png', detectExt: true });
     assert(persistedAuto.ext === 'jpg' && path.extname(persistedAuto.filePath) === '.jpg', 'persist: auto filename follows REAL bytes (.jpg)');
     assert(fs.existsSync(persistedAuto.filePath), 'persist: file written');
     assert(fs.statSync(persistedAuto.filePath).size === jpeg.length, 'persist: size matches');
+
+    // GLB bytes + filename model.bin → model.glb (path and ext agree)
+    const glbNamed = core.persistArtifact(glb, { outputDir: tmpDir, filename: 'model.bin', preferredExt: 'bin', detectExt: true });
+    assert(path.extname(glbNamed.filePath) === '.glb' && glbNamed.ext === 'glb',
+        'persist STRICT: GLB bytes + model.bin → model.glb (path & ext AGREE)');
+    assert(fs.existsSync(path.join(tmpDir, 'model.glb')), 'persist STRICT: model.glb written on disk');
+
+    // MP4 bytes + filename output.webm → output.mp4
+    const mp4Named = core.persistArtifact(mp4, { outputDir: tmpDir, filename: 'output.webm', preferredExt: 'webm', detectExt: true });
+    assert(path.extname(mp4Named.filePath) === '.mp4' && mp4Named.ext === 'mp4',
+        'persist STRICT: MP4 bytes + output.webm → output.mp4 (path & ext AGREE)');
+    assert(fs.existsSync(path.join(tmpDir, 'output.mp4')), 'persist STRICT: output.mp4 written on disk');
 
     // GLB persistence validates real format
     const persistedGlb = core.persistArtifact(glb, { outputDir: tmpDir, preferredExt: 'bin', detectExt: true });
@@ -388,8 +402,235 @@ async function testErrorParser() {
     assert(netErr.kind === 'network', 'parser: network classified');
 }
 
-// ─── 9. VIDEO ENDPOINT ───────────────────────────────────────────────────
+// ─── 8b. gen3d CONFIRMATION DISPATCHER (real Cost Guard path, mocked exec) ──
 
+async function testGen3dConfirmationDispatcher() {
+    log.section('gen3d Confirmation Dispatcher (A)');
+
+    const costGuard = await importDist('tools/pollinations/cost-guard.js');
+    const confirmMod = await importDist('tools/pollinations/polli_gen_confirm.js');
+    const configMod = await importDist('server/config.js');
+    const gen3dMod = await importDist('tools/pollinations/gen_3d.js');
+
+    // Preserve the real config to restore after the test
+    const original = configMod.loadConfig();
+
+    try {
+        // 1. Default Cost Guard: costConfirmationRequired=true, costThreshold=0.15
+        configMod.saveConfig({ costConfirmationRequired: true, costThreshold: 0.15, enablePaidTools: true });
+
+        // 2. polli_gen_3d / trellis estimated cost (0.24) > threshold (0.15)
+        const check = costGuard.checkCostControl('polli_gen_3d', {}, 'trellis-2', 0.24, '3d');
+        assert(check.allowed === false, '3D: cost 0.24 > threshold 0.15 → suspended (not auto-executed)');
+        assert(check.confirmationRequired === true, '3D: confirmationRequired flagged');
+        assert(typeof check.pendingRequestId === 'string' && check.pendingRequestId.length > 0, '3D: pendingRequestId returned');
+
+        // 3. Initial check creates the pending request
+        const pending = costGuard.getPendingRequest(check.pendingRequestId);
+        assert(pending !== null && pending.toolName === 'polli_gen_3d', '3D: pending request stored with toolName polli_gen_3d');
+        assert(pending.model === 'trellis-2' && pending.estimatedCost >= 0.24, '3D: pending request carries model + estimated cost');
+
+        // Spy on polliGen3dTool.execute — NO live 3D generation in this test.
+        const realExecute = gen3dMod.polliGen3dTool.execute;
+        let receivedArgs = null;
+        gen3dMod.polliGen3dTool.execute = async (args, ctx) => { receivedArgs = args; return 'MOCKED_3D_EXECUTION'; };
+
+        try {
+            // 4. polli_gen_confirm(confirm) recognizes polli_gen_3d
+            const fakeContext = { metadata: () => { } };
+            const out = await confirmMod.polliGenConfirmTool.execute({ request_id: check.pendingRequestId, action: 'confirm' }, fakeContext);
+            assert(out === 'MOCKED_3D_EXECUTION', '3D: confirm dispatches to polli_gen_3d (not unknown_tool)');
+            assert(receivedArgs !== null, '3D: confirmed execution invoked with args');
+            // 5. Confirmed execution receives the polli_confirmed bypass symbol
+            assert(receivedArgs[Symbol.for('polli_confirmed')] === true, '3D: confirmed args carry polli_confirmed bypass');
+            assert(costGuard.getPendingRequest(check.pendingRequestId) === null, '3D: pending request cleaned up after confirm');
+        } finally {
+            gen3dMod.polliGen3dTool.execute = realExecute;
+        }
+
+        // cancel path removes the request
+        const check2 = costGuard.checkCostControl('polli_gen_3d', {}, 'trellis-2', 0.24, '3d');
+        const cancelOut = await confirmMod.polliGenConfirmTool.execute({ request_id: check2.pendingRequestId, action: 'cancel' }, { metadata: () => { } });
+        assert(/cancel|annul|abandon|abort/i.test(cancelOut), '3D: cancel returns a cancellation message');
+    assert(costGuard.getPendingRequest(check2.pendingRequestId) === null, '3D: cancel removes pending request');
+    } finally {
+        // Restore the user's real config
+        configMod.saveConfig({
+            costConfirmationRequired: original.costConfirmationRequired ?? true,
+            costThreshold: original.costThreshold ?? 0.15,
+            enablePaidTools: original.enablePaidTools ?? false,
+        });
+    }
+}
+
+// ─── 8c. CONFIG → EXECUTION TIMEOUT (user config propagation) ─────────────
+
+async function testConfigToExecutionTimeout() {
+    log.section('Config → Execution Timeout (C)');
+
+    const tcr = await importDist('tools/pollinations/tool-capability-registry.js');
+
+    // config.timeouts.capabilities.threeD = 2400 → effective 2400 (no per-call)
+    const t1 = tcr.resolveCapabilityTimeout('gen_3d', 'trellis-2', undefined, { capabilities: { threeD: 2400 } });
+    assert(t1 === 2400, 'config capabilities.threeD=2400 → effective 2400 (USER capability beats built-in trellis 1200)');
+
+    // config.timeouts.overrides['trellis-2'] = 2000 → 2000
+    const t2 = tcr.resolveCapabilityTimeout('gen_3d', 'trellis-2', undefined, { overrides: { 'trellis-2': 2000 } });
+    assert(t2 === 2000, 'config overrides[trellis-2]=2000 → effective 2000');
+
+    // per-call 500 → 500 (beats user model override AND user capability override)
+    const t3 = tcr.resolveCapabilityTimeout('gen_3d', 'trellis-2', 500, { overrides: { 'trellis-2': 2000 }, capabilities: { threeD: 2400 } });
+    assert(t3 === 500, 'per-call 500 → effective 500 (top precedence)');
+
+    // USER model override > USER capability override
+    const t4 = tcr.resolveCapabilityTimeout('gen_3d', 'trellis-2', undefined, { overrides: { 'trellis-2': 2000 }, capabilities: { threeD: 2400 } });
+    assert(t4 === 2000, 'USER model override (2000) > USER capability (2400)');
+
+    // built-in model default still applies without user config
+    const t5 = tcr.resolveCapabilityTimeout('gen_3d', 'trellis-2');
+    assert(t5 === 1200, 'no user config → built-in trellis default 1200');
+
+    // gen_3d tool source passes the RAW user config through
+    const gen3dSrc = fs.readFileSync(path.join(ROOT, 'src', 'tools', 'pollinations', 'gen_3d.ts'), 'utf-8');
+    assert(/config\.timeouts \?\? null/.test(gen3dSrc), 'gen_3d passes raw config.timeouts into resolveCapabilityTimeout');
+}
+
+// ─── 8d. 429 ATTEMPT COUNT (mocked fetch — exact network attempts) ────────
+
+async function test429AttemptCount() {
+    log.section('429 Attempt Count (D) — mocked fetch');
+
+    const { fetchWithRetry } = await importDist('server/proxy.js');
+    const realFetch = globalThis.fetch;
+
+    try {
+        // 429: 1 initial request + 1 retry = 2 attempts max (v6.5 MAX_RETRIES=1)
+        let attempts = 0;
+        globalThis.fetch = async () => {
+            attempts++;
+            if (attempts === 1) return { ok: false, status: 429 };
+            return { ok: true, status: 200, headers: new Map(), body: null };
+        };
+        const res429 = await fetchWithRetry('https://example.invalid/chat', { method: 'POST' });
+        assert(attempts === 2, '429: exactly 1 initial request + 1 retry (2 total)');
+        assert(res429.ok === true, '429: retried response returned');
+
+        // 5xx: 1 request total, NO replay
+        let fiveXx = 0;
+        globalThis.fetch = async () => { fiveXx++; return { ok: false, status: 500 }; };
+        const res500 = await fetchWithRetry('https://example.invalid/chat', {});
+        assert(fiveXx === 1 && res500.status === 500, '5xx: 1 request total, NO replay');
+
+        // network error: 1 request total, rethrown (NO replay)
+        let netCount = 0;
+        globalThis.fetch = async () => { netCount++; throw new TypeError('fetch failed'); };
+        let threwNet = false;
+        try { await fetchWithRetry('https://example.invalid/chat', {}); } catch (e) { threwNet = true; }
+        assert(netCount === 1 && threwNet, 'network error: 1 request total, rethrown (NO replay)');
+
+        // timeout / AbortError: 1 request total, rethrown (NO replay)
+        let abortCount = 0;
+        globalThis.fetch = async () => {
+            abortCount++;
+            const e = new Error('The operation was aborted');
+            e.name = 'AbortError';
+            throw e;
+        };
+        let threwAbort = false;
+        try { await fetchWithRetry('https://example.invalid/chat', {}); } catch (e) { threwAbort = true; }
+        assert(abortCount === 1 && threwAbort, 'timeout/AbortError: 1 request total, rethrown (NO replay)');
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+}
+
+// ─── 8e. TCR RETRY POLICY SEMANTICS (embed/upload/media/async/local) ──────
+
+async function testTcrRetryPolicies() {
+    log.section('TCR Retry Policy Semantics (G)');
+
+    const tcr = await importDist('tools/pollinations/tool-capability-registry.js');
+
+    // billable embedding is a POST — NOT a read-only op
+    const embed = tcr.resolveCapability('embed');
+    assert(embed && embed.transport.method === 'POST', 'embed is a POST op');
+    assert(embed.execution.retryPolicy === 'NO_AUTOMATIC_RETRY', 'embed (billable POST) → NO_AUTOMATIC_RETRY, never SAFE_READ_ONLY');
+    assert(embed.execution.idempotency === 'NONE', 'embed idempotency NONE');
+
+    // POST upload — NOT a read-only op (provider cascade is explicit)
+    const upload = tcr.resolveCapability('upload');
+    assert(upload && upload.transport.method === 'POST', 'upload is a POST op');
+    assert(upload.execution.retryPolicy === 'NO_AUTOMATIC_RETRY', 'upload (POST) → NO_AUTOMATIC_RETRY, never SAFE_READ_ONLY');
+
+    // media (cache-backed) → same-request recovery, server dedup
+    for (const cap of ['gen_image', 'gen_video', 'gen_3d']) {
+        const c = tcr.resolveCapability(cap);
+        assert(c && c.execution.retryPolicy === 'RECOVER_SAME_REQUEST', `${cap}: media → RECOVER_SAME_REQUEST`);
+        assert(c && c.execution.idempotency === 'SERVER_DEDUP', `${cap}: media → SERVER_DEDUP`);
+    }
+    for (const cap of ['tts', 'stt', 'music', 'web_search']) {
+        const c = tcr.resolveCapability(cap);
+        assert(c && c.execution.retryPolicy === 'NO_AUTOMATIC_RETRY', `${cap}: NO_AUTOMATIC_RETRY`);
+    }
+
+    // async job tiers → re-poll job.id, never resubmit
+    for (const cap of ['video_free', 'remove_background', 'object_remove', 'image_upscale', 'image_enhance']) {
+        const c = tcr.resolveCapability(cap);
+        assert(c && c.execution.retryPolicy === 'REPOLL_JOB', `${cap}: async poll → REPOLL_JOB (never resubmit)`);
+    }
+
+    // local pure tools → safe retry
+    for (const cap of ['qrcode', 'palette']) {
+        const c = tcr.resolveCapability(cap);
+        assert(c && c.transport.mode === 'LOCAL', `${cap}: LOCAL mode`);
+        assert(c && c.execution.retryPolicy === 'SAFE_READ_ONLY', `${cap}: local pure op → SAFE_READ_ONLY`);
+    }
+}
+
+// ─── 8f. enablePaidTools CONTRACT (wording must not promise Quest-only) ───
+
+async function testEnablePaidToolsWording() {
+    log.section('enablePaidTools Contract (F)');
+
+    const src = fs.readFileSync(path.join(ROOT, 'src', 'tools', 'pollinations', 'polli_config.ts'), 'utf-8');
+    assert(!/can only use/.test(src), 'enablePaidTools does NOT promise "can only use Quest pollen"');
+    assert(!/only use models that consume 'Quest'/.test(src), 'enablePaidTools does NOT claim Quest-only guarantee');
+    assert(/BLOCKED LOCALLY/i.test(src), 'enablePaidTools = local block of paid_only models');
+    assert(/not a server guarantee/i.test(src), 'enablePaidTools says "no server guarantee" (pack debit possible)');
+    assert(/blocks explicit paid_only routes locally|paid_only are rejected before sending/i.test(src), 'enablePaidTools mentions paid_only routes');
+}
+
+// ─── 8g. LIVE/MANUAL TEST CLASSIFICATION ──────────────────────────────────
+
+async function testTestClassification() {
+    log.section('Live/Manual Test Classification (H)');
+
+    const pkgPath = path.join(ROOT, 'package.json');
+    const scripts = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).scripts || {};
+    const allScripts = JSON.stringify(scripts);
+
+    const LIVE_FILES = ['test-e2e-providers.cjs', 'test-api-live.cjs', 'test_api_endpoints.ts', 'test_all_tools.mjs'];
+    for (const f of LIVE_FILES) {
+        assert(!allScripts.includes(f), `${f} is NOT wired into npm test/prepublishOnly (manual/live only)`);
+        const fp = path.join(ROOT, 'scripts', 'tests', f);
+        if (fs.existsSync(fp)) {
+            const content = fs.readFileSync(fp, 'utf-8').slice(0, 1500);
+            assert(/MANUAL|LIVE ONLY|never.*CI|NOT.*CI|live canary/i.test(content), `${f} carries a MANUAL/LIVE marker header`);
+        }
+    }
+
+    const testScript = scripts.test || '';
+    assert(testScript.includes('test-suite.cjs'), 'npm test includes test-suite.cjs');
+    assert(testScript.includes('test-v65.cjs'), 'npm test includes test-v65.cjs');
+    assert(testScript.includes('test-i18n.cjs'), 'npm test includes test-i18n.cjs');
+    assert(testScript.includes('test-ux-vocab.cjs'), 'npm test includes test-ux-vocab.cjs');
+
+    const prepub = scripts.prepublishOnly || '';
+    assert(!LIVE_FILES.some(f => prepub.includes(f)), 'prepublishOnly excludes live/billable suites');
+    assert(prepub.includes('test:vocab') || prepub.includes('test-ux-vocab'), 'prepublishOnly includes UX vocab guard (test:vocab)');
+}
+
+// ─── 9. VIDEO ENDPOINT ───────────────────────────────────────────────────
 async function testVideoEndpoint() {
     log.section('Video Canonical Endpoint (P1)');
 
@@ -419,6 +660,12 @@ async function main() {
     await test3D();
     await testBillingMigration();
     await testErrorParser();
+    await testGen3dConfirmationDispatcher();
+    await testConfigToExecutionTimeout();
+    await test429AttemptCount();
+    await testTcrRetryPolicies();
+    await testEnablePaidToolsWording();
+    await testTestClassification();
     await testVideoEndpoint();
 
     console.log('\n' + '═'.repeat(60) + '\n');

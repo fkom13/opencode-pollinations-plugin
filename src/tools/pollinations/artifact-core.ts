@@ -176,6 +176,16 @@ export function persistArtifact(buf: Buffer, opts: PersistOptions): PersistedArt
     let filename = opts.filename ? sanitizeFilename(opts.filename) : undefined;
     if (!filename) {
         filename = `artifact_${Date.now()}.${ext}`;
+    } else if (opts.detectExt !== false && detected) {
+        // STRICT: the written extension follows the real bytes — a caller
+        // filename like my_image.png becomes my_image.jpg for JPEG bytes.
+        // Filesystem path and returned ext always agree.
+        const dotIdx = filename.lastIndexOf('.');
+        if (dotIdx > 0) {
+            filename = filename.slice(0, dotIdx) + '.' + ext;
+        } else {
+            filename = `${filename}.${ext}`;
+        }
     } else if (!filename.includes('.')) {
         filename = `${filename}.${ext}`;
     }

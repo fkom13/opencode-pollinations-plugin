@@ -13,7 +13,7 @@
  * across tools.
  */
 
-import { resolveTimeoutSeconds, DEFAULT_TIMEOUT_HIERARCHY, type TimeoutHierarchy } from './timeout-policy.js';
+import { resolveEffectiveTimeout, lookupTimeoutOverride, DEFAULT_TIMEOUT_HIERARCHY, type TimeoutHierarchy, type UserTimeoutConfig } from './timeout-policy.js';
 
 export type ExecutionMode = 'SHORT_REQUEST' | 'LONG_BLOCKING' | 'ASYNC_JOB' | 'STREAMING' | 'LOCAL';
 
@@ -141,7 +141,8 @@ export const TOOL_CAPABILITIES: ToolModelCapability[] = [
         capability: 'embed',
         backend: 'pollinations',
         transport: { endpoint: 'https://gen.pollinations.ai/v1/embeddings', method: 'POST', mode: 'SHORT_REQUEST' },
-        execution: { defaultTimeoutSeconds: 60, retryPolicy: 'SAFE_READ_ONLY' },
+        // Billable POST → never auto-replay (NOT a read-only operation).
+        execution: { defaultTimeoutSeconds: 60, retryPolicy: 'NO_AUTOMATIC_RETRY', idempotency: 'NONE' },
     },
 
     // ── Tier services (true ASYNC_JOB with job.id, re-poll safe) ──
@@ -193,7 +194,9 @@ export const TOOL_CAPABILITIES: ToolModelCapability[] = [
         capability: 'upload',
         backend: 'filehost',
         transport: { endpoint: 'multi-provider cascade', method: 'POST', mode: 'SHORT_REQUEST' },
-        execution: { defaultTimeoutSeconds: 45, retryPolicy: 'SAFE_READ_ONLY' },
+        // POST upload → NOT a read-only op. The provider cascade is explicit,
+        // not an automatic same-request replay.
+        execution: { defaultTimeoutSeconds: 45, retryPolicy: 'NO_AUTOMATIC_RETRY', idempotency: 'NONE' },
     },
 
     // ── Local (offline) ──
@@ -228,26 +231,24 @@ export function listCapabilities(): string[] {
     return TOOL_CAPABILITIES.map(c => c.capability);
 }
 
-/** Effective timeout for a capability+model via the timeout hierarchy. */
+/**
+ * Effective timeout for a capability+model with full v6.5 precedence:
+ * per-call > USER model override > USER capability override
+ * > built-in model default > built-in capability > global.
+ */
 export function resolveCapabilityTimeout(
     capability: string,
     model?: string,
     perCall?: number,
-    hierarchy: TimeoutHierarchy = DEFAULT_TIMEOUT_HIERARCHY
+    userConfig?: UserTimeoutConfig | null
 ): number {
     const cap = resolveCapability(capability);
-    const backendOverride = model
-        ? Object.entries(cap?.backendOverrides || {}).find(([pattern]) =>
-            pattern === model || (pattern.endsWith('*') && model.startsWith(pattern.slice(0, -1)))
-        )?.[1]
-        : undefined;
-    const modelOverrideSeconds = (backendOverride as any)?.timeoutSeconds as number | undefined;
-    return resolveTimeoutSeconds({
-        perCall: perCall ?? modelOverrideSeconds,
+    return resolveEffectiveTimeout({
+        perCall,
         model,
-        capability: mapCapabilityToTimeoutKey(capability),
+        capabilityKey: mapCapabilityToTimeoutKey(capability),
         longRunning: cap?.transport.mode === 'LONG_BLOCKING',
-        hierarchy,
+        user: userConfig ?? null,
     });
 }
 

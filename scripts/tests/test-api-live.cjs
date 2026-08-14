@@ -9,6 +9,7 @@
  *
  * These tests hit the LIVE API. They are read-only (no generation calls).
  */
+MANUAL/LIVE ONLY — never run in CI. This suite performs REAL billable Pollinations generation or live-network probing. Run it manually with explicit balance tracking (Phase 3 canary protocol).
 const https = require('https');
 
 const API_KEY = process.env.POLLINATIONS_API_KEY || process.argv[2] || '';

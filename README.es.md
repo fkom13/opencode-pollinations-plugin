@@ -17,7 +17,7 @@
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>El puente definitivo entre OpenCode y el ecosistema Pollinations.ai</h3>
-  <p><em>Accede a un universo continuo de modelos de IA básicos y gratuitos, o aprovecha modelos premium empresariales usando nuestras generosas <b>Cuotas Gratuitas por Hora (Hourly Free Tiers)</b> directamente en tu terminal.</em></p>
+  <p><em>Accede a un universo continuo de modelos de IA básicos y gratuitos, o aprovecha modelos premium empresariales usando nuestro sistema <b>Quest & Paid Pollen</b> directamente en tu terminal.</em></p>
 </div>
 
 <div align="center">
@@ -87,31 +87,35 @@ Nos preocupamos de tu cartera y de tu ritmo de trabajo, incluyendo barreras fund
 
 ---
 
-## 🐝 Entendiendo el Pollen & "Free Tiers"
+## 🐝 Entendiendo el Quest Pollen & el Pollen de Pago
 
-Antes Pollinations se sustentaba de anuncios para todos. Hoy, correr grandes servidores y maravillas como Claude 3.5 Sonnet, cuestan dinero. El mundo llamado **Enter Universe** precisa entonces de tu propia APi Key.
+El pollen de Pollinations se divide en dos columnas:
 
-**¡Pero espera que NO necesitas registrar una tarjeta bancaria!**
+- **🎁 Pollen Quest** — se gana gratis completando **Misiones**. El servidor lo consume primero en los modelos regulares.
+- **💎 Pollen de Pago** — comprado (tarjeta). Se usa cuando el Quest es insuficiente, o para modelos `paid_only`.
 
-El **Pollen 🌻** dicta la ley unificada del crédito (1$ ≈ 1 Pollen). Sólo vinculando una clave Key sencilla gratuita abres el camino hacia el **beneficio del sistema de recarga automática por hora**:
+> ⚠️ El plugin no puede leer el desglose del servidor; estima Quest/Pago localmente y lee el desglose real (`meter_source`) desde `/account/usage`.
 
-| Tier | Recarga Hora ⏱️ | Aprox Diario* | Requisito a Cumplir |
-| :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / hora** | ~0.24 /día | Cuenta nueva (predeterminado) |
-| 🌱 **Seed** | **0.15 Pollen / hora** | ~3.6 /día | Miembro activo de la comunidad |
-| 🌸 **Flower** | **0.40 Pollen / hora** | ~9.6 /día | Completa Misiones y contribuye |
-| 🍯 **Nectar** | **0.80 Pollen / hora** | ~19.2 /día | Principal contribuidor |
-| 🐝 **Router** | **10 Pollen / hora** | ~240 /día | Especial / solo por invitación |
+**Modos de facturación (v6.5):**
 
-_*Los cálculos diarios solo son estimaciones teóricas (~24h × cuota/hora). El reinicio limpio sucede exacto en el minuto `:00` de las horas del reloj._
+| Modo | Comportamiento |
+| :--- | :--- |
+| `quest` (QUEST_PREFERRED, **por defecto**) | Quest primero, fallback a Pago permitido. Cae al universo gratuito cuando ambos parecen agotados. |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | Bloquea modelos `paid_only` localmente; solo envía llamadas elegibles para Quest. **Best-effort** — puede ocurrir un débito de Pago (race). |
+| `paid` (PAID_ALLOWED) | Pago permitido, `paid_only` según el Cost Guard. Cae al gratuito cuando el wallet está bajo. |
+| `manual` | Sin política automática — control total. |
+
+Cambia con `/poll mode <mode>`.
+
+> 🎯 **¡Gana pollen gratis completando Misiones!** Usar este plugin completa varias retroactivamente. Ejecuta `/poll quests`.
 
 > 🎁 **Obtén tu Clave Gratuita Personal (BYOK) desde [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) ¡Y dale alas a tu OpenCode!**
 
 **¿Cómo es el ciclo?**
-1. Lo que consumas lo deduce el plugin de tu cuota de Tier gratuita (ej: los 0.40 🌻/h si eres Flower).
-2. Si llegas al límite horario de gratis, bajará los procesos a modos pasivos y lentos del ecosistema Gratuito.
+1. Tu Pollen Quest se consume primero en los modelos regulares.
+2. Cuando ambos saldos se agotan, el plugin baja los procesos al ecosistema Gratuito.
 3. Lo introducido en saldo comprado solo afectará la orden si fallan las vías de red anteriores.
-4. ¿Ha llegado la hora siguiente? 💥 Bam. Tus cuotas se resetean totalmente de nuevo.
+4. ¡Ejecuta `/poll usage` para medir tus saldos en tiempo real!
 
 ---
 

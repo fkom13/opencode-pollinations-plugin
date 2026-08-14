@@ -1,3 +1,4 @@
+MANUAL/LIVE ONLY — never run in CI. This suite performs REAL billable Pollinations generation or live-network probing. Run it manually with explicit balance tracking (Phase 3 canary protocol).
 // Using Native Fetch in Node 22
 
 const DUMMY_KEY = "dummy_anonymous_key_2026";

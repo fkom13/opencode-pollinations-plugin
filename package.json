@@ -40,12 +40,13 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node scripts/tests/test-suite.cjs && node scripts/tests/test-v65.cjs && node scripts/tests/test-i18n.cjs",
+    "test": "npm run build && node scripts/tests/test-suite.cjs && node scripts/tests/test-v65.cjs && node scripts/tests/test-i18n.cjs && node scripts/tests/test-ux-vocab.cjs",
     "test:unit": "node scripts/tests/test-suite.cjs",
     "test:v65": "node scripts/tests/test-v65.cjs",
     "test:i18n": "node scripts/tests/test-i18n.cjs",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build && npm run test:unit && npm run test:v65 && npm run test:i18n"
+    "prepublishOnly": "npm run build && npm run test:unit && npm run test:v65 && npm run test:i18n && npm run test:vocab",
+    "test:vocab": "node scripts/tests/test-ux-vocab.cjs"
   },
   "files": [
     "dist",

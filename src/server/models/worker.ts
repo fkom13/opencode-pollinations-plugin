@@ -60,7 +60,7 @@ export class ToolRegistryWorker {
 
             if (videoModels.length > 0 && polliGenVideoTool.description) {
                 let videoTable = `\n\n**🎬 Modèles Vidéo Détectés (${videoModels.length}) :**\n`;
-                videoTable += `*(Légende: [💎 Paid] = Enter Tier (Consomme le Wallet USD), [🌿 Free] = Free Tier (Consomme d'abord le Quota Pollen Gratuit Journalier))*\n`;
+                videoTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Free] = Quest Pollen (consomme d'abord le Quota Gratuit Journalier))*\n`;
                 videoTable += `| Modèle | Source I/O | Audio | 1 pollen ≈ | Specs |\n`;
                 videoTable += `|--------|------------|-------|------------|-------|\n`;
 
@@ -85,7 +85,7 @@ export class ToolRegistryWorker {
 
             if (imageModels.length > 0 && polliGenImageTool.description) {
                 let imageTable = `\n\n**🎨 Modèles Image Détectés (${imageModels.length}) :**\n`;
-                imageTable += `*(Légende: [💎 Paid] = Enter Tier (Consomme le Wallet USD), [🌿 Free] = Free Tier (Consomme d'abord le Quota Pollen Gratuit Journalier))*\n`;
+                imageTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Free] = Quest Pollen (consomme d'abord le Quota Gratuit Journalier))*\n`;
                 imageTable += `| Modèle | I2I | Qualité | 1 pollen ≈ |\n`;
                 imageTable += `|--------|-----|---------|------------|\n`;
 
@@ -114,7 +114,7 @@ export class ToolRegistryWorker {
 
             if (audioModels.length > 0 && polliGenAudioTool.description && polliGenMusicTool.description) {
                 let audioTable = `\n\n**🎵 Modèles Audio/Music Détectés (${audioModels.length}) :**\n`;
-                audioTable += `*(Légende: [💎 Paid] = Enter Tier (Consomme le Wallet USD), [🌿 Free] = Free Tier (Consomme d'abord le Quota Pollen Gratuit Journalier))*\n`;
+                audioTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Free] = Quest Pollen (consomme d'abord le Quota Gratuit Journalier))*\n`;
                 audioTable += `| Modèle | Durée max | Qualité |\n`;
                 audioTable += `|--------|-----------|---------|\n`;
 
@@ -152,7 +152,7 @@ export class ToolRegistryWorker {
 
                 if (searchModels.length > 0) {
                     let searchTable = `\n\n**🌍 Modèles de Recherche & Grounding Détectés (${searchModels.length}) :**\n`;
-                    searchTable += `*(Légende: [💎 Paid] = Enter Tier, [🌿 Free] = Quota Gratuit. Obligatoire de choisir un modèle exact au lieu de 'deep' ou 'rapid' !)*\n`;
+                    searchTable += `*(Légende: [💎 Paid] = Pollen acheté, [🌿 Free] = Quest (Quota Gratuit). Obligatoire de choisir un modèle exact au lieu de 'deep' ou 'rapid' !)*\n`;
                     searchTable += `| Modèle | Description / Specs |\n`;
                     searchTable += `|--------|---------------------|\n`;
 

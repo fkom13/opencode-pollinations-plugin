@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>The Ultimate Bridge between OpenCode and the Pollinations.ai Ecosystem.</h3>
-  <p><em>Access a continuous universe of free basic AI models, or leverage premium enterprise models with our generous <b>Hourly Free Tiers</b> directly from your local terminal.</em></p>
+  <p><em>Access a continuous universe of free basic AI models, or leverage premium enterprise models with our <b>Quest & Paid Pollen</b> system directly from your local terminal.</em></p>
 </div>
 
 <div align="center">

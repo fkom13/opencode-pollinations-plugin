@@ -38,7 +38,7 @@ import {
 } from './shared.js';
 import { loadConfig } from '../../server/config.js';
 import { checkCostControl, isTokenBased } from './cost-guard.js';
-import { validateTimeoutSeconds, mergeTimeoutHierarchy } from './timeout-policy.js';
+import { validateTimeoutSeconds } from './timeout-policy.js';
 import { resolveCapabilityTimeout } from './tool-capability-registry.js';
 import { emitStatusToast } from '../../server/toast.js';
 import { t } from '../../locales/index.js';
@@ -192,7 +192,7 @@ export const polliGenVideoTool: ToolDefinition = tool({
             const balBefore = await fetchEnterBalance();
 
             // Video generation takes time (30-70 seconds depending on model)
-            const timeoutSeconds = resolveCapabilityTimeout('gen_video', model, args.timeout_seconds, mergeTimeoutHierarchy(config.timeouts));
+            const timeoutSeconds = resolveCapabilityTimeout('gen_video', model, args.timeout_seconds, config.timeouts ?? null);
             const result = await httpsGet(url, headers, timeoutSeconds * 1000);
             const videoData = result.data;
             const responseHeaders = result.headers;

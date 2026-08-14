@@ -17,7 +17,7 @@
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>Il Ponte definitivo tra OpenCode e l'ecosistema Pollinations.ai</h3>
-  <p><em>Accedi a un universo continuo di modelli AI di base gratuiti, o sfrutta modelli premium enterprise utilizzando i nostri generosi <b>Fondi Gratuiti Orari (Hourly Free Tiers)</b> direttamente dal tuo terminale locale.</em></p>
+  <p><em>Accedi a un universo continuo di modelli AI di base gratuiti, o sfrutta modelli premium enterprise utilizzando il nostro sistema <b>Quest & Paid Pollen</b> direttamente dal tuo terminale locale.</em></p>
 </div>
 
 <div align="center">
@@ -87,31 +87,35 @@ Abbiamo introdotto protezioni fondamentali per garantire che il tuo flusso di la
 
 ---
 
-## 🐝 Capire i Pollen & I "Free Tiers"
+## 🐝 Capire il Quest Pollen & il Pollen a Pagamento
 
-In passato, Pollinations si finanziava principalmente con il traffico generato dalla pubblicità. Oggi, modelli massicci (es. Claude 3.5 Sonnet, Wan Video) hanno un gran costo. Pertanto l'**Enter Universe** ha lo scopo di darti questo accesso tramite Key.
+Il pollen di Pollinations è diviso in due colonne:
 
-**Ma aspetta, NON hai bisogno di una carta di credito!**
+- **🎁 Pollen Quest** — guadagnato gratis completando le **Quest**. Consumato per primo dal server sui modelli regolari.
+- **💎 Pollen a Pagamento** — acquistato (carta). Usato quando il Quest è insufficiente, o per i modelli `paid_only`.
 
-Il **Pollen 🌻** è un sistema universale (1$ ≈ 1 Pollen). Immettendo una primissima Chiave Gratuita dal sito, sbloccherai le generose **Ricariche Orarie** calcolate tramite un sistema a Tiers (Livelli):
+> ⚠️ Il plugin non può leggere la suddivisione lato server; stima Quest/Pagamento localmente e legge la suddivisione reale (`meter_source`) da `/account/usage`.
 
-| Tier (Livello) | Ricarica Oraria ⏱️ | Stima Giorno* | Requisito richiesto |
-| :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / ora** | ~0.24 / giorno | Nuovo account (predefinito) |
-| 🌱 **Seed** | **0.15 Pollen / ora** | ~3.6 / giorno | Membro attivo della community |
-| 🌸 **Flower** | **0.40 Pollen / ora** | ~9.6 / giorno | Completa le Missioni e contribuisci |
-| 🍯 **Nectar** | **0.80 Pollen / ora** | ~19.2 / giorno | Contributore di punta |
-| 🐝 **Router** | **10 Pollen / ora** | ~240 / giorno | Speciale / solo su invito |
+**Modalità di fatturazione (v6.5):**
 
-_*La stima giornaliera è puramente teorica (~24h × quota oraria). I Pollen si rinfrescano in modo corretto all'istante di ogni cambio ora (`:00`)._
+| Modalità | Comportamento |
+| :--- | :--- |
+| `quest` (QUEST_PREFERRED, **predefinita**) | Prima Quest, fallback a Pagamento consentito. Cade sull'universo gratuito quando entrambi sembrano esauriti. |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | Blocca i modelli `paid_only` localmente; invia solo chiamate eleggibili Quest. **Best-effort** — può verificarsi un addebito Pagamento (race). |
+| `paid` (PAID_ALLOWED) | Pagamento consentito, `paid_only` secondo il Cost Guard. Cade sul gratuito quando il wallet è basso. |
+| `manual` | Nessuna politica automatica — controllo totale. |
+
+Cambia con `/poll mode <mode>`.
+
+> 🎯 **Guadagna pollen gratis completando le Quest!** Usare questo plugin ne completa diverse retroattivamente. Esegui `/poll quests`.
 
 > 🎁 **Aggiungi la tua API Key Base su [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) per avviare il potenziamento!**
 
 **Come Funziona:**
-1. Il saldo grauito del tuo Tier (es: 0.40 🌻/ora per un Flower) viene drenato per primo.
-2. Quando arriva a zero, subentrano i modelli Free di salvataggio (Safety Net).
-3. Il saldo in dollari reale si sfiora "A Meno Che" tu non voglia eseguire dei modelli costosi super premium a tutti i costi.
-4. Ogni inizio dell'ora tutto riparte! 💥 Fai /poll usage per misurarlo e divertiti!
+1. Il tuo Pollen Quest viene consumato per primo sui modelli regolari.
+2. Quando entrambi i saldi si esauriscono, subentrano i modelli Free di salvataggio (Safety Net).
+3. Il saldo reale (Pollen a pagamento) si usa solo per i modelli premium o `paid_only`.
+4. Esegui `/poll usage` per misurare i tuoi saldi in tempo reale!
 
 ---
 

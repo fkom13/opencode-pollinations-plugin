@@ -17,7 +17,7 @@
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>La Passerelle ultime entre OpenCode et l'écosystème Pollinations.ai</h3>
-  <p><em>Accédez à un univers continu de modèles IA de base gratuits, ou exploitez des modèles d'entreprise premium grâce à nos généreux <b>Tiers Gratuits Horaires</b>, directement depuis votre terminal local.</em></p>
+  <p><em>Accédez à un univers continu de modèles IA de base gratuits, ou exploitez des modèles d'entreprise premium grâce à notre système <b>Quest & Paid Pollen</b>, directement depuis votre terminal local.</em></p>
 </div>
 
 <div align="center">
@@ -80,38 +80,42 @@ Utilisez l'alias **`/poll`** ou **`/pollinations`** à tout moment dans le termi
 
 ## 🛡️ Le "Cost Guard" & le "Filet de Sécurité"
 
-Nous avons introduit des protections fondamentales pour garantir que votre flux de travail ne s'interrompe jamais et que votre budget (Portefeuille ou Tiers Gratuits) reste sous votre contrôle absolu :
+Nous avons introduit des protections fondamentales pour garantir que votre flux de travail ne s'interrompe jamais et que votre budget (Pollen Quest & Paid) reste sous votre contrôle absolu :
 
-- 🛟 **Filet de Sécurité (Safety Net)** : Si vous utilisez des modèles premium et que votre quota horaire s'épuise en pleine session de chat, le plugin bascule silencieusement vers un modèle gratuit de secours. *Plus d'erreurs bloquantes (429).*
+- 🛟 **Filet de Sécurité (Safety Net)** : Si vous utilisez des modèles premium et que votre solde Quest/Paid s'épuise en pleine session de chat, le plugin bascule silencieusement vers un modèle gratuit de secours. *Plus d'erreurs bloquantes (429).*
 - 🚦 **Cost Guard pour les Outils** : Les Agents OpenCode peuvent être trop zélés. Si un Agent tente de dépenser trop de Pollens pour générer une vidéo très lourde, le plugin intercepte la requête. Un flux asynchrone demandera votre confirmation manuelle.
 
 ---
 
-## 🐝 Comprendre les Pollens & "Free Tiers"
+## 🐝 Comprendre le Quest Pollen & le Paid Pollen
 
-Par le passé, Pollinations s'appuyait principalement sur le trafic réseau financé par la pub. Aujourd'hui, faire tourner des modèles massifs (comme Claude 3.5 Sonnet, Flux Pro, Wan Video) coûte de l'argent. L'Univers **Enter** nécessite une clé API pour débloquer les modèles de pointe.
+Le pollen Pollinations est réparti en deux colonnes :
 
-**Mais attendez, vous n'avez pas besoin de carte bancaire !**
+- **🎁 Quest Pollen** — gagné gratuitement en complétant des **Quêtes**. Consommé en premier par le serveur sur les modèles réguliers.
+- **💎 Paid Pollen** — acheté (carte bancaire). Utilisé quand le Quest est insuffisant, ou pour les modèles `paid_only`.
 
-Le **Pollen 🌻** est notre système de crédit unifié (1$ ≈ 1 Pollen). En connectant une simple clé API gratuite, vous débloquez des recharges **horaires** selon votre niveau Développeur :
+> ⚠️ Le plugin ne peut pas lire la répartition côté serveur ; il estime Quest/Paid localement et lit la répartition réelle (`meter_source`) via `/account/usage`.
 
-| Tier | Recharge Horaire ⏱️ | Estimation Jour* | Condition |
-| :--- | :--- | :--- | :--- |
-| 🍄 **Spore** | **0.01 Pollen / heure** | ~0.24 / jour | Nouveau compte (par défaut) |
-| 🌱 **Seed** | **0.15 Pollen / heure** | ~3.6 / jour | Membre actif de la communauté |
-| 🌸 **Flower** | **0.40 Pollen / heure** | ~9.6 / jour | Compléter des Quêtes et contribuer |
-| 🍯 **Nectar** | **0.80 Pollen / heure** | ~19.2 / jour | Contributeur de premier plan |
-| 🐝 **Router** | **10 Pollen / heure** | ~240 / jour | Spécial / sur invitation |
+**Modes de facturation (v6.5) :**
 
-_*Les estimations quotidiennes sont approximatives (~24h × taux horaire). La réinitialisation réelle s'effectue automatiquement au début de chaque heure (XX:00)._
+| Mode | Comportement |
+| :--- | :--- |
+| `quest` (QUEST_PREFERRED, **défaut**) | Quest d'abord, bascule Paid autorisée. Retombe sur l'univers gratuit quand les deux semblent épuisés. |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | Bloque les modèles `paid_only` localement ; envoie uniquement les appels éligibles Quest. **Best-effort** — un débit Paid peut survenir (race). |
+| `paid` (PAID_ALLOWED) | Paid autorisé, `paid_only` selon le Cost Guard. Retombe sur le gratuit quand le wallet est bas. |
+| `manual` | Aucune politique automatique — contrôle total. |
+
+Changez avec `/poll mode <mode>`.
+
+> 🎯 **Gagnez du pollen gratuit en complétant des Quêtes !** Utiliser simplement ce plugin en complète plusieurs rétroactivement. Lancez `/poll quests`.
 
 > 🎁 **Obtenez votre Clé Personnelle Gratuite (BYOK) sur [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) pour booster OpenCode !**
 
 **Comment ça marche :**
-1. Votre quota de Tier gratuit (ex: 0.40 🌻/h pour Flower) est consommé en premier.
-2. Lorsque le quota est épuisé, le filet de sécurité bascule doucement vers les modèles gratuits.
-3. Le solde de votre Portefeuille (Pollen payant) n'est touché que pour les outils premium si le quota gratuit est insuffisant.
-4. Boom ! 💥 Le quota se réinitialise complètement dès la prochaine heure.
+1. Votre Quest Pollen est consommé en premier sur les modèles réguliers.
+2. Quand les deux soldes sont épuisés, le filet de sécurité bascule doucement vers les modèles gratuits.
+3. Le solde de votre Portefeuille (Pollen payant) n'est touché que pour les outils premium ou les modèles `paid_only`.
+4. Faites `/poll usage` pour mesurer vos soldes en temps réel !
 
 ---
 

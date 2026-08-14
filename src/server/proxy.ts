@@ -189,7 +189,7 @@ interface ChatRequest {
     [key: string]: any;
 }
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 1; // v6.5: at most 1 initial request + 1 retry (429 only)
 const RETRY_DELAY_MS = 1000;
 const FETCH_TIMEOUT_MS = 600000; // 10 Minutes global timeout
 
@@ -223,7 +223,7 @@ export function classifyRetry(signal: RetrySignal): 'RETRY' | 'NO_RETRY' {
     return 'NO_RETRY';
 }
 
-async function fetchWithRetry(url: string, options: any, retries: number = MAX_RETRIES): Promise<Response> {
+export async function fetchWithRetry(url: string, options: any, retries: number = MAX_RETRIES): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 

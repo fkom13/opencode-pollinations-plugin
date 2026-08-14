@@ -17,7 +17,7 @@
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>连接 OpenCode 终端与 Pollinations.ai 生态的终极桥梁</h3>
-  <p><em>直接通过你的本地终端，随时随地访问连续的免费AI基础模型，或在我们慷慨的 <b>每小时免费额度 (Hourly Free Tiers)</b> 支持下，使用顶级企业大模型。</em></p>
+  <p><em>直接通过你的本地终端，随时随地访问连续的免费AI基础模型，或在我们的 <b>Quest 与付费 Pollen</b> 体系支持下，使用顶级企业大模型。</em></p>
 </div>
 
 <div align="center">
