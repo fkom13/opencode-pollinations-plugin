@@ -47,3 +47,6 @@ scripts/*
 !scripts/i18n/
 !scripts/i18n/**
 !scripts/set_key.cjs
+
+# Live audit temporary artifacts (never commit)
+tmp/

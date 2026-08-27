@@ -1,18 +1,4 @@
-# 🌸 Pollinations AI Plugin für OpenCode (v6.4.9)
-
-## ✨ Neu in v6.4.9
-
-- 🎯 **Quests & Gamification**: `polli_quests` + `/poll quests`. Plugin-Nutzung erfüllt Quests **rückwirkend**.
-- 🆓 **Kostenlose Tools (kein Schlüssel)** — für **jedes** OpenCode-Modell:
-  - `gen_edit_image_free` — generieren **und** bearbeiten (~20/Tag)
-  - `gen_video_free` — Text→Video (~5/Tag)
-  - `object_remover` / `image_upscaler` / `image_enhancer` — kostenlose Bildverarbeitung
-  - `remove_background` — kostenloses KI-Freistellen (rmbg / bgeraser)
-- 🔐 **1-Klick-Login**: `/poll login` + `polli_login`. `/poll connect sk_...` bleibt verfügbar.
-- 🧊 **Vollständiger Modellkatalog**: text, image, video, audio, **3D**, **embeddings**, realtime.
-- 🧪 **CI + Packaging**: Node ≥ 18, CLI `npx opencode-pollinations-plugin`, Unit- + i18n-Tests.
-- 🌍 **6 Sprachen**: en, fr, es, de, it, zh — Onboarding und Commands ausgerichtet.
-
+# 🌸 Pollinations AI Plugin für OpenCode (v6.5.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -34,19 +20,23 @@
 
 > **"Keine verschlossenen Türen, keine Unternehmenshürden — einfach gute Werkzeuge und gute Menschen."**
 
-**Pollinations.ai** ist eine Open-Source-Plattform von der Community für die Community. Wir bieten eine einheitliche, direkte API zur Generierung von Bildern, Text, Audio und Video.
+**Pollinations.ai** ist eine Open-Source-Plattform von der Community für die Community. Wir bieten eine einheitliche, direkte API zur Generierung von Bildern, Text, Audio, Video und 3D.
 
 - 🌍 **Transparent**: Unser Code, unsere Roadmap und unsere Diskussionen sind öffentlich.
 - ⚖️ **Faire Wirtschaft**: Eine einzige Währung (**Pollen 🌻**) für alle Medien und Modelle. Vorhersehbare und transparente Preise, keine Anbieterbindung (Vendor Lock-in).
 
 ---
 
-## ✨ Was ist neu in V6.4?
+## ✨ Neu in v6.5.0
 
-- ⏱️ **Stündliche Quoten**: Verabschieden Sie sich von täglichen Limits! Developer Tiers werden jetzt **jede Stunde** pünktlich um `:00` zurückgesetzt. So haben Sie bei langen Code-Sitzungen immer frische Credits.
-- ⚡ **100% Dynamische Engine**: Keine hartcodierten Modelllisten, festen Standardkonfigurationen und Preise mehr! In V6.2 ruft der KI-Agent von OpenCode dynamisch die neuesten LLMs, Parameter, Tags (`[💎 Paid]`, `[🌿 Free]`) und Kostenabschätzungen über die Pollinations-APIs ab.
-- 🛡️ **Robuste Sicherheit**: Schutz vor Path-Traversal-Angriffen und strenge URL-Überprüfungen sind vollständig integriert.
-- 🔍 **Verbesserte Websuche**: Die `polli_web_search`-Komponente wird an hochentwickelte, für das Web aktivierte Modelle wie Google Gemini Fast, Perplexity und spezielle Assistenten abgebildet.
+- 🧊 **3D-Generierung (`polli_gen_3d`)**: Erzeugung hochwertiger 3D-Assets (`trellis-2`, `hyper3d-rodin`) im Standardformat `.glb` mit Cost-Guard-Schutz und Cache-Recovery.
+- 🛡️ **Schutz vor Doppelabrechnung**: Chat-Wiederholungen sind strikt auf den HTTP-Code 429 beschränkt; Timeouts und Netzwerkunterbrechungen führen niemals zu doppelten Abbuchungen.
+- 🧠 **Saubere Reasoning-Normalisierung**: Automatisches Bereinigen von DeepSeek-, Kimi- und Qwen-Gedankenströmen — kein internes Denktext-Leck im Chat.
+- 💰 **Transparente Quest- & Paid-Semantik**: Moderne Abrechnungsmodi (`quest`, `quest_only`, `paid`, `manual`) mit absoluten Pollen-Schwellenwerten.
+- 📦 **Artifact Core (Magic Bytes)**: Echte Binärprüfung (JPEG, PNG, GLB, MP4, MP3, WebM) garantiert die korrekte Dateiendung auf der Festplatte.
+- ⏱️ **Konfigurierbare Timeout-Hierarchie**: Detaillierte Kontrolle der Wartezeiten pro Aufruf, pro Modell und pro Fähigkeit via `/poll config timeouts.*`.
+- 🎯 **Quests & 1-Klick-Login**: Automatische Quest-Erfassung (`/poll quests`) und sofortiges Browser-Login (`/poll login`).
+- 🆓 **6 kostenlose Creator-Tools (ohne Schlüssel)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -57,24 +47,33 @@ Mit der Einbindung Ihres API-Schlüssels erhalten OpenCode-Agenten Zugriff auf m
 ### 💎 Integrierte generative Werkzeuge (ENTER ONLY - API-Schlüssel erforderlich)
 - 🎨 `polli_gen_image` : Hochmoderne Bildmodelle (`Flux`, `Sana`, `Midjourney`, etc.).
 - 🎬 `polli_gen_video` : Starke Text-zu-Video- und Bild-zu-Video-Modelle (`Wan`, `Veo`, `LTX`, `Reveal`).
+- 🧊 `polli_gen_3d` : Erzeugung von 3D-Modellen (`trellis-2`, `hyper3d-rodin`) mit GLB-Ausgabe.
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Magische Sprachsynthese (ElevenLabs, OpenAI TTS) und generative Musik.
 - 🎙️ `polli_stt` : Hochwertige Sprachumwandlung in Text (Whisper V3).
 - 🌐 `polli_web_search` : Vernetzte Websuche & Spezialkontexte (`gemini-search`, `perplexity...`).
 
-### 🧰 Kostenlose Bonus-Werkzeuge für Entwickler (Immer verfügbar)
-- ✂️ `remove_background` : Integrierte, blitzschnelle Entfernung von Bildhintergründen.
-- 🛠️ `gen_qrcode`, `gen_diagram`, `extract_frames`, `extract_audio`, `file_to_url` : Entwickler-Tools.
+### 🧰 Kostenlose Bonus-Werkzeuge für Entwickler (Immer verfügbar — kein Schlüssel nötig)
+- 🆓 `gen_edit_image_free` : Kostenlose Bildgenerierung und -bearbeitung (~20/Tag, jedes Modell, ohne Schlüssel).
+- 🆓 `gen_video_free` : Kostenloses Text-zu-Video mit optionalem Startbild & Audio (~5/Tag, ohne Schlüssel).
+- 🧹 `object_remover` : Objekte direkt per Prompt entfernen (30-120s, ohne Schlüssel).
+- 📐 `image_upscaler` : Bilder 2x/4x kostenlos vergrößern (30-120s, ohne Schlüssel).
+- ✨ `image_enhancer` : KI-Bildverbesserung — Rauschunterdrückung, Schärfe, Restaurierung (30-120s, ohne Schlüssel).
+- ✂️ `remove_background` : KI-Freistellen via rmbg (bgeraser.com) — kostenlos.
+- 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url` : Entwickler-Tools.
 
 ### 💻 Komplette Liste der Terminalbefehle
 Verwenden Sie jederzeit den Alias **`/poll`** oder **`/pollinations`** in Ihrem Konversations-Terminal:
 - `/poll help` : Zeigt die interaktive Hilfetabelle an.
-- `/poll connect` : Interaktive "Bring Your Own Key"-Konfiguration.
-- `/poll usage full` : Echtzeit-Dashboard (Statistiken), freie Kontingente und Wallet-Guthaben.
-- `/poll config` : Feinabstimmung von Cost Guards, Logs, Sprache und Anzeige.
+- `/poll login` : **1-Klick-Browser-Login** (Device Flow) — erstellt und verbindet einen Schlüssel automatisch.
+- `/poll connect <Schlüssel>` : Manuelle "Bring Your Own Key"-Konfiguration (`sk_...`).
+- `/poll quests` : Quests und verfügbares kostenloses Pollen einsehen. 🎯
+- `/poll usage full` : Echtzeit-Dashboard (Statistiken), Quests und Wallet-Guthaben.
+- `/poll config` : Feinabstimmung von Cost Guards, Timeouts, Logs, Sprache und Anzeige.
 - `/poll models` : Status der verfügbaren Modelle prüfen.
 - `/poll pricing` : Anzeige einheitlicher Preise in Echtzeit (Durchschnittskosten-Schätzung).
+- `/poll mode <mode>` : Wechseln zwischen Abrechnungsmodi (`quest`, `quest_only`, `paid`, `manual`).
 - `/poll fallback` : Definieren des "Safety Net"-Chatmodells.
-- `/poll infos` : Lernen Sie Community-Regeln und das Stufen-System (Leveling) kennen.
+- `/poll infos` : Übersicht über Funktionen und Nutzungsanleitung.
 
 ---
 
@@ -82,8 +81,8 @@ Verwenden Sie jederzeit den Alias **`/poll`** oder **`/pollinations`** in Ihrem 
 
 Wir haben grundlegende Schutzmechanismen entwickelt, um zu garantieren, dass Ihr Workflow niemals unterbrochen wird und Ihr Budget in Ihrer Kontrolle bleibt:
 
-- 🛟 **Safety Net (Sicherheitsnetz)**: Wenn Sie Premium-Modelle verwenden und Ihr Quest-/Paid-Guthaben mitten in der Chat-Sitzung leer ist, wechselt das Plugin lautlos auf ein kostenloses Fallback-Modell. *Keine blockierenden Limits (429) mehr.*
-- 🚦 **Cost Guard für Tools**: OpenCode-Agenten können sehr eifrig sein. Möchte ein Agent zu viele Pollen (z. B. für lange Videos) ausgeben, schaltet sich das Plugin dazwischen. Ein asynchroner Vorgang fragt erst nach Ihrer manuellen Bestätigung. Sie behalten die Kontrolle.
+- 🛟 **Safety Net (Sicherheitsnetz)** : Wenn Sie Premium-Modelle verwenden und Ihr Quest-/Paid-Guthaben mitten in der Chat-Sitzung leer ist, wechselt das Plugin lautlos auf ein kostenloses Fallback-Modell. *Keine blockierenden Limits (429) mehr.*
+- 🚦 **Cost Guard für Tools** : OpenCode-Agenten können sehr eifrig sein. Möchte ein Agent zu viel Pollen für eine schwere Video- oder 3D-Generierung ausgeben, fängt das Plugin die Anfrage ab und fragt nach Ihrer manuellen Bestätigung (`polli_gen_confirm`).
 
 ---
 
@@ -109,7 +108,7 @@ Das Pollinations-Pollen ist in zwei Konten getrennt:
 
 > 🎯 **Verdienen Sie kostenloses Pollen durch das Abschließen von Quests!** Allein die Nutzung dieses Plugins erfüllt mehrere Quests rückwirkend. Führen Sie `/poll quests` aus, um zu sehen, was Sie beanspruchen können.
 
-> 🎁 **Erhalten Sie Ihren kostenlosen persönlichen Schlüssel (BYOK) auf [Pollinations](https://enter.pollinations.ai), um OpenCode zu boosten!**
+> 🎁 **Erhalten Sie Ihren kostenlosen persönlichen Schlüssel (BYOK) auf [enter.pollinations.ai](https://enter.pollinations.ai), um OpenCode zu boosten!**
 
 **Wie es funktioniert:**
 1. Ihr Quest Pollen wird auf allen regulären Modellen zuerst verbraucht.
@@ -129,30 +128,40 @@ Pollinations für OpenCode spricht Ihre Sprache nativ:
 ## 🚀 Installation & Onboarding
 
 ### 🐧 1. Plattformübergreifende Einrichtung (NPM-Installation)
-Dieses Plugin ist **komplett plattformunabhängig** (Windows, macOS, Linux) und erkennt OpenCode-Ports dynamisch.
+Dieses Plugin ist **komplett plattformunabhängig** (Windows, macOS, Linux ; Node **≥ 18**) und startet einen lokalen Proxy auf einem dynamischen Port.
 
-1. Globale Installation:
+1. Globale oder lokale Installation:
    ```bash
    npm install -g opencode-pollinations-plugin
    ```
 2. Auto-Konfiguration:
    ```bash
    npx opencode-pollinations-plugin
+   # oder: npx opencode-pollinations-plugin --check
    ```
-   *(Oder manuell in `~/.config/opencode/opencode.json` eintragen)*
+   *(Trägt `opencode-pollinations-plugin` automatisch in `~/.config/opencode/opencode.json` ein)*
 
 ### 🔑 2. Interaktives Onboarding
-Nachdem OpenCode gestartet ist, tippen Sie im Agent-Terminal einfach ab:
+
+Verbinden Sie Ihr Pollinations-Konto in OpenCode über **eine dieser Methoden**:
+
+**Option A — 1-Klick-Login (empfohlen):**
 ```bash
-/poll connect
+/poll login
 ```
-Ein Assistent hilft Ihnen interaktiv bei der Erstellung des Schlüssels und der Workspace-Einrichtung. *(Starten Sie OpenCode neu, damit die neue Modellliste im UI erscheint).*
+Ihr Browser öffnet sich automatisch. Melden Sie sich mit GitHub an und klicken Sie auf **Authorize** — das Plugin verbindet sich automatisch ohne Copy-Paste.
+
+**Option B — Manueller Schlüssel:**
+```bash
+/poll connect sk_ihr_schluessel_hier
+```
+Erstellen Sie selbst einen **Secret**-Schlüssel auf [enter.pollinations.ai](https://enter.pollinations.ai) und fügen Sie ihn ein. *(Starten Sie OpenCode neu, damit die neue Modellliste im UI erscheint).*
 
 ---
 
 ## 🔗 Links
 
-- **Pollen-API-Schlüssel holen**: [pollinations.ai](https://pollinations.ai)
+- **Dashboard & API-Schlüssel**: [enter.pollinations.ai](https://enter.pollinations.ai)
 - **Discord-Community**: [Mach mit!](https://discord.gg/pollinations-ai-885844321461485618)
 - **OpenCode-Ökosystem**: [opencode.ai](https://opencode.ai/docs/ecosystem#plugins)
 

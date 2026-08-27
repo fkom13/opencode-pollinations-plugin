@@ -1,18 +1,4 @@
-# 🌸 Pollinations AI Plugin para OpenCode (v6.4.9)
-
-## ✨ Novedades v6.4.9
-
-- 🎯 **Quests & Gamificación**: `polli_quests` + `/poll quests`. Usar el plugin completa quests **retroactivamente**.
-- 🆓 **Herramientas gratis (sin clave)** — para **cualquier** modelo OpenCode:
-  - `gen_edit_image_free` — generar **y** editar (~20/día)
-  - `gen_video_free` — texto→vídeo (~5/día)
-  - `object_remover` / `image_upscaler` / `image_enhancer` — procesado de imagen gratis
-  - `remove_background` — recorte IA gratis (rmbg / bgeraser)
-- 🔐 **Login en 1 clic**: `/poll login` + `polli_login`. `/poll connect sk_...` sigue disponible.
-- 🧊 **Catálogo completo**: text, image, video, audio, **3D**, **embeddings**, realtime.
-- 🧪 **CI + packaging**: Node ≥ 18, CLI `npx opencode-pollinations-plugin`, tests unit + i18n.
-- 🌍 **6 idiomas**: en, fr, es, de, it, zh — onboarding y comandos alineados.
-
+# 🌸 Pollinations AI Plugin para OpenCode (v6.5.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -34,19 +20,23 @@
 
 > **"Sin puertas cerradas, sin bloqueos corporativos — simplemente buenas herramientas y buena gente."**
 
-**Pollinations.ai** es una plataforma de código abierto creada por y para la comunidad. Ofrecemos una API unificada y directa para generar imágenes, texto, audio y vídeo.
+**Pollinations.ai** es una plataforma de código abierto creada por y para la comunidad. Ofrecemos una API unificada y directa para generar imágenes, texto, audio, vídeo y 3D.
 
 - 🌍 **Transparente**: Nuestro código, hoja de ruta (roadmap) y discusiones son de acceso público.
 - ⚖️ **Economía Justa**: Una moneda única (**Pollen 🌻**) para todo tipo de archivos multimedia y modelos. Precios predecibles, transparentes y sin ataduras propietarias.
 
 ---
 
-## ✨ Novedades de la V6.4
+## ✨ Novedades v6.5.0
 
-- ⏱️ **Cuotas por Hora**: ¡Dile adiós a los límites diarios! Los Tiers de Desarrollador se recargan **cada hora** exacta (a la hora en punto `:00`), asegurando que siempre tengas créditos frescos para tus largas jornadas de código.
-- ⚡ **Motor 100% Dinámico**: ¡Se acabaron las listas de modelos quemadas en el código y los precios estáticos! En V6.2, el agente obtiene dinámicamente los últimos LLMs, parámetros, etiquetas (`[💎 Paid]`, `[🌿 Free]`) y costes aproximados conectándose continuamente a la API de Pollinations.
-- 🛡️ **Seguridad Robusta**: Completamente integradas las mitigaciones contra path traversal y una estricta validación de URLs.
-- 🔍 **Búsqueda Web Mejorada**: El componente `polli_web_search` accede directamente a las opciones modernas de indexación como Gemini Fast, Perplexity y otros asistentes personalizados por red.
+- 🧊 **Generación 3D (`polli_gen_3d`)**: Generación de modelos 3D (`trellis-2`, `hyper3d-rodin`) en formato estándar `.glb` con protección Cost Guard y recuperación desde caché.
+- 🛡️ **Cero Doble Facturación**: Reintentos de chat estrictamente limitados al error 429; los timeouts y cortes de red nunca vuelven a enviar peticiones de pago.
+- 🧠 **Normalización de Razonamiento**: Limpieza automática de flujos SSE en DeepSeek, Kimi y Qwen — sin filtraciones de pensamientos en el chat.
+- 💰 **Semántica Quest & Paid Transparente**: Nuevos modos de facturación (`quest`, `quest_only`, `paid`, `manual`) con límites de alerta en Pollen absoluto.
+- 📦 **Artifact Core (Magic Bytes)**: Verificación física binaria (JPEG, PNG, GLB, MP4, MP3, WebM) garantizando extensiones correctas en disco.
+- ⏱️ **Jerarquía de Timeouts Configurable**: Control detallado de tiempos de espera por llamada, por modelo y por capacidad con `/poll config timeouts.*`.
+- 🎯 **Quests y Login en 1 Clic**: Seguimiento retroactivo de misiones (`/poll quests`) e inicio de sesión automático en navegador (`/poll login`).
+- 🆓 **6 Herramientas de Creador Gratuitas (sin clave)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -57,24 +47,33 @@ Aparte de conversar, cuando conectas tu API Key, el Agente OpenCode adquiere sup
 ### 💎 Herramientas Generativas (ENTER ONLY - requiere API Key)
 - 🎨 `polli_gen_image` : Modelos creativos líderes (`Flux`, `Sana`, `Midjourney`, etc.).
 - 🎬 `polli_gen_video` : Modelos robustos de Texto-a-Vídeo e Imagen-a-Vídeo (`Wan`, `Veo`, `LTX`, `Reveal`).
+- 🧊 `polli_gen_3d` : Generación de activos 3D de alta fidelidad (`trellis-2`, `hyper3d-rodin`) en GLB.
 - 🔊 `polli_gen_audio` y `polli_gen_music` : Síntesis de voz mágica (ElevenLabs, OpenAI TTS) y Música de IA.
 - 🎙️ `polli_stt` : Alta eficiencia en el paso de voz a texto (Whisper V3).
 - 🌐 `polli_web_search` : Búsqueda web inteligente y conocimiento en tiempo real (`gemini-search`, `perplexity...`).
 
-### 🧰 Herramientas Integradas Gratuitas (Siempre disponibles)
-- ✂️ `remove_background` : Eliminación rápida del fondo de cualquier imagen de forma offline nativa.
-- 🛠️ Herramientas como `gen_qrcode`, `gen_diagram`, `extract_frames`, `extract_audio`, y `file_to_url` para mejorar el día a día.
+### 🧰 Herramientas de Creador Gratuitas (Siempre disponibles — sin clave API)
+- 🆓 `gen_edit_image_free` : Generación y edición de imágenes gratis (~20/día, cualquier modelo, sin clave).
+- 🆓 `gen_video_free` : Texto-a-vídeo gratis con imagen y audio de entrada opcionales (~5/día, sin clave).
+- 🧹 `object_remover` : Eliminación de objetos por prompt directamente (30-120s, sin clave).
+- 📐 `image_upscaler` : Aumento de resolución 2x/4x gratis (30-120s, sin clave).
+- ✨ `image_enhancer` : Mejora de imagen por IA — reducción de ruido, nitidez, restauración (30-120s, sin clave).
+- ✂️ `remove_background` : Eliminación de fondo mediante rmbg (bgeraser.com) — gratis.
+- 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Utilidades para desarrolladores.
 
 ### 💻 Lista Completa de Comandos en Terminal
 Solo llama al bot usando los alias **`/poll`** o **`/pollinations`** en tu terminal:
 - `/poll help` : Muestra todo el cuadro de ayuda interactivo.
-- `/poll connect` : Interfaz de configuración "Bring Your Own Key" (Trae tu proipa Clave).
-- `/poll usage full` : Panel de control en tiempo real, recargas de saldo y uso del Tiers Gratuitos.
-- `/poll config` : Refinamiento de idiomas, alertas de costes (Cost Guards) y logs.
-- `/poll models` : Ver los modelos ahora viables y en línea.
-- `/poll pricing` : Mirar la lista de precios unificados de Pollen al día.
-- `/poll fallback` : Configurar tus redes de seguridad para las conversaciones y el Agente.
-- `/poll infos` : Información vital del ecosistema, sobre cómo funciona todo y formas de subir de nivel en los Roles.
+- `/poll login` : **Inicio de sesión en 1 clic** en el navegador (device flow) — conecta una clave automáticamente.
+- `/poll connect <clave>` : Configuración manual "Bring Your Own Key" (`sk_...`).
+- `/poll quests` : Mira tus misiones y el Pollen gratis disponible para reclamar. 🎯
+- `/poll usage full` : Panel de control en tiempo real, recargas de saldo y uso del Portafolio.
+- `/poll config` : Refinamiento de idiomas, límites de costes (Cost Guards), timeouts y logs.
+- `/poll models` : Ver los modelos actualmente disponibles y en línea.
+- `/poll pricing` : Consultar la lista de precios unificados de Pollen al día.
+- `/poll mode <mode>` : Cambiar entre modos de facturación (`quest`, `quest_only`, `paid`, `manual`).
+- `/poll fallback` : Configurar tus redes de seguridad para las conversaciones del chat.
+- `/poll infos` : Información del ecosistema y guía de uso.
 
 ---
 
@@ -82,8 +81,8 @@ Solo llama al bot usando los alias **`/poll`** o **`/pollinations`** en tu termi
 
 Nos preocupamos de tu cartera y de tu ritmo de trabajo, incluyendo barreras fundamentales que aseguran tu tranquilidad:
 
-- 🛟 **Red de Seguridad**: Al agotar tu saldo diario/por hora o si un error bloqueante 429 sucediese, el ecosistema transita suave y calladamente hacia modelos Free de seguridad. Tu chat jamás se cortará sin un aviso.
-- 🚦 **Cost Guard de Herramientas**: Ya que los modelos potentes de Audio o Video consumen bastante (y un agente podría sobrepasar ese límite por afición a resolver un problema a nivel visual), implementamos interceptores. Una parada asíncrona solicitará tu confirmación directa ante transacciones altas.
+- 🛟 **Red de Seguridad (Safety Net)** : Al agotar tu saldo Quest/Paid o si ocurriese un corte, el ecosistema transita suave y silenciosamente hacia modelos gratuitos de seguridad. *Tu chat jamás se cortará con errores 429.*
+- 🚦 **Cost Guard de Herramientas** : Los agentes pueden ser insistentes. Si un agente intenta gastar demasiado Pollen en una generación pesada de vídeo o 3D, el plugin interceptará la petición solicitando tu confirmación manual (`polli_gen_confirm`).
 
 ---
 
@@ -96,67 +95,76 @@ El pollen de Pollinations se divide en dos columnas:
 
 > ⚠️ El plugin no puede leer el desglose del servidor; estima Quest/Pago localmente y lee el desglose real (`meter_source`) desde `/account/usage`.
 
-**Modos de facturación (v6.5):**
+### Modos de facturación (v6.5):
 
 | Modo | Comportamiento |
 | :--- | :--- |
 | `quest` (QUEST_PREFERRED, **por defecto**) | Quest primero, fallback a Pago permitido. Cae al universo gratuito cuando ambos parecen agotados. |
-| `quest_only` (QUEST_ELIGIBLE_ONLY) | Bloquea modelos `paid_only` localmente; solo envía llamadas elegibles para Quest. **Best-effort** — puede ocurrir un débito de Pago (race). |
+| `quest_only` (QUEST_ELIGIBLE_ONLY) | Bloquea modelos `paid_only` localmente; solo envía llamadas elegibles para Quest. **Best-effort** — puede ocurrir un débito de Pago. |
 | `paid` (PAID_ALLOWED) | Pago permitido, `paid_only` según el Cost Guard. Cae al gratuito cuando el wallet está bajo. |
 | `manual` | Sin política automática — control total. |
 
-Cambia con `/poll mode <mode>`.
+Cambia con `/poll mode <mode>` o `/poll config mode <mode>`.
 
 > 🎯 **¡Gana pollen gratis completando Misiones!** Usar este plugin completa varias retroactivamente. Ejecuta `/poll quests`.
 
-> 🎁 **Obtén tu Clave Gratuita Personal (BYOK) desde [Pollinations.ai](https://enter.pollinations.ai/authorize?redirect_url=https://github.com/fkom13/opencode-pollinations-plugin) ¡Y dale alas a tu OpenCode!**
+> 🎁 **Obtén tu Clave Gratuita Personal (BYOK) desde [enter.pollinations.ai](https://enter.pollinations.ai) ¡Y dale alas a tu OpenCode!**
 
-**¿Cómo es el ciclo?**
+**¿Cómo funciona?**
 1. Tu Pollen Quest se consume primero en los modelos regulares.
-2. Cuando ambos saldos se agotan, el plugin baja los procesos al ecosistema Gratuito.
-3. Lo introducido en saldo comprado solo afectará la orden si fallan las vías de red anteriores.
-4. ¡Ejecuta `/poll usage` para medir tus saldos en tiempo real!
+2. Los modelos `paid_only` 💎 consumen siempre Pollen comprado.
+3. Cuando ambos saldos se agotan, el plugin cambia suavemente a los modelos gratuitos de seguridad.
 
 ---
 
 ## 🌍 Soporte Nativo de Diversos Idiomas (i18n)
 
 Pollinations se comunica fluidamente en varios idiomas usando bases directas:
-- Interfaz del entorno, Alarmas Flotantes (Toasts), Notificaciones y Comandos vienen localizados a **Inglés**, **Francés**, **Español**, **Alemán**, **Italiano**, y **Chino**.
-- Ingresa el comando `/poll config lang <en|fr|es|de|it|zh>` para cambiar entre esquemas casi mágicamente.
+- Interfaz del entorno, Notificaciones Flotantes (Toasts), Respuestas de herramientas y Comandos vienen localizados a **Inglés**, **Francés**, **Español**, **Alemán**, **Italiano**, y **Chino**.
+- Ingresa el comando `/poll config lang <en|fr|es|de|it|zh>` para cambiar de idioma al instante.
 
 ---
 
 ## 🚀 Instalación y Emparejamiento
 
 ### 🐧 1. Soporte a Todas las Plataformas vía NPM CLI
-Este núcleo ha sido forjado para acoplarse y detectar con vida propia sobre (Windows, macOS, Linux).
+Este plugin es **totalmente multiplataforma** (Windows, macOS, Linux ; Node **≥ 18**) e inicia un proxy local en un puerto dinámico.
 
-1. Usando el ambiente general o nativo:
+1. Instalación global o local:
    ```bash
    npm install -g opencode-pollinations-plugin
    ```
-2. Auto-Configuración Dinámica de inyección:
+2. Auto-Configuración:
    ```bash
    npx opencode-pollinations-plugin
+   # o: npx opencode-pollinations-plugin --check
    ```
-   *(También tienes libertad de editar `~/.config/opencode/opencode.json` con cautela a mano)*
+   *(Inyecta automáticamente `opencode-pollinations-plugin` en `~/.config/opencode/opencode.json`)*
 
-### 🔑 2. Proceso de Integración
-Estando conectado dentro de tu visualización OpenCode, abre la terminal al Agente escribiendo:
+### 🔑 2. Onboarding Interactivo
+
+Una vez dentro de OpenCode, conecta tu cuenta de Pollinations con **una de estas opciones**:
+
+**Opción A — Login en 1 clic (recomendado):**
 ```bash
-/poll connect
+/poll login
 ```
-Sigue el simpático sistema base para inyectar y comprobar tu clave Pollinations personal. *(Nota: Haz el amago de cerrar OpenCode y ejecutarlo de nuevo para purgar el visor de modelos al instante).*
+Tu navegador se abrirá automáticamente. Inicia sesión con GitHub y presiona **Authorize** — el plugin se conectará solo, sin necesidad de copiar y pegar.
+
+**Opción B — Clave manual:**
+```bash
+/poll connect sk_tu_clave_aqui
+```
+Crea una clave **Secret** en [enter.pollinations.ai](https://enter.pollinations.ai) y pégala. *(Reinicia OpenCode para refrescar la lista de modelos de la interfaz).*
 
 ---
 
 ## 🔗 Enlaces Importantes
 
-- **Obtener tu Llave Master de la Red API**: [pollinations.ai](https://pollinations.ai)
-- **Nuestra Gran y Activa Familia Discord**: [¡Súmate Todos Mismos Aquí!](https://discord.gg/pollinations-ai-885844321461485618)
-- **Cosas Relacionadas Al Ecosistema Abierto**: [opencode.ai](https://opencode.ai/docs/ecosystem#plugins)
+- **Dashboard y Claves API**: [enter.pollinations.ai](https://enter.pollinations.ai)
+- **Comunidad Discord**: [¡Únete aquí!](https://discord.gg/pollinations-ai-885844321461485618)
+- **Ecosistema OpenCode**: [opencode.ai](https://opencode.ai/docs/ecosystem#plugins)
 
-## 📜 Licencia de Dominio Público
+## 📜 Licencia
 
-Licencia MIT otorgada. Hecho posible de principio a infinito por [fkom13](https://github.com/fkom13) & La Gran Comunidad Pollinations.
+Licencia MIT. Desarrollado por [fkom13](https://github.com/fkom13) y la Comunidad Pollinations.

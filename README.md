@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v6.4.9)
+# 🌸 Pollinations AI Plugin for OpenCode (v6.5.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -20,25 +20,23 @@
 
 > **"No closed doors, no corporate hoops — just good tools and good people."**
 
-**Pollinations.ai** is an open-source platform created by and for the community. We offer a unified, direct API for generating **images, text, audio, and video**.
+**Pollinations.ai** is an open-source platform created by and for the community. We offer a unified, direct API for generating **images, text, audio, video, and 3D**.
 
 - 🌍 **Transparent**: Our code, roadmap, and discussions are fully public.
 - ⚖️ **Fair Economy**: A single currency (**Pollen 🌻**) for all media and models. Predictable and transparent pricing. No vendor lock-in.
 
 ---
 
-## ✨ What's new in v6.4.9?
+## ✨ What's new in v6.5.0?
 
-- 🎯 **Quests & Gamification**: `polli_quests` + `/poll quests`. Using this plugin completes several quests **retroactively** — free Pollen may already be waiting.
-- 🆓 **Free tools (no key required)** — usable by **any** OpenCode model:
-  - `gen_edit_image_free` — generate **and edit** images (~20/day).
-  - `gen_video_free` — text-to-video (~5/day), optional first frame & audio.
-  - `object_remover` / `image_upscaler` / `image_enhancer` — free image processing.
-  - `remove_background` — free AI cutout (rmbg / bgeraser).
-- 🔐 **1-Click Device Login**: `/poll login` + `polli_login` (like `gh auth login`). Manual `/poll connect sk_...` still works.
-- 🧊 **Full model catalog**: text, image, video, audio, **3D**, **embeddings**, realtime.
-- 🧪 **CI + packaging**: Node 18+ only (no VS Code leftovers), `npx opencode-pollinations-plugin` setup CLI restored, unit + i18n tests.
-- 🌍 **6 languages**: en, fr, es, de, it, zh — onboarding, commands, and free-tool strings aligned.
+- 🧊 **3D Generation (`polli_gen_3d`)**: High-fidelity 3D model generation (`trellis-2`, `hyper3d-rodin`) as standard `.glb` assets with Cost Guard protection and cache recovery.
+- 🛡️ **Zero Double-Billing**: Chat retries strictly constrained to 429; client timeouts and network interruptions never re-submit or duplicate token debits.
+- 🧠 **Clean Reasoning Normalization**: Normalizes DeepSeek, Kimi, and Qwen reasoning streams — no internal thinking text leaks into the conversation.
+- 💰 **Transparent Quest & Paid Semantics**: Modern billing modes (`quest`, `quest_only`, `paid`, `manual`) with absolute Pollen threshold safeguards.
+- 📦 **Artifact Core (Magic Bytes)**: True binary file verification ensures image, video, audio, and 3D files are saved with their real file extension.
+- ⏱️ **Configurable Timeout Hierarchy**: Fine-grained per-call, per-model, and per-capability timeout control via `/poll config timeouts.*`.
+- 🎯 **Quests & 1-Click Device Login**: Automatic quest tracking (`/poll quests`) and instant browser login (`/poll login`).
+- 🆓 **6 Free Creator Tools (No API key needed)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -49,6 +47,7 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 ### 💎 Integrated Generative Tools (ENTER ONLY - requires API key)
 - 🎨 `polli_gen_image` : State-of-the-art imagery models (`Flux`, `Sana`, `Midjourney`, etc.).
 - 🎬 `polli_gen_video` : Powerful Text-to-Video and Image-to-Video models (`Wan`, `Veo`, `LTX`, `Reveal`).
+- 🧊 `polli_gen_3d` : High-quality 3D asset generation (`trellis-2`, `hyper3d-rodin`) with GLB output.
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Voice synthesis (ElevenLabs, OpenAI TTS) and Generative Music.
 - 🎙️ `polli_stt` : High-flying voice transcription (Whisper V3).
 - 🌐 `polli_web_search` : Connected Web & Specialized Search context (`gemini-search`, `perplexity...`).

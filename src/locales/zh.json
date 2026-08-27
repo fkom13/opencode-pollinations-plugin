@@ -512,7 +512,7 @@
   },
   "connect_response": {
     "title_key": "## 🍯💚 POLLINATIONS 插件已连接 💚🍯\n\n欢迎 **{name}** 使用 Pollinations 代理插件！\n**当前模式**：`{mode}`",
-    "tools_intro": "### 🚀 集成到开发中的多媒体工具\n\n本插件让你能够无缝生成代码、图像、分析视频并与最佳 AI 模型交互。通过聊天、重构或终端访问最先进的 LLM。\n\n**本插件为你带来：**\n\n**🛠️ 免费集成工具：**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`\n- `remove_background`\n- `extract_frames` / `extract_audio`\n- `file_to_url`\n- `gen_edit_image_free` (图像生成和编辑, ~20/天)\n- `gen_video_free` (视频生成, ~5/天)\n- `object_remover`\n- `image_upscaler`\n- `image_enhancer`\n\n**💎 Pollinations 工具 (高级)：**\n- `polli_gen_image`\n- `polli_gen_video`\n- `polli_gen_audio`/`polli_stt`\n- `polli_gen_music`\n- `polli_web_search`",
+    "tools_intro": "### 🚀 集成到开发中的多媒体工具\n\n本插件让你能够无缝生成代码、图像、分析视频并与最佳 AI 模型交互。通过聊天、重构或终端访问最先进的 LLM。\n\n**本插件为你带来：**\n\n**🛠️ 免费集成工具：**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`\n- `remove_background`\n- `extract_frames` / `extract_audio`\n- `file_to_url`\n- `gen_edit_image_free` (图像生成和编辑, ~20/天)\n- `gen_video_free` (视频生成, ~5/天)\n- `object_remover`\n- `image_upscaler`\n- `image_enhancer`\n\n**💎 Pollinations 工具 (高级)：**\n- `polli_gen_image`\n- `polli_gen_video`\n- `polli_gen_3d`\n- `polli_gen_audio`/`polli_stt`\n- `polli_gen_music`\n- `polli_web_search`",
     "terminal_cmds": "### 💻 终端命令\n使用 `/poll help` 查看所有命令。试试 `/poll models` 发现目录，或 `/poll usage` 跟踪剩余 Pollen。",
     "resources": "### 📚 资源\n* **Dashboard:** enter.pollinations.ai\n* **Discord:** 加入社区\n* **Plugin:** github.com/fkom13/opencode-pollinations-plugin",
     "free_models_success": "可用免费模型：{models}",
