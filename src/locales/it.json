@@ -473,7 +473,7 @@
       "error": "❗ Error: {error}"
     },
     "gen3d": {
-      "desc": "Genera un oggetto 3D da un prompt di testo o un'immagine di riferimento con Pollinations AI.\n\n**🧊 Modelli 3D**:\n- `trellis-2` — predefinito, ~0.24 pollen (low), output GLB, immagine-a-3D (max 1 immagine di riferimento).\n- `hyper3d-rodin` — paid_only, ~0.10 pollen, output GLB.\n\n**⏱️ Lunga durata**: la generazione può richiedere 20s–150s+ (LONG_BLOCKING). Usa `timeout_seconds` per controllare l'attesa locale.\n\n**♻️ Recupero**: dopo un timeout la generazione può continuare ed essere fatturata. Rilanciare con lo STESSO seed restituisce l'artefatto dalla cache (non rifatturato).",
+      "desc": "Genera un oggetto 3D da un prompt di testo o un'immagine di riferimento con Pollinations AI.\n\nI modelli 3D correnti, accesso, capacità I/O e costi vengono inseriti dinamicamente dal Model Registry live.\n\n**⏱️ Lunga durata**: la generazione può richiedere 20s–150s+ (LONG_BLOCKING). Usa `timeout_seconds` per controllare l'attesa locale.\n\n**♻️ Recupero**: dopo un timeout la generazione può continuare ed essere fatturata. Rilanciare con lo STESSO seed restituisce l'artefatto dalla cache (non rifatturato).",
       "arg_prompt": "Descrizione testuale dell'oggetto 3D (opzionale se si fornisce un'immagine)",
       "arg_image": "URL dell'immagine di riferimento opzionale (max 1 immagine)",
       "arg_model": "Modello da usare (predefinito: trellis-2).",

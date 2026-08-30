@@ -64,6 +64,7 @@ function hasValidKey(): boolean {
  */
 export function createToolRegistry(): Record<string, any> {
     const tools: Record<string, any> = {};
+    const config = loadConfig();
     const keyPresent = hasValidKey();
 
     // === FREE UNIVERSE: Always injected (8 tools) ===
@@ -112,8 +113,10 @@ export function createToolRegistry(): Record<string, any> {
         // Cost Guard Confirmation tool
         tools['polli_gen_confirm'] = polliGenConfirmTool;
 
-        // Model API discovery & diagnostics
-        tools['polli_beta_discovery'] = polliBetaDiscoveryTool;
+        // Model API discovery & diagnostics: developer-only, hidden by default.
+        if (config.enableDeveloperTools === true) {
+            tools['polli_beta_discovery'] = polliBetaDiscoveryTool;
+        }
 
         // Plugin Configuration editor (Agents)
         tools['polli_config'] = polliConfigTool;

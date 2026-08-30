@@ -35,6 +35,7 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
         statusBar: tool.schema.boolean().optional().describe('Enable/disable status bar visibility (true/false)'),
         costConfirmationRequired: tool.schema.boolean().optional().describe('Safety Lock: Set to true to ask user confirmation before spending money. Set to false to spend automatically.'),
         enablePaidTools: tool.schema.boolean().optional().describe('Allow execution of paid or premium models using Paid pollen (true/false)'),
+        enableDeveloperTools: tool.schema.boolean().optional().describe('Expose developer-only API discovery/fuzzing tools after restart (default false).'),
         costThreshold: tool.schema.number().optional().describe('Cost threshold in 🌼 above which confirmation is required'),
         thresholdsQuest: tool.schema.number().optional().describe('Absolute Quest pollen floor (e.g. 0.05) for quest_only fallback.'),
         thresholdsWallet: tool.schema.number().optional().describe('Absolute Paid pollen floor (e.g. 0.5) for paid mode fallback.'),
@@ -59,6 +60,7 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
             if (args.statusBar !== undefined) updates.statusBar = args.statusBar;
             if (args.costConfirmationRequired !== undefined) updates.costConfirmationRequired = args.costConfirmationRequired;
             if (args.enablePaidTools !== undefined) updates.enablePaidTools = args.enablePaidTools;
+            if (args.enableDeveloperTools !== undefined) updates.enableDeveloperTools = args.enableDeveloperTools;
             if (args.costThreshold !== undefined) updates.costThreshold = args.costThreshold;
             if (args.lang !== undefined) updates.lang = args.lang;
 

@@ -100,6 +100,9 @@ function mapRawToModel(raw: any, fallbackCategory: ModelCategory, averageCost?: 
         voices: raw.voices,
         tools: raw.tools,
         reasoning: raw.reasoning,
+        reasoning_options: raw.reasoning_options,
+        interleaved: raw.interleaved,
+        capabilities: raw.capabilities,
         is_specialized: raw.is_specialized,
         context_window: raw.context_window || raw.context_length,
         averageCost: averageCost !== undefined && !isNaN(averageCost) ? averageCost : undefined,
@@ -194,6 +197,9 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
                 if (v1Item.context_length) item.context_length = v1Item.context_length;
                 if (v1Item.tools !== undefined) item.tools = v1Item.tools;
                 if (v1Item.reasoning !== undefined) item.reasoning = v1Item.reasoning;
+                if (v1Item.reasoning_options !== undefined) item.reasoning_options = v1Item.reasoning_options;
+                if (v1Item.interleaved !== undefined) item.interleaved = v1Item.interleaved;
+                if (v1Item.capabilities !== undefined) item.capabilities = v1Item.capabilities;
             }
 
             const model = mapRawToModel(item, res.fallbackCategory, avgCost);

@@ -155,7 +155,7 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
 
         // Alerts (v6.5): thresholds are absolute pollen floors, not percentages.
         const questNeedsAlert = cleanQuestBalance > 0 && cleanQuestBalance < (config.thresholds.quest ?? 0.05);
-        const walletNeedsAlert = cleanWalletBalance > 0 && cleanWalletBalance < (config.thresholds.wallet || 0.5);
+        const walletNeedsAlert = cleanWalletBalance > 0 && cleanWalletBalance < (config.thresholds.wallet ?? 0.5);
 
         logQuota(`Fetch Success. Quest: ${cleanQuestBalance}, Paid: ${cleanWalletBalance}, Total: ${totalBalance}`);
 

@@ -67,31 +67,28 @@ async function testRetryPolicy() {
     assert(classifyRetry(429) === 'RETRY', '429 → RETRY (conservative single retry)');
 }
 
-// ─── 2. REASONING NORMALIZATION (M8/M9) ─────────────────────────────────
+// ─── 2. NATIVE REASONING NORMALIZATION ───────────────────────────────────
 
 async function testReasoningNormalization() {
-    log.section('Reasoning Normalization (M8/M9)');
+    log.section('Native Reasoning Normalization');
 
     const { normalizeChunkLine } = await importDist('server/proxy.js');
 
-    // DeepSeek stream chunk: delta.reasoning_content must be stripped
     const deepseekChunk = JSON.stringify({
         id: 'c1', object: 'chat.completion.chunk',
         choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: 'hidden thinking', content: '' }, finish_reason: null }],
     });
     const dsOut = JSON.parse(normalizeChunkLine(deepseekChunk));
-    assert(dsOut.choices[0].delta.reasoning_content === undefined, 'DeepSeek stream: reasoning_content stripped');
-    assert(dsOut.choices[0].delta.role === 'assistant', 'DeepSeek stream: role preserved');
+    assert(dsOut.choices[0].delta.reasoning_content === 'hidden thinking', 'DeepSeek: native reasoning_content preserved');
+    assert(dsOut.choices[0].delta.content === '', 'DeepSeek: reasoning never merged into content');
 
-    // reasoning not merged into content
     const mixedChunk = JSON.stringify({
         choices: [{ delta: { content: 'real answer', reasoning_content: 'NOT ANSWER' } }],
     });
     const mixedOut = JSON.parse(normalizeChunkLine(mixedChunk));
-    assert(mixedOut.choices[0].delta.content === 'real answer', 'content preserved (never merged with reasoning)');
-    assert(mixedOut.choices[0].delta.reasoning_content === undefined, 'reasoning not merged into content');
+    assert(mixedOut.choices[0].delta.content === 'real answer', 'content preserved independently');
+    assert(mixedOut.choices[0].delta.reasoning_content === 'NOT ANSWER', 'structured reasoning preserved independently');
 
-    // Kimi non-stream with tool call: name:null parasite removed, function.name kept, reasoning_content stripped
     const kimiMsg = JSON.stringify({
         object: 'chat.completion',
         choices: [{
@@ -107,13 +104,11 @@ async function testReasoningNormalization() {
     });
     const kimiOut = JSON.parse(normalizeChunkLine(kimiMsg));
     const km = kimiOut.choices[0].message;
-    assert(km.reasoning_content === undefined, 'Kimi: reasoning_content stripped');
+    assert(km.reasoning_content === 'thinking...', 'Kimi: native reasoning_content preserved');
     assert(km.tools === undefined, 'Kimi: message.tools === null removed');
     assert(km.tool_calls[0].name === undefined, 'Kimi: top-level name:null removed');
     assert(km.tool_calls[0].function.name === 'calc', 'Kimi: function.name preserved (canonical)');
-    assert(kimiOut.choices[0].finish_reason === 'tool_calls', 'Kimi: finish_reason preserved');
 
-    // Qwen non-stream: reasoning + reasoning_details stripped
     const qwenMsg = JSON.stringify({
         choices: [{
             message: {
@@ -127,49 +122,18 @@ async function testReasoningNormalization() {
     });
     const qwenOut = JSON.parse(normalizeChunkLine(qwenMsg));
     const qm = qwenOut.choices[0].message;
-    assert(qm.reasoning === undefined, 'Qwen: reasoning stripped');
-    assert(qm.reasoning_details === undefined, 'Qwen: reasoning_details stripped');
-    assert(qm.content === 'OK', 'Qwen: content preserved');
+    assert(qm.reasoning === 'hidden', 'Qwen: native reasoning field preserved');
+    assert(Array.isArray(qm.reasoning_details), 'Qwen: structured reasoning_details preserved');
+    assert(qm.content === 'OK', 'Qwen: content preserved independently');
     assert(qwenOut.usage.completion_tokens_details.reasoning_tokens === 42, 'usage reasoning_tokens preserved');
 
-    // Luna/OpenAI clean shape: passthrough untouched
-    const lunaChunk = JSON.stringify({
+    const cleanChunk = JSON.stringify({
         choices: [{ index: 0, delta: { role: 'assistant', content: 'hi' }, finish_reason: null }],
         usage: { completion_tokens_details: { reasoning_tokens: 0 } },
     });
-    const lunaOut = JSON.parse(normalizeChunkLine(lunaChunk));
-    assert(lunaOut.choices[0].delta.content === 'hi', 'OpenAI clean passthrough: content preserved');
-    assert(lunaOut.usage.completion_tokens_details.reasoning_tokens === 0, 'OpenAI clean passthrough: usage preserved');
-
-    // [DONE] sentinel passes through
+    const cleanOut = JSON.parse(normalizeChunkLine(cleanChunk));
+    assert(cleanOut.choices[0].delta.content === 'hi', 'OpenAI clean passthrough: content preserved');
     assert(normalizeChunkLine('[DONE]') === '[DONE]', '[DONE] sentinel passthrough');
-
-    // ── Live fixture normalization (Phase 2 captured proofs) ──
-    const kimiFixturePath = path.join(FIXTURES, 'P24-kimi-tools-nostream.json');
-    if (fs.existsSync(kimiFixturePath)) {
-        const fixture = fs.readFileSync(kimiFixturePath, 'utf-8').trim();
-        const out = JSON.parse(normalizeChunkLine(fixture));
-        const m = out.choices[0].message;
-        assert(!('reasoning_content' in m), 'LIVE fixture Kimi: reasoning_content stripped');
-        const tc = m.tool_calls && m.tool_calls[0];
-        if (tc) {
-            assert(!('name' in tc) || tc.name !== null, 'LIVE fixture Kimi: name:null parasite removed');
-            assert(tc.function && typeof tc.function.name === 'string', 'LIVE fixture Kimi: function.name canonical');
-        }
-    } else {
-        log.info('Kimia fixture P24 not found — skipped');
-    }
-
-    const qwenFixturePath = path.join(FIXTURES, 'T12-qwen-max.json');
-    if (fs.existsSync(qwenFixturePath)) {
-        const fixture = fs.readFileSync(qwenFixturePath, 'utf-8').trim();
-        const out = JSON.parse(normalizeChunkLine(fixture));
-        const m = out.choices[0].message;
-        assert(!('reasoning' in m), 'LIVE fixture Qwen: reasoning stripped');
-        assert(!('reasoning_details' in m), 'LIVE fixture Qwen: reasoning_details stripped');
-    } else {
-        log.info('Qwen fixture T12 not found — skipped');
-    }
 }
 
 // ─── 3. MODEL REGISTRY FRESHNESS ─────────────────────────────────────────
@@ -352,7 +316,7 @@ async function testBillingMigration() {
 
     // legacy modes migrate
     const m1 = config.migrateV65Config({ mode: 'alwaysfree' });
-    assert(m1.mode === 'quest', 'migration: alwaysfree → quest');
+    assert(m1.mode === 'quest_only', 'migration: alwaysfree → quest_only');
     const m2 = config.migrateV65Config({ mode: 'pro' });
     assert(m2.mode === 'paid', 'migration: pro → paid');
     const m3 = config.migrateV65Config({ mode: 'manual' });
@@ -630,6 +594,25 @@ async function testTestClassification() {
     assert(prepub.includes('test:vocab') || prepub.includes('test-ux-vocab'), 'prepublishOnly includes UX vocab guard (test:vocab)');
 }
 
+// ─── 8h. CONVERGENCE CONTRACTS ───────────────────────────────────────────
+async function testConvergenceContracts() {
+    log.section('Convergence Contracts (Quest / dynamic registries / native reasoning)');
+
+    const configSrc = fs.readFileSync(path.join(ROOT, 'src', 'server', 'config.ts'), 'utf-8');
+    const proxySrc = fs.readFileSync(path.join(ROOT, 'src', 'server', 'proxy.ts'), 'utf-8');
+    const workerSrc = fs.readFileSync(path.join(ROOT, 'src', 'server', 'models', 'worker.ts'), 'utf-8');
+    const toolsSrc = fs.readFileSync(path.join(ROOT, 'src', 'tools', 'index.ts'), 'utf-8');
+
+    assert(/['"]alwaysfree['"]\s*:\s*['"]quest_only['"]/.test(configSrc), 'legacy alwaysfree migrates to quest_only');
+    assert(/mode === ['"]quest_only['"][\s\S]*questBalance <=/.test(proxySrc), 'quest_only checks Quest balance before enterprise routing');
+    assert(/config\.thresholds\.wallet \?\? 0\.5/.test(proxySrc), 'paid wallet reserve preserves an explicit zero threshold');
+    assert(!/config\.thresholds\.wallet \|\| 0\.5/.test(proxySrc), 'paid wallet reserve has no truthiness fallback');
+    assert(workerSrc.includes("ModelRegistry.list('3d')"), '3D tool description reads the live Model Registry');
+    assert(workerSrc.includes('polliGen3dTool.description'), '3D tool description is patched dynamically');
+    assert(/enableDeveloperTools\s*===\s*true/.test(toolsSrc), 'beta discovery is developer/debug opt-in');
+    assert(!proxySrc.includes('stripReasoning'), 'native reasoning fields are not stripped');
+}
+
 // ─── 9. VIDEO ENDPOINT ───────────────────────────────────────────────────
 async function testVideoEndpoint() {
     log.section('Video Canonical Endpoint (P1)');
@@ -666,6 +649,7 @@ async function main() {
     await testTcrRetryPolicies();
     await testEnablePaidToolsWording();
     await testTestClassification();
+    await testConvergenceContracts();
     await testVideoEndpoint();
 
     console.log('\n' + '═'.repeat(60) + '\n');

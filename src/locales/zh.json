@@ -473,7 +473,7 @@
       "error": "❗ Error: {error}"
     },
     "gen3d": {
-      "desc": "使用 Pollinations AI 从文本提示或参考图像生成 3D 对象。\n\n**🧊 3D 模型**：\n- `trellis-2` — 默认，约 0.24 pollen（low），输出 GLB，图生 3D（最多 1 张参考图）。\n- `hyper3d-rodin` — paid_only，约 0.10 pollen，输出 GLB。\n\n**⏱️ 长时运行**：生成可能需要 20s–150s+（LONG_BLOCKING）。使用 `timeout_seconds` 控制本地等待。\n\n**♻️ 恢复**：超时后生成可能仍在运行并计费。使用相同 seed 重新运行将从缓存返回结果（不重复计费）。",
+      "desc": "使用 Pollinations AI 从文本提示或参考图像生成 3D 对象。\n\n当前 3D 模型、访问标志、输入输出能力和成本由实时 Model Registry 动态注入。\n\n**⏱️ 长时运行**：生成可能需要 20s–150s+（LONG_BLOCKING）。使用 `timeout_seconds` 控制本地等待。\n\n**♻️ 恢复**：超时后生成可能仍在运行并计费。使用相同 seed 重新运行将从缓存返回结果（不重复计费）。",
       "arg_prompt": "3D 对象的文本描述（提供图像时可省略）",
       "arg_image": "可选的参考图像 URL（最多 1 张）",
       "arg_model": "使用的模型（默认：trellis-2）。",

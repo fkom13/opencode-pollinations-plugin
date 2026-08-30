@@ -38,6 +38,9 @@ export interface PollinationsModel {
     voices?: string[];
     tools?: boolean;
     reasoning?: boolean;
+    reasoning_options?: Array<{ type: 'effort' | 'toggle'; values?: string[] }>;
+    interleaved?: { field: 'reasoning' | 'reasoning_content' | 'reasoning_details' };
+    capabilities?: string[];
     is_specialized?: boolean;
     context_window?: number;
 

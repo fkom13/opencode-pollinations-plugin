@@ -209,9 +209,9 @@ async function handleModeCommand(args: string[]): Promise<CommandResult> {
         };
     }
 
-    // v6.5 Quest/Paid modes + legacy aliases (alwaysfree → quest, pro → paid).
+    // v6.5 Quest/Paid modes + legacy aliases (alwaysfree → quest_only, pro → paid).
     const LEGACY_MODE_ALIASES: Record<string, string> = {
-        'alwaysfree': 'quest',
+        'alwaysfree': 'quest_only',
         'pro': 'paid',
     };
     const resolvedMode = LEGACY_MODE_ALIASES[mode] || mode;

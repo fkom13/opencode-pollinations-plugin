@@ -256,27 +256,12 @@ export async function fetchWithRetry(url: string, options: any, retries: number 
 }
 
 // ============================================================================
-// REASONING NORMALIZATION (v6.5) — M8/M9
-// DeepSeek/Kimi expose `reasoning_content`; Qwen exposes `reasoning` +
-// `reasoning_details` (Responses hybrid). These must never leak into OpenCode
-// as text. Kimi also emits top-level `tool_calls[].name: null` (canonical is
-// `function.name`) and `message.tools: null`.
-// Rule: never merge reasoning* into content; strip the backend-specific fields;
-//       preserve usage.completion_tokens_details.reasoning_tokens.
+// NATIVE REASONING NORMALIZATION
+// Preserve `reasoning_content`, `reasoning` and `reasoning_details` as
+// structured sibling fields. OpenCode's OpenAI-compatible adapter consumes
+// these natively (including interleaved replay). They must never be copied or
+// concatenated into `content`. Only malformed tool-call parasites are removed.
 // ============================================================================
-const REASONING_KEYS = ['reasoning_content', 'reasoning', 'reasoning_details'];
-
-function stripReasoning(obj: any): any {
-    if (!obj || typeof obj !== 'object') return obj;
-    if (Array.isArray(obj)) {
-        for (const item of obj) stripReasoning(item);
-        return obj;
-    }
-    for (const key of REASONING_KEYS) {
-        if (key in obj) delete obj[key];
-    }
-    return obj;
-}
 
 function normalizeToolCallShape(obj: any): any {
     if (!obj || typeof obj !== 'object') return obj;
@@ -303,14 +288,15 @@ function normalizeChatChunk(obj: any): any {
     }
     const delta = obj.delta;
     if (delta && typeof delta === 'object') {
-        stripReasoning(delta);
+        // Preserve native reasoning fields for OpenCode's OpenAI-compatible adapter.
+        // They remain separate from content and can be replayed through interleaved reasoning.
         if (Array.isArray(delta.tool_calls)) {
             for (const tc of delta.tool_calls) normalizeToolCallShape(tc);
         }
     }
     const message = obj.message;
     if (message && typeof message === 'object') {
-        stripReasoning(message);
+        // Preserve native reasoning fields; never merge them into message.content.
         normalizeToolCallShape(message);
         if (Array.isArray(message.tool_calls)) {
             for (const tc of message.tool_calls) normalizeToolCallShape(tc);
@@ -336,8 +322,8 @@ export function normalizeChunkLine(payload: string): string {
 }
 
 // --- UNIFIED SSE STREAM PROCESSOR (v6.5) ---
-// Buffers SSE blocks (\n\n), normalizes each JSON chunk (reasoning strip +
-// Kimi tool_calls name:null), preserves finish_reason/signature semantics,
+// Buffers SSE blocks (\n\n), preserves native reasoning, normalizes each JSON
+// chunk (including Kimi tool_calls name:null), preserves finish_reason/signature semantics,
 // applies loop-detection guillotine, and injects the fallback warning.
 interface SseStreamOpts {
     isFallbackActive: boolean;
@@ -691,13 +677,13 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                     isEnterprise = false;
                     isFallbackActive = true;
                     fallbackReason = t('proxy.warnings.quota_unreachable_msg');
-                } else if (quota.walletBalance < (config.thresholds.wallet || 0.5)) {
-                    log(`[SafetyNet] Paid Mode: Wallet (~${quota.walletBalance}) < floor (${config.thresholds.wallet || 0.5}). Switching.`);
-                    emitStatusToast('warning', t('proxy.warnings.wallet_limit_title', { wallet: config.thresholds.wallet || 0.5 }), 'Paid Mode');
+                } else if (quota.walletBalance < (config.thresholds.wallet ?? 0.5)) {
+                    log(`[SafetyNet] Paid Mode: Wallet (~${quota.walletBalance}) < floor (${config.thresholds.wallet ?? 0.5}). Switching.`);
+                    emitStatusToast('warning', t('proxy.warnings.wallet_limit_title', { wallet: config.thresholds.wallet ?? 0.5 }), 'Paid Mode');
                     actualModel = config.fallbacks.free.main.replace('free/', '');
                     isEnterprise = false;
                     isFallbackActive = true;
-                    fallbackReason = t('proxy.warnings.wallet_limit_msg', { threshold: config.thresholds.wallet || 0.5 });
+                    fallbackReason = t('proxy.warnings.wallet_limit_msg', { threshold: config.thresholds.wallet ?? 0.5 });
                 }
             }
         }

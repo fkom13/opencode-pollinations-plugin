@@ -47,6 +47,8 @@ interface OpenCodeModel {
     attachment?: boolean;
     tool_call?: boolean;
     reasoning?: boolean;
+    reasoning_options?: Array<{ type: 'effort' | 'toggle'; values?: string[] }>;
+    interleaved?: { field: 'reasoning' | 'reasoning_content' | 'reasoning_details' };
     temperature?: boolean;
 }
 
@@ -280,22 +282,31 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
         }
     }
 
-    // 2. REASONING VARIANTS — format @ai-sdk/openai-compatible: { reasoningEffort: "level" }
-    if (raw.reasoning === true || raw.capabilities?.includes('reasoning') || rawId.includes('thinking') || rawId.includes('reasoning')) {
-        modelObj.variants = {
-            ...modelObj.variants,
-            low: { reasoningEffort: 'low' },
-            high: { reasoningEffort: 'high' }
-        };
-    }
-    // Gemini models without explicit reasoning flag: add reasoning variants based on name
-    if (rawId.includes('gemini') && !rawId.includes('fast') && !modelObj.variants.high) {
-        if (rawId === 'gemini' || rawId === 'gemini-large') {
-            modelObj.variants = {
-                ...modelObj.variants,
-                low: { reasoningEffort: 'low' },
-                high: { reasoningEffort: 'high' }
-            };
+    // 2. NATIVE REASONING — capabilities come from the live Model Registry.
+    // OpenCode keeps reasoning as structured parts; it must never be merged into content.
+    const supportsReasoning = raw.reasoning === true || raw.capabilities?.includes('reasoning');
+    modelObj.reasoning = supportsReasoning;
+    if (supportsReasoning) {
+        const advertised = Array.isArray(raw.reasoning_options) ? raw.reasoning_options : [];
+        const effectiveReasoningOptions: Array<{ type: 'effort' | 'toggle'; values?: string[] }> = advertised.length > 0
+            ? advertised
+            : [{ type: 'effort', values: ['low', 'high'] }];
+        modelObj.reasoning_options = effectiveReasoningOptions;
+
+        if (raw.interleaved?.field) {
+            modelObj.interleaved = raw.interleaved;
+        }
+
+        const effortValues = effectiveReasoningOptions
+            .filter(option => option.type === 'effort')
+            .flatMap(option => option.values || []);
+
+        for (const effort of effortValues) {
+            modelObj.variants![effort] = { reasoningEffort: effort };
+        }
+        if (effectiveReasoningOptions.some(option => option.type === 'toggle')) {
+            modelObj.variants!.off = { reasoningEffort: 'none' };
+            modelObj.variants!.on = {};
         }
     }
 

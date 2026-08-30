@@ -2,6 +2,7 @@ import { polliGenImageTool } from '../../tools/pollinations/gen_image.js';
 import { polliGenVideoTool } from '../../tools/pollinations/gen_video.js';
 import { polliGenAudioTool } from '../../tools/pollinations/gen_audio.js';
 import { polliGenMusicTool } from '../../tools/pollinations/gen_music.js';
+import { polliGen3dTool } from '../../tools/pollinations/gen_3d.js';
 import { polliWebSearchTool } from '../../tools/pollinations/polli_web_search.js';
 import { ModelRegistry } from './index.js';
 import { log } from '../logger.js';
@@ -60,7 +61,7 @@ export class ToolRegistryWorker {
 
             if (videoModels.length > 0 && polliGenVideoTool.description) {
                 let videoTable = `\n\n**🎬 Modèles Vidéo Détectés (${videoModels.length}) :**\n`;
-                videoTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Free] = Quest Pollen (consomme d'abord le Quota Gratuit Journalier))*\n`;
+                videoTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Quest] = appel éligible au Quest; en mode quest_only, fallback Free avant le plancher Quest)*\n`;
                 videoTable += `| Modèle | Source I/O | Audio | 1 pollen ≈ | Specs |\n`;
                 videoTable += `|--------|------------|-------|------------|-------|\n`;
 
@@ -69,7 +70,7 @@ export class ToolRegistryWorker {
                     const price = cost ? `${per1pollen(cost)} vidéos` : 'inconnu';
                     const specs = `${m.durationRange ? m.durationRange.join('-') + 's' : '?s'} / ${m.aspectRatios ? m.aspectRatios.length : '?'} ratios`;
                     const isCommunity = (m as any).community === true || m.name.includes('/');
-                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
+                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                     videoTable += `| \`${m.name}\` ${badge} | ${m.supportsI2X ? 'T2V/I2V' : 'T2V'} | ${m.output_modalities?.includes('audio') || m.name === 'grok-video' ? '✅' : '❌'} | ${price} | ${specs} |\n`;
                 }
 
@@ -85,7 +86,7 @@ export class ToolRegistryWorker {
 
             if (imageModels.length > 0 && polliGenImageTool.description) {
                 let imageTable = `\n\n**🎨 Modèles Image Détectés (${imageModels.length}) :**\n`;
-                imageTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Free] = Quest Pollen (consomme d'abord le Quota Gratuit Journalier))*\n`;
+                imageTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Quest] = appel éligible au Quest; en mode quest_only, fallback Free avant le plancher Quest)*\n`;
                 imageTable += `| Modèle | I2I | Qualité | 1 pollen ≈ |\n`;
                 imageTable += `|--------|-----|---------|------------|\n`;
 
@@ -94,7 +95,7 @@ export class ToolRegistryWorker {
                     const cost = estimateImageCost(m.name);
                     const price = cost ? `${per1pollen(cost)} images` : 'inconnu';
                     const isCommunity = (m as any).community === true || m.name.includes('/');
-                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
+                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                     imageTable += `| \`${m.name}\` ${badge} | ${m.supportsI2X ? '✅' : '❌'} | Standard | ${price} |\n`;
                 }
 
@@ -114,13 +115,13 @@ export class ToolRegistryWorker {
 
             if (audioModels.length > 0 && polliGenAudioTool.description && polliGenMusicTool.description) {
                 let audioTable = `\n\n**🎵 Modèles Audio/Music Détectés (${audioModels.length}) :**\n`;
-                audioTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Free] = Quest Pollen (consomme d'abord le Quota Gratuit Journalier))*\n`;
+                audioTable += `*(Légende: [💎 Paid] = Pollen acheté (consomme le Wallet USD), [🌿 Quest] = appel éligible au Quest; en mode quest_only, fallback Free avant le plancher Quest)*\n`;
                 audioTable += `| Modèle | Durée max | Qualité |\n`;
                 audioTable += `|--------|-----------|---------|\n`;
 
                 for (const m of audioModels) {
                     const isCommunity = (m as any).community === true || m.name.includes('/');
-                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
+                    const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                     const duration = m.durationRange ? `${m.durationRange.join('-')}s` : 'Standard';
                     audioTable += `| \`${m.name}\` ${badge} | ${duration} | Standard |\n`;
                 }
@@ -138,6 +139,32 @@ export class ToolRegistryWorker {
                 }
             }
 
+            // -- Patch 3D Tool (fully dynamic from ModelRegistry) --
+            const threeDModels = ModelRegistry.list('3d');
+
+            if (threeDModels.length > 0 && polliGen3dTool.description) {
+                let threeDTable = `\n\n**🧊 Live 3D models (${threeDModels.length})**\n`;
+                threeDTable += `| Model | Access | Inputs | Output | Estimated cost |\n`;
+                threeDTable += `|-------|--------|--------|--------|----------------|\n`;
+
+                for (const m of threeDModels) {
+                    const access = m.paid_only ? 'Paid only' : 'Quest eligible';
+                    const inputs = m.input_modalities.join(', ') || 'text';
+                    const cost = m.averageCost
+                        ?? m.pricing.completionImageTokens
+                        ?? m.pricing.completionTextTokens;
+                    const costText = typeof cost === 'number' ? `${cost.toFixed(4)} pollen` : 'live pricing';
+                    threeDTable += `| \`${m.name}\` | ${access} | ${inputs} | GLB | ${costText} |\n`;
+                }
+
+                const sectionMarker = '**🧊 Live 3D models';
+                if (!polliGen3dTool.description.includes(sectionMarker)) {
+                    polliGen3dTool.description += threeDTable;
+                } else {
+                    polliGen3dTool.description = polliGen3dTool.description.split(sectionMarker)[0] + threeDTable;
+                }
+            }
+
             // -- Patch WEB SEARCH Tool --
             const textModels = ModelRegistry.list('text');
 
@@ -152,13 +179,13 @@ export class ToolRegistryWorker {
 
                 if (searchModels.length > 0) {
                     let searchTable = `\n\n**🌍 Modèles de Recherche & Grounding Détectés (${searchModels.length}) :**\n`;
-                    searchTable += `*(Légende: [💎 Paid] = Pollen acheté, [🌿 Free] = Quest (Quota Gratuit). Obligatoire de choisir un modèle exact au lieu de 'deep' ou 'rapid' !)*\n`;
+                    searchTable += `*(Légende: [💎 Paid] = Pollen acheté, [🌿 Quest] = appel éligible au Quest; quest_only protège le wallet Paid. Obligatoire de choisir un modèle exact au lieu de 'deep' ou 'rapid' !)*\n`;
                     searchTable += `| Modèle | Description / Specs |\n`;
                     searchTable += `|--------|---------------------|\n`;
 
                     for (const m of searchModels) {
                         const isCommunity = (m as any).community === true || m.name.includes('/');
-                        const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Free]');
+                        const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                         // Clean markdown piping conflicts
                         let cleanDesc = m.description.replace(/\|/g, '-');
 

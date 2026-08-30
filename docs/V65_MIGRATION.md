@@ -14,14 +14,14 @@ retries/timeouts, and adds a 3D tool.
 
 | v6.4.10 | v6.5.0 | Meaning |
 |---|---|---|
-| `alwaysfree` | **`quest`** (QUEST_PREFERRED) | Default. Quest first, Paid fallback **allowed** (server default). |
+| `alwaysfree` | **`quest_only`** (QUEST_ELIGIBLE_ONLY) | Checks the Quest floor before sending; falls back to Free Universe and never intentionally spends Paid. |
 | *(new)* | **`quest_only`** (QUEST_ELIGIBLE_ONLY) | Blocks `paid_only` locally; Quest-eligible calls only. **Best-effort.** |
 | `pro` | **`paid`** (PAID_ALLOWED) | Paid allowed; wallet-protected fallback. |
 | `manual` | `manual` | Unchanged. |
 
 - Old names `alwaysfree` and `pro` are **still accepted** as aliases on
   `/poll mode` and are **migrated automatically** in your config
-  (`alwaysfree` → `quest`, `pro` → `paid`) on first load.
+  (`alwaysfree` → `quest_only`, `pro` → `paid`) on first load.
 - **"Never spend Paid" is not a promise we can make**: the server picks the
   billing bucket at debit time (Quest first, then Paid) and the client cannot
   lock it. `quest_only` is a client-side best-effort guard — a Paid (pack)
@@ -64,7 +64,7 @@ Clamp: min 10 s, max 3600 s.
 | **Media timeouts** | On timeout the generation may still be running and **billed** upstream. Tools now say so and propose **cache recovery**: re-run with the SAME seed → artifact served from cache, not re-billed. |
 | **`timeout_seconds`** | New per-call arg on `polli_gen_image`, `polli_gen_video`, `polli_gen_3d` (10–3600 s). |
 | **3D** | New tool `polli_gen_3d` (trellis-2 default ~0.24 🌻 low, hyper3d-rodin ~0.10 🌻). GLB output, magic-bytes validated. |
-| **Reasoning** | DeepSeek/Kimi `reasoning_content` and Qwen `reasoning`/`reasoning_details` are **stripped** before reaching OpenCode (no more reasoning text pollution). `usage.completion_tokens_details.reasoning_tokens` preserved. Kimi `tool_calls[].name:null` parasite removed (`function.name` is canonical). |
+| **Reasoning** | Native `reasoning_content`, `reasoning`, and `reasoning_details` stay structured and separate from `content`, so OpenCode can expose reasoning off/low/high according to live model capabilities without leaking it into answer text. Kimi `tool_calls[].name:null` is still removed (`function.name` is canonical). |
 | **Artifact save** | Saved extension follows **real magic bytes** (a b64 edit response can be JPEG even if the caller assumed PNG). |
 | **Model registry** | Now refreshes automatically after its TTL during long sessions (lazy refresh on every read path, coalesced, offline fallback kept). |
 

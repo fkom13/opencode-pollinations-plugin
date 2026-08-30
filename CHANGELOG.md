@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.5.1] — 2026-08-30
+
+### Convergence fixes
+
+- **Quest-only safety** — legacy `alwaysfree` now migrates to `quest_only`: check the Quest floor first, then fall back to the Free Universe without intentionally routing to the Paid wallet.
+- **Paid reserve** — `thresholds.wallet` remains the wallet floor in `paid` mode, including an explicit zero value.
+- **Native reasoning** — preserve `reasoning_content`, `reasoning`, and `reasoning_details` as structured fields separate from `content`; derive effort variants from live registry capabilities.
+- **Dynamic 3D** — inject live 3D models, access, modalities, and pricing into the tool description from the Model Registry.
+- **Developer discovery** — `polli_beta_discovery` is hidden by default and exposed only with `enableDeveloperTools: true`.
+- **Vocabulary** — remove obsolete daily/free-quota wording from runtime model descriptions.
+- **Validation** — 380 offline/contract/i18n/vocabulary assertions pass; npm package contents validated before publication.
+
 ## [6.5.0] — 2026-08-14
 
 ### 🔒 Reliability & safety
@@ -15,13 +27,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ### 🧠 Model compatibility
 
-- **Reasoning normalization** — DeepSeek/Kimi `reasoning_content` and Qwen `reasoning`/`reasoning_details` are stripped before reaching OpenCode (no more reasoning text pollution). `usage.completion_tokens_details.reasoning_tokens` preserved.
+- **Reasoning normalization** — DeepSeek/Kimi `reasoning_content` and Qwen `reasoning`/`reasoning_details` are preserved as native structured fields, separate from `content`; OpenCode can select live-advertised reasoning efforts without reasoning-text leakage. `usage.completion_tokens_details.reasoning_tokens` is preserved.
 - **Kimi tool calls** — top-level `tool_calls[].name:null` parasite removed; `function.name` is canonical. `message.tools:null` ignored.
 - **Video canonical endpoint** — tools now use `/video/{prompt}` (SDK/CLI route).
 
 ### 💰 Billing & BYOP
 
-- **Quest/Paid semantics** — new modes: `quest` (QUEST_PREFERRED, default), `quest_only` (QUEST_ELIGIBLE_ONLY, best-effort), `paid` (PAID_ALLOWED), `manual`. Legacy `alwaysfree`→`quest`, `pro`→`paid` migrated automatically.
+- **Quest/Paid semantics** — new modes: `quest` (QUEST_PREFERRED, default), `quest_only` (QUEST_ELIGIBLE_ONLY, best-effort), `paid` (PAID_ALLOWED), `manual`. Legacy `alwaysfree`→`quest_only`, `pro`→`paid` migrated automatically.
 - **Tier/refill purge** — `KNOWN_REFILLS`, `deduceAllowance*`, `TIER_INFO` table, `refillOverride`, `questStashInFreeMode` removed (hourly refill no longer exists upstream). Thresholds are now absolute pollen floors.
 - **Honest docs** — strict Quest-only is not guaranteed upstream; a Paid (pack) debit can still occur in a race.
 

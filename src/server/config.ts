@@ -79,7 +79,7 @@ const EXTERNAL_PATHS = getExternalConfigPaths();
 //                BEST-EFFORT: a pack debit can still occur (race/real cost).
 //   paid       = PAID_ALLOWED — Paid allowed, paid_only allowed per Cost Guard.
 //   manual     = MANUAL — existing manual behavior.
-// Legacy aliases (migrated on load): alwaysfree → quest, pro → paid.
+// Legacy aliases (migrated on load): alwaysfree → quest_only, pro → paid.
 
 export type BillingMode = 'quest' | 'quest_only' | 'paid' | 'manual';
 
@@ -107,6 +107,7 @@ export interface PollinationsConfigV5 {
     };
 
     enablePaidTools: boolean;
+    enableDeveloperTools: boolean; // Expose diagnostic/fuzzing tools (default: false)
     costThreshold: number; // Default 0.15 🌻
     costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
     statusBar: boolean;
@@ -149,6 +150,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
         enter: { agent: 'free/openai-fast' }
     },
     enablePaidTools: false,
+    enableDeveloperTools: false,
     costThreshold: 0.15, // Default 0.15 🌻
     costConfirmationRequired: true, // Ask confirmation when cost exceeds threshold
     keyHasAccessToProfile: true, // Default true for legacy keys
@@ -158,13 +160,13 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
 };
 
 // v6.5 migration: legacy mode/threshold names → Quest/Paid semantics.
-// alwaysfree → quest (QUEST_PREFERRED), pro → paid (PAID_ALLOWED).
+// alwaysfree → quest_only (QUEST_ELIGIBLE_ONLY), pro → paid (PAID_ALLOWED).
 // Legacy tier percentage thresholds are replaced by absolute pollen floors.
 export function migrateV65Config(raw: any): any {
     if (!raw || typeof raw !== 'object') return raw;
 
     const legacyModeMap: Record<string, BillingMode> = {
-        'alwaysfree': 'quest',
+        'alwaysfree': 'quest_only',
         'pro': 'paid',
         'manual': 'manual',
         'quest': 'quest',
