@@ -517,7 +517,7 @@ let loginPollActive = false;
 // Publishable app key (pk_) — embedded for BYOP attribution: the consent screen
 // shows "plugin by fkom13" and traffic is credited to this app. Safe to ship
 // publicly (publishable by design); earningsEnabled=false so users pay nothing extra.
-const APP_CLIENT_ID = 'pk_sATzVHuna3I5e7Sf';
+const APP_CLIENT_ID = 'pk_QPDopXO7XzKugYVr';
 
 // Shared result promise so the tool's `wait` mode can attach to the running poll.
 type LoginOutcome = { status: 'connected' | 'expired' | 'error'; message: string };
