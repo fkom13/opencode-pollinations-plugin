@@ -1,7 +1,7 @@
 {
   "name": "opencode-pollinations-plugin",
   "displayName": "Pollinations",
-  "version": "6.5.2",
+  "version": "6.5.3",
   "description": "Native Pollinations.ai Provider Plugin for OpenCode — free & premium AI models, media tools, quests, cost guards",
   "author": "fkom13",
   "license": "MIT",

@@ -18,7 +18,8 @@
         "costThreshold": "费用警告阈值",
         "costConfirmationRequired": "消费前请求确认",
         "threshold_quest": "Quest 余额告警阈值（pollen）"
-      }
+      },
+      "connection": "**🔐 连接你的 Pollinations 账户（推荐）**\n- **`/poll login`**：一键浏览器 OAuth。使用 GitHub 登录并授权，插件会自动连接——无需复制粘贴 API 密钥。推荐用于账户、Quest 和 Paid 功能。\n- **`/poll connect sk_...`**：仅当你已经拥有 Pollinations Secret 密钥时使用手动 BYOK。"
     },
     "config": {
       "title": "## ⚙️ Pollinations 配置 (v{version})",
@@ -528,5 +529,6 @@
     "reason_fixed": "此操作的预估费用 ({cost}) 超过了设定的阈值 ({limit})。",
     "estimated_max": "💰 平均预估费用：{cost} (最大：{maxCost})",
     "estimated": "💰 预估费用：{cost}"
-  }
+  },
+  "onboarding": "## 🌸 欢迎使用 Pollinations 插件\n\n**立即免费使用——无需密钥**\n插件提供聊天、代码和多媒体工具。选择一个 `pollinations/free/*` 模型即可开始。\n\n**🆓 免费附加工具（无需密钥）：** `gen_edit_image_free`、`gen_video_free`、`object_remover`、`image_upscaler`、`image_enhancer`、`remove_background`。\n\n---\n\n## 🔐 一键连接——推荐\n要解锁 Pollinations 账户、Quest、钱包、高级模型和付费工具，只需运行：\n\n```bash\n/poll login\n```\n\n浏览器会自动打开。使用 GitHub 登录并授权，插件将自动连接。**无需创建、复制或粘贴 API 密钥。**\n\n已经有 Pollinations Secret 密钥？仍可手动 BYOK：\n```bash\n/poll connect sk_your_key_here\n```\n\n---\n\n## 💰 Quest & Paid Pollen\nQuest Pollen 通过完成 Quest 获得。不足时（或使用 paid-only 模型）会使用 Paid Pollen。查看 `/poll quests` 和 `/poll usage full`。\n\n**需要帮助？** 输入 `/poll help`。Discord：https://discord.gg/pollinations-ai-885844321461485618"
 }

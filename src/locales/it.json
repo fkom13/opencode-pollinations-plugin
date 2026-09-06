@@ -18,7 +18,8 @@
         "costThreshold": "Soglia di avviso costo",
         "costConfirmationRequired": "Chiedi conferma prima di spendere",
         "threshold_quest": "Soglia di allerta saldo Quest (pollen)"
-      }
+      },
+      "connection": "**🔐 Collega il tuo account Pollinations (consigliato)**\n- **`/poll login`**: OAuth nel browser con 1 clic. Accedi con GitHub, autorizza e il plugin si collega automaticamente — nessuna chiave API da copiare/incollare. È il percorso consigliato per account, Quest e funzioni Paid.\n- **`/poll connect sk_...`**: BYOK manuale solo se possiedi già una chiave Secret Pollinations."
     },
     "config": {
       "title": "## ⚙️ Configurazione Pollinations (v{version})",
@@ -528,5 +529,6 @@
     "reason_fixed": "Il costo stimato di questa azione ({cost}) supera la soglia definita ({limit}).",
     "estimated_max": "💰 Costo medio stimato: {cost} (Max: {maxCost})",
     "estimated": "💰 Costo stimato: {cost}"
-  }
+  },
+  "onboarding": "## 🌸 Benvenuto nel plugin Pollinations\n\n**Accesso gratuito immediato — nessuna chiave richiesta**\nIl plugin offre chat, codice e strumenti multimediali. Seleziona un modello `pollinations/free/*` e inizia subito.\n\n**🆓 Strumenti gratuiti bonus (senza chiave):** `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.\n\n---\n\n## 🔐 Connessione in 1 clic — consigliata\nPer sbloccare account Pollinations, Quest, wallet, modelli premium e strumenti a pagamento, esegui:\n\n```bash\n/poll login\n```\n\nSi apre il browser. Accedi con GitHub, autorizza e il plugin si collega automaticamente. **Nessuna chiave API da creare, copiare o incollare.**\n\nHai già una chiave Secret Pollinations? Il BYOK manuale resta disponibile:\n```bash\n/poll connect sk_la_tua_chiave\n```\n\n---\n\n## 💰 Quest & Paid Pollen\nIl Quest Pollen si guadagna tramite le Quest. Quando non basta (o per modelli paid-only), viene usato il Paid Pollen. Controlla `/poll quests` e `/poll usage full`.\n\n**Serve aiuto?** Digita `/poll help`. Discord: https://discord.gg/pollinations-ai-885844321461485618"
 }

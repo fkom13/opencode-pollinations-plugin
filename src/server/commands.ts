@@ -863,6 +863,8 @@ function handleHelpCommand(): CommandResult {
 ${t('commands.help.title')}
 ${t('commands.help.alias_note')}
 
+${t('commands.help.connection')}
+
 ${t('commands.help.mode_usage')}
 
 ${t('commands.help.configuration_intro')}

@@ -184,6 +184,7 @@ async function testCommandsModule() {
     const help = await mod.handleCommand('/poll help');
     assert(help.handled === true, '/poll help handled');
     assert(typeof help.response === 'string' && help.response.length > 20, '/poll help has response');
+    assert(help.response.includes('/poll login'), '/poll help promotes device login');
 
     const help2 = await mod.handleCommand('/pollinations help');
     assert(help2.handled === true, '/pollinations help handled');

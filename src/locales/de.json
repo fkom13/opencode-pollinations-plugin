@@ -18,7 +18,8 @@
         "costThreshold": "Kosten-Warnschwelle",
         "costConfirmationRequired": "Bestätigung vor Ausgaben anfordern",
         "threshold_quest": "Alarm-Schwelle für Quest-Guthaben (Pollen)"
-      }
+      },
+      "connection": "**🔐 Pollinations-Konto verbinden (empfohlen)**\n- **`/poll login`**: Browser-OAuth mit einem Klick. Mit GitHub anmelden, autorisieren, und das Plugin verbindet sich automatisch — kein API-Key zum Kopieren nötig. Empfohlen für Konto-, Quest- und Paid-Funktionen.\n- **`/poll connect sk_...`**: Manuelles BYOK nur, wenn bereits ein Pollinations Secret-Key vorhanden ist."
     },
     "config": {
       "title": "## ⚙️ Pollinations Konfiguration (v{version})",
@@ -528,5 +529,6 @@
     "reason_fixed": "Die geschätzten Kosten dieser Aktion ({cost}) überschreiten das Limit ({limit}).",
     "estimated_max": "💰 Geschätzte Durchschnittskosten: {cost} (Max: {maxCost})",
     "estimated": "💰 Geschätzte Kosten: {cost}"
-  }
+  },
+  "onboarding": "## 🌸 Willkommen beim Pollinations-Plugin\n\n**Sofortiger kostenloser Zugang — kein Schlüssel erforderlich**\nDas Plugin bietet Chat, Code und Medienwerkzeuge. Wähle ein `pollinations/free/*`-Modell und starte sofort.\n\n**🆓 Kostenlose Bonus-Tools (ohne Key):** `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.\n\n---\n\n## 🔐 Verbindung mit 1 Klick — empfohlen\nFür Pollinations-Konto, Quests, Wallet, Premium-Modelle und Paid-Tools einfach ausführen:\n\n```bash\n/poll login\n```\n\nDer Browser öffnet sich. Mit GitHub anmelden, autorisieren, und das Plugin verbindet sich automatisch. **Kein API-Key muss erstellt, kopiert oder eingefügt werden.**\n\nBereits einen Pollinations Secret-Key? Manuelles BYOK bleibt verfügbar:\n```bash\n/poll connect sk_dein_schluessel\n```\n\n---\n\n## 💰 Quest & Paid Pollen\nQuest Pollen wird über Quests verdient. Reicht es nicht aus (oder bei paid-only Modellen), wird Paid Pollen verwendet. Siehe `/poll quests` und `/poll usage full`.\n\n**Hilfe?** `/poll help`. Discord: https://discord.gg/pollinations-ai-885844321461485618"
 }

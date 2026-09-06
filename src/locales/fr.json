@@ -18,7 +18,8 @@
         "costThreshold": "Seuil d'alerte coût",
         "costConfirmationRequired": "Demander confirmation avant dépense",
         "threshold_quest": "Seuil d'alerte du solde Quest (pollen)"
-      }
+      },
+      "connection": "**🔐 Connectez votre compte Pollinations (recommandé)**\n- **`/poll login`** : OAuth navigateur en 1 clic. Connectez-vous avec GitHub, autorisez, et le plugin se connecte automatiquement — aucune clé API à copier-coller. C’est le chemin recommandé pour le compte, les Quêtes et les fonctions Paid.\n- **`/poll connect sk_...`** : BYOK manuel uniquement si vous avez déjà une clé Secret Pollinations."
     },
     "config": {
       "title": "## ⚙️ Configuration Pollinations (v{version})",
@@ -528,5 +529,6 @@
     "reason_fixed": "Le coût estimé de cette action ({cost}) dépasse le seuil défini ({limit}).",
     "estimated_max": "💰 Coût estimé moyen: {cost} (Max: {maxCost})",
     "estimated": "💰 Coût estimé: {cost}"
-  }
+  },
+  "onboarding": "## 🌸 Bienvenue sur le plugin Pollinations\n\n**Accès gratuit immédiat — aucune clé requise**\nCe plugin offre un environnement complet pour le chat, le code et les outils média. Sélectionnez un modèle `pollinations/free/*` et commencez immédiatement.\n\n**🆓 Outils gratuits bonus (sans clé) :** `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.\n\n---\n\n## 🔐 Connexion en 1 clic — recommandée\nPour débloquer votre compte Pollinations, les Quêtes, le wallet, les modèles premium et les outils payants, tapez simplement :\n\n```bash\n/poll login\n```\n\nLe navigateur s’ouvre. Connectez-vous avec GitHub, autorisez l’accès et le plugin se connecte automatiquement. **Aucune clé API à créer, copier ou coller.**\n\nVous avez déjà une clé Secret Pollinations ? Le BYOK manuel reste disponible :\n```bash\n/poll connect sk_votre_cle_ici\n```\n\n---\n\n## 💰 Quest & Paid Pollen\nLe Quest Pollen se gagne via les Quêtes. Quand il est insuffisant (ou pour les modèles paid-only), le Paid Pollen est utilisé. Consultez `/poll quests` et `/poll usage full`.\n\n**Besoin d’aide ?** Tapez `/poll help`. Discord officiel : https://discord.gg/pollinations-ai-885844321461485618"
 }
