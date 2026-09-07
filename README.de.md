@@ -141,21 +141,22 @@ Dieses Plugin ist **komplett plattformunabhängig** (Windows, macOS, Linux ; Nod
    ```
    *(Trägt `opencode-pollinations-plugin` automatisch in `~/.config/opencode/opencode.json` ein)*
 
-### 🔑 2. Interaktives Onboarding
+### 🔐 2. Pollinations-Konto verbinden — empfohlen
 
-Verbinden Sie Ihr Pollinations-Konto in OpenCode über **eine dieser Methoden**:
+Der normale Weg besteht aus **einem Befehl**:
 
-**Option A — 1-Klick-Login (empfohlen):**
 ```bash
 /poll login
 ```
-Ihr Browser öffnet sich automatisch. Melden Sie sich mit GitHub an und klicken Sie auf **Authorize** — das Plugin verbindet sich automatisch ohne Copy-Paste.
 
-**Option B — Manueller Schlüssel:**
+Der Browser öffnet sich automatisch. Mit GitHub anmelden und **Authorize** klicken; das Plugin verbindet sich selbst. **Kein API-Schlüssel muss erstellt, kopiert oder eingefügt werden.** Empfohlen für Konto, Quests, Wallet, Premium-Modelle und Paid-Tools.
+
+> 🤖 **Agenten:** Wenn der Benutzer Pollinations verbinden/anmelden möchte, automatisch `polli_login` aufrufen. Nicht nach einem API-Key fragen, außer der Benutzer verlangt ausdrücklich manuelles BYOK.
+
+**Manuelles BYOK — optional, nur mit bereits vorhandenem Secret-Key:**
 ```bash
 /poll connect sk_ihr_schluessel_hier
 ```
-Erstellen Sie selbst einen **Secret**-Schlüssel auf [enter.pollinations.ai](https://enter.pollinations.ai) und fügen Sie ihn ein. *(Starten Sie OpenCode neu, damit die neue Modellliste im UI erscheint).*
 
 ---
 

@@ -141,21 +141,22 @@ Pollinations for OpenCode 已提供母语原生语言支持，沟通无缝顺畅
    ```
    *(将自动把 `opencode-pollinations-plugin` 写入你的 `~/.config/opencode/opencode.json` 文件中)*
 
-### 🔑 2. 入场初始化引导
+### 🔐 2. 连接 Pollinations 账户——推荐
 
-部署完成后，在 OpenCode 终端中选择以下任一方式连接你的账号：
+正常流程只需要 **一条命令**：
 
-**方式 A — 浏览器一键登录（推荐）：**
 ```bash
 /poll login
 ```
-浏览器将自动弹出，使用 GitHub 登录并点击 **Authorize** — 插件即可全自动完成配置，无需复制粘贴密钥。
 
-**方式 B — 手动输入密钥：**
+浏览器会自动打开。使用 GitHub 登录并点击 **Authorize**，插件会自动完成连接。**无需创建、复制或粘贴 API 密钥。** 推荐用于账户、Quest、钱包、高级模型和付费工具。
+
+> 🤖 **Agent：** 当用户要求连接/登录 Pollinations 时，应自动调用 `polli_login`。除非用户明确要求手动 BYOK，否则不要要求用户创建或粘贴 API 密钥。
+
+**手动 BYOK——可选，仅适用于已经拥有 Secret 密钥的用户：**
 ```bash
 /poll connect sk_你的密钥
 ```
-在 [enter.pollinations.ai](https://enter.pollinations.ai) 上创建 **Secret** 密钥并粘贴至此。*(重启 OpenCode 即可刷新 UI 中的模型列表)*。
 
 ---
 

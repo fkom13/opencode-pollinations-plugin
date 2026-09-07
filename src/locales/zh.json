@@ -51,7 +51,7 @@
       "timeouts_3d_role": "3D 生成超时"
     },
     "generic": {
-      "add_key_hint": "💡 使用 /poll connect <key> 添加 API 密钥。",
+      "add_key_hint": "💡 使用 /poll connect <key> 添加 API 密钥。\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "unknown_command": "❌ 未知命令：{cmd}",
       "tui_error": "命令错误：{error}",
       "tui_critical": "命令严重错误：{error}",
@@ -128,7 +128,7 @@
       "pollen_get": "运行 AI 模型需要花钱。Pollen 是我们在不投放广告或出售数据的情况下维持服务器运行的方式。一种适用于所有模型的简单、统一的额度 — 可预测、透明、无意外。\n\n**$1 ≈ 1 Pollen** (价格可能变动)。你用它来调用 API。",
       "pollen_spend": "## 🛒 如何获取 Pollen?\n1. 🎯 **任务** — 在 dashboard 完成任务 (`/poll quests`).\n2. 💳 **购买** — 在 enter.pollinations.ai 用信用卡购买.\n3. 🌻 **开发者收益** — 在你的 App Key 上启用开发者收益.",
       "quests": "## 🎯 任务 — 赚取免费 Pollen\n现在 Pollen 主要通过完成**任务**来赚取。好消息：仅仅使用本插件 (文本、图像和音频模型) 就能**追溯性地**完成多个任务 — 你可能已经有免费 Pollen 在等着领取了！\n\n👉 在[仪表盘](https://enter.pollinations.ai)查看并领取你的奖励。_领取只能在仪表盘进行。_\n\n> 💡 任务 Pollen 适用于所有标准模型。💎 仅付费模型仍需要购买的 Pollen。",
-      "get_started": "## 🔑 开始使用\n\n**1.** 在 enter.pollinations.ai 创建免费账户\n**2.** 一键连接: `/poll login`\n**3.** 或使用手动密钥: `/poll connect sk_...`\n\n输入 `/poll help` 查看所有命令.",
+      "get_started": "## 🔐 连接账户——推荐\n\n**只需输入 `/poll login`。** 浏览器会打开，使用 GitHub 登录并授权，插件随后自动连接。**无需创建、复制或粘贴 API 密钥。**\n\n手动 BYOK 仅作为可选方案，适用于已经拥有 Secret 密钥的用户：`/poll connect sk_...`。\n\n输入 `/poll help` 查看所有命令。",
       "quest_paid_title": "## 🎁 Quest 与 💎 付费 Pollen",
       "quest_paid_body": "Pollen 分为两列：\n\n- **🎁 Quest Pollen** — 通过完成**任务（Quests）**获得（免费）。服务器优先消耗。\n- **💎 Paid Pollen** — 购买（信用卡）。Quest 不足时使用，或用于 `paid_only` 模型。\n\n> ⚠️ 插件无法读取服务器端的拆分；它在本地估算 Quest/Paid，并从 `/account/usage` 读取真实拆分（`meter_source`）。\n\n**模式：**\n- `quest` (QUEST_PREFERRED) — 默认：优先 Quest，允许回退到 Paid。\n- `quest_only` (QUEST_ELIGIBLE_ONLY) — 阻止 paid_only 模型，仅尽力 Quest。\n- `paid` (PAID_ALLOWED) — 允许 Paid。\n- `manual` — 无自动策略。"
     },
@@ -199,7 +199,7 @@
       "arg_trans": "仅 gptimage 模型的透明背景",
       "arg_save_to": "自定义输出目录",
       "arg_filename": "自定义文件名 (不含扩展名)",
-      "req_key": "❌ 图像生成**需要 API 密钥**。\n💡 使用 `/poll connect <key>` 激活服务。\n💎 可用模型：{models}...",
+      "req_key": "❌ 图像生成**需要 API 密钥**。\n💡 使用 `/poll connect <key>` 激活服务。\n💎 可用模型：{models}...\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "no_i2i": "⚠️ 模型 \"{model}\" 不支持图生图。\n💡 支持 I2I 的模型：{models}",
       "blocked": "❌ 操作被 Cost Guard 拦截。",
       "req_url_i2i": "❌ 本地文件需要先上传。\n💡 使用 `file_to_url` 工具获取公开 URL。",
@@ -242,7 +242,7 @@
       "recency_day": "将你的搜索限制在过去 24 小时内发布的文章。",
       "recency_week": "将你的搜索限制在过去 7 天内发布的文章。",
       "recency_month": "将你的搜索限制在过去 30 天内发布的文章。",
-      "req_key": "❌ 搜索需要 API 密钥。请使用 /poll connect。",
+      "req_key": "❌ 搜索需要 API 密钥。请使用 /poll connect。\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "insufficient_pollen": "❌ 此次搜索的 🌻 Pollen 不足。需要约 0.005",
       "blocked": "🚫 搜索被 Cost Guard 限制拦截。",
       "toast_success": "使用 {model} 的搜索已完成",
@@ -265,7 +265,7 @@
       "arg_seed": "可复现性种子 (-1 为随机)",
       "arg_save_to": "自定义输出目录",
       "arg_filename": "自定义文件名 (不含扩展名)",
-      "req_key": "❌ 视频生成需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥",
+      "req_key": "❌ 视频生成需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "warn_beta": "模型 \"{model}\" 未收录 — 模式 (beta)",
       "invalid_duration": "❌ {model} 的时长无效：{duration}秒\n💡 支持的时长：{min}-{max}秒",
       "invalid_aspect": "❌ {model} 不支持的宽高比：{aspect}\n💡 支持的比例：{supported}",
@@ -314,7 +314,7 @@
       "arg_format": "音频格式 (默认：mp3，仅 openai-audio)",
       "arg_save_to": "自定义输出目录",
       "arg_filename": "自定义文件名 (不含扩展名)",
-      "req_key": "❌ TTS 需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥",
+      "req_key": "❌ TTS 需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "warn_beta": "模型 \"{model}\" 未收录 — 模式 (beta)",
       "unsupported_openai": "⚠️ openai-audio 不支持语音 \"{voice}\"。\n💡 OpenAI 语音：{voices}",
       "unsupported_elevenlabs": "⚠️ elevenlabs 无法识别语音 \"{voice}\"。\n💡 热门 ElevenLabs 语音：rachel, domi, bella, adam, josh...\n📋 共：{count} 种语音可用",
@@ -345,7 +345,7 @@
       "arg_seed": "可复现性种子 (-1 为随机)",
       "arg_save_to": "自定义输出目录",
       "arg_filename": "自定义文件名 (不含扩展名)",
-      "req_key": "❌ 音乐生成需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥",
+      "req_key": "❌ 音乐生成需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "blocked": "❌ 操作被 Cost Guard 拦截。",
       "toast_start": "音乐生成：{duration}秒 (~{time}秒生成)",
       "res_title": "🎵 音乐已生成",
@@ -373,7 +373,7 @@
       "arg_model": "STT 模型 (默认：{model})",
       "arg_language": "语言提示 (例如 \"en\", \"fr\", \"zh\")",
       "arg_save": "将转录保存到文件 (默认：false)",
-      "req_key": "❌ 转录需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥",
+      "req_key": "❌ 转录需要 Pollinations API 密钥。\n🔧 使用 /poll connect 连接你的密钥\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "err_unknown_model": "❌ 未知 STT 模型：{model}\n💡 可用 STT 模型：{models}",
       "toast_dl": "🎙️ STT：正在下载...",
       "err_dl": "❌ 无法下载音频：{error}",
@@ -397,7 +397,7 @@
     "polli_quests": {
       "desc": "列出你的 Pollinations 任务并显示你可以领取多少免费 Pollen。只读。完成任务 (包括仅仅使用本插件) 可赚取 Pollen；领取在仪表盘进行。",
       "arg_filter": "过滤器：'all' (默认), 'available' (开放的任务), 或 'claimable' (已赚取但尚未领取)。",
-      "no_key": "🔑 未配置 API 密钥。请先使用 `/poll connect <key>`。",
+      "no_key": "🔑 未配置 API 密钥。请先使用 `/poll connect <key>`。\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "error": "⚠️ 无法获取任务：{error}",
       "empty": "未找到此账户的任务。",
       "title": "## 🎯 Pollinations 任务",
@@ -455,7 +455,7 @@
       "degraded": "⚠️ 免费视频服务不可用 ({error})。\n💡 备用方案：使用带 Pollinations 密钥的 `polli_gen_video`。"
     },
     "polli_login": {
-      "desc": "🔐 为用户启动快速 Pollinations 登录 (设备流程)。显示一个短代码 + URL；用户在浏览器中用 GitHub 登录，批准后插件会自动连接 (有提示确认)。运行此功能无需 API 密钥。当用户想要轻松连接其 Pollinations 账户而无需复制粘贴密钥时使用。如需永久密钥，请告诉他们使用 `/poll connect sk_...`。",
+      "desc": "🔐 推荐的账户连接方式。当用户要求连接/登录 Pollinations 时，应自动调用此工具，而不是要求用户创建或粘贴 API 密钥。它会启动一键浏览器 Device OAuth：向用户显示返回的 URL/代码，用户使用 GitHub 登录并授权，插件随后自动连接。启动此流程无需 API 密钥。只有当用户明确要求手动 BYOK 或已经拥有 Secret 密钥时，才使用 `/poll connect sk_...`。",
       "arg_wait": "如果为 true，则等待进行中的登录完成并返回最终结果 (✅ 已连接 / 已过期)。先不带 wait 调用以显示代码，然后在告知用户授权后再带 wait:true 调用。"
     },
     "object_remover": {
@@ -483,7 +483,7 @@
       "arg_save_to": "自定义输出目录或文件路径",
       "arg_filename": "自定义输出文件名（不含扩展名）",
       "arg_timeout": "每次调用的超时秒数（10–3600）。超时后不自动重试。",
-      "req_key": "❌ polli_gen_3d 需要 API 密钥（/poll login）。",
+      "req_key": "❌ polli_gen_3d 需要 API 密钥（/poll login）。\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
       "unknown_model": "模型 '{model}' 不在 3D 注册表中 — beta 透传",
       "invalid_image_url": "❌ 无效的图像 URL。请使用 http:// 或 https://",
       "invalid_timeout": "❌ timeout_seconds 无效：{reason}",

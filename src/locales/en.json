@@ -51,7 +51,7 @@
       "timeouts_3d_role": "3D generation timeout"
     },
     "generic": {
-      "add_key_hint": "💡 Use /poll connect <key> to add an API key.",
+      "add_key_hint": "💡 Use /poll connect <key> to add an API key.\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "unknown_command": "❌ Unknown command: {cmd}",
       "tui_error": "Command error: {error}",
       "tui_critical": "Critical error in command: {error}",
@@ -128,7 +128,7 @@
       "pollen_get": "Running AI models costs money. Pollen is our way to keep servers running without ads or selling data. A simple, unified credit for all models — predictable, transparent, no surprises.\n\n**$1 ≈ 1 Pollen** (prices subject to change). You spend it on API calls.",
       "pollen_spend": "## 🛒 How to get Pollen?\n1. 🎯 **Quests** — Complete tasks on the dashboard (`/poll quests`).\n2. 💳 **Buy** — By credit card at enter.pollinations.ai.\n3. 🌻 **Dev earnings** — Enable developer earnings on your App Key.",
       "quests": "## 🎯 Quests — Earn Free Pollen\nPollen is now mainly earned by completing **Quests**. Good news: just using this plugin (text, image & audio models) completes several quests **retroactively** — you may already have free Pollen waiting!\n\n👉 Review & claim your rewards on the [dashboard](https://enter.pollinations.ai). _Claiming is dashboard-only._\n\n> 💡 Quest Pollen works on all standard models. 💎 Paid-only models still require purchased Pollen.",
-      "get_started": "## 🔑 Getting Started\n\n**1.** Create a free account at enter.pollinations.ai\n**2.** Connect in 1 click: `/poll login`\n**3.** Or use a manual key: `/poll connect sk_...`\n\nType `/poll help` for all commands.",
+      "get_started": "## 🔐 Connect your account — recommended\n\n**Just type `/poll login`.** Your browser opens, you sign in with GitHub and approve, and the plugin connects automatically. **No API key to create, copy or paste.**\n\nManual BYOK is optional and only for users who already have a Secret key: `/poll connect sk_...`.\n\nType `/poll help` for all commands.",
       "quest_paid_title": "## 🎁 Quest & 💎 Paid Pollen",
       "quest_paid_body": "Pollen is split into two columns:\n\n- **🎁 Quest Pollen** — earned by completing **Quests** (free). Consumed first by the server.\n- **💎 Paid Pollen** — purchased (credit card). Used when Quest is insufficient, or for `paid_only` models.\n\n> ⚠️ The plugin cannot read the split server-side; it estimates Quest/Paid locally and reads the real split (`meter_source`) from `/account/usage`.\n\n**Modes:**\n- `quest` (QUEST_PREFERRED) — default: Quest first, Paid fallback allowed.\n- `quest_only` (QUEST_ELIGIBLE_ONLY) — blocks paid_only models, best-effort Quest only.\n- `paid` (PAID_ALLOWED) — Paid allowed.\n- `manual` — no automatic policy."
     },
@@ -199,7 +199,7 @@
       "arg_trans": "Transparent background for gptimage models only",
       "arg_save_to": "Custom output directory",
       "arg_filename": "Custom filename (without extension)",
-      "req_key": "❌ **API Key Required** for image generation.\n💡 Use `/poll connect <key>` to activate the service.\n💎 Available models: {models}...",
+      "req_key": "❌ **API Key Required** for image generation.\n💡 Use `/poll connect <key>` to activate the service.\n💎 Available models: {models}...\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "no_i2i": "⚠️ Model \"{model}\" does not support Image-to-Image.\n💡 Supported I2I models: {models}",
       "blocked": "❌ Operation blocked by Cost Guard.",
       "req_url_i2i": "❌ Local files require uploading first.\n💡 Use the `file_to_url` tool to get a public URL.",
@@ -242,7 +242,7 @@
       "recency_day": "Limit your research to articles published within the last 24 hours.",
       "recency_week": "Limit your research to articles published within the last 7 days.",
       "recency_month": "Limit your research to articles published within the last 30 days.",
-      "req_key": "❌ API Key required for Search. Use /poll connect.",
+      "req_key": "❌ API Key required for Search. Use /poll connect.\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "insufficient_pollen": "❌ Insufficient 🌻 Pollen for this search. Need ~0.005",
       "blocked": "🚫 Search blocked by Cost Guard limits.",
       "toast_success": "Search with {model} completed",
@@ -265,7 +265,7 @@
       "arg_seed": "Seed for reproducibility (-1 for random)",
       "arg_save_to": "Custom output directory",
       "arg_filename": "Custom filename (without extension)",
-      "req_key": "❌ Video generation requires a Pollinations API key.\n🔧 Connect your key with /poll connect",
+      "req_key": "❌ Video generation requires a Pollinations API key.\n🔧 Connect your key with /poll connect\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "warn_beta": "Model \"{model}\" unreferenced — mode (beta)",
       "invalid_duration": "❌ Invalid duration for {model}: {duration}s\n💡 Supported duration: {min}-{max}s",
       "invalid_aspect": "❌ Aspect ratio not supported by {model}: {aspect}\n💡 Supported ratios: {supported}",
@@ -314,7 +314,7 @@
       "arg_format": "Audio format (default: mp3, openai-audio only)",
       "arg_save_to": "Custom output directory",
       "arg_filename": "Custom filename (without extension)",
-      "req_key": "❌ TTS requires a Pollinations API key.\n🔧 Connect your key with /poll connect",
+      "req_key": "❌ TTS requires a Pollinations API key.\n🔧 Connect your key with /poll connect\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "warn_beta": "Model \"{model}\" unreferenced — mode (beta)",
       "unsupported_openai": "⚠️ Voice \"{voice}\" not supported by openai-audio.\n💡 OpenAI Voices: {voices}",
       "unsupported_elevenlabs": "⚠️ Voice \"{voice}\" unrecognized for elevenlabs.\n💡 Popular ElevenLabs voices: rachel, domi, bella, adam, josh...\n📋 Total: {count} voices available",
@@ -345,7 +345,7 @@
       "arg_seed": "Seed for reproducibility (-1 for random)",
       "arg_save_to": "Custom output directory",
       "arg_filename": "Custom filename (without extension)",
-      "req_key": "❌ Music generation requires a Pollinations API key.\n🔧 Connect your key with /poll connect",
+      "req_key": "❌ Music generation requires a Pollinations API key.\n🔧 Connect your key with /poll connect\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "blocked": "❌ Operation blocked by Cost Guard.",
       "toast_start": "Music gen: {duration}s (~{time}s gen)",
       "res_title": "🎵 Music Generated",
@@ -373,7 +373,7 @@
       "arg_model": "STT model (default: {model})",
       "arg_language": "Language hint (e.g., \"en\", \"fr\", \"es\")",
       "arg_save": "Save transcript to file (default: false)",
-      "req_key": "❌ Transcription requires a Pollinations API key.\n🔧 Connect your key with /poll connect",
+      "req_key": "❌ Transcription requires a Pollinations API key.\n🔧 Connect your key with /poll connect\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "err_unknown_model": "❌ Unknown STT model: {model}\n💡 Available STT models: {models}",
       "toast_dl": "🎙️ STT: Downloading...",
       "err_dl": "❌ Unable to download audio: {error}",
@@ -397,7 +397,7 @@
     "polli_quests": {
       "desc": "List your Pollinations Quests and show how much free Pollen you can claim. Read-only. Completing quests (including just using this plugin) earns Pollen; claiming is done on the dashboard.",
       "arg_filter": "Filter: 'all' (default), 'available' (open quests), or 'claimable' (earned but not yet claimed).",
-      "no_key": "🔑 No API key configured. Use `/poll connect <key>` first.",
+      "no_key": "🔑 No API key configured. Use `/poll connect <key>` first.\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "error": "⚠️ Could not fetch quests: {error}",
       "empty": "No quests found for this account.",
       "title": "## 🎯 Pollinations Quests",
@@ -455,7 +455,7 @@
       "degraded": "⚠️ Free video service unavailable ({error}).\n💡 Fallback: use `polli_gen_video` with your Pollinations key."
     },
     "polli_login": {
-      "desc": "🔐 Start a quick Pollinations login (device flow) for the user. Shows a short code + URL; the user signs in with GitHub in their browser, and the plugin connects AUTOMATICALLY once approved (a toast confirms). No API key needed to run this. Use when the user wants to connect their Pollinations account easily, without copy-pasting a key. For a permanent key instead, tell them to use `/poll connect sk_...`.",
+      "desc": "🔐 PREFERRED account connection method. When the user asks to connect/sign in to Pollinations, call this tool automatically instead of asking them to create or paste an API key. It starts the 1-click browser device OAuth: show the returned URL/code, the user signs in with GitHub and approves, then the plugin connects automatically. No API key is needed to start. Use `/poll connect sk_...` only when the user explicitly wants manual BYOK or already has a Secret key.",
       "arg_wait": "If true, waits for an in-progress login to complete and returns the final result (✅ connected / expired). Call once without wait to show the code, then again with wait:true after telling the user to authorize."
     },
     "object_remover": {
@@ -483,7 +483,7 @@
       "arg_save_to": "Custom output directory or file path",
       "arg_filename": "Custom output filename (without extension)",
       "arg_timeout": "Per-call timeout in seconds (10–3600). No automatic resubmit on timeout.",
-      "req_key": "❌ polli_gen_3d requires an API key (/poll login).",
+      "req_key": "❌ polli_gen_3d requires an API key (/poll login).\\n💡 Connect with `/poll login` (recommended, 1-click OAuth). Manual BYOK: `/poll connect sk_...`.",
       "unknown_model": "Model '{model}' not in the 3D registry — beta passthrough",
       "invalid_image_url": "❌ Invalid image URL. Use http:// or https://",
       "invalid_timeout": "❌ Invalid timeout_seconds: {reason}",

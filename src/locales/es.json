@@ -51,7 +51,7 @@
       "timeouts_3d_role": "Timeout de generación 3D"
     },
     "generic": {
-      "add_key_hint": "💡 Usa /poll connect <key> para agregar una clave API.",
+      "add_key_hint": "💡 Usa /poll connect <key> para agregar una clave API.\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "unknown_command": "❌ Comando desconocido: {cmd}",
       "tui_error": "Error de comando: {error}",
       "tui_critical": "Error crítico: {error}",
@@ -128,7 +128,7 @@
       "pollen_get": "Ejecutar modelos de IA cuesta dinero. El Pollen es nuestra forma de mantener los servidores funcionando sin anuncios ni vendiendo datos. Un crédito simple para todos los modelos — predecible y transparente.\n\n**$1 ≈ 1 Pollen**. Se gasta en llamadas API.",
       "pollen_spend": "## 🛒 Como obtener Pollen?\n1. 🎯 **Quests** — Completa tareas en el dashboard (`/poll quests`).\n2. 💳 **Comprar** — Con tarjeta en enter.pollinations.ai.\n3. 🌻 **Dev earnings** — Activa ganancias de desarrollador en tu App Key.",
       "quests": "## 🎯 Misiones — Gana Pollen gratis\nAhora el Pollen se gana principalmente completando **Misiones**. Buenas noticias: usar este plugin (modelos de texto, imagen y audio) completa varias misiones **retroactivamente** — ¡quizás ya tengas Pollen gratis esperando!\n\n👉 Revisa y reclama tus recompensas en el [panel](https://enter.pollinations.ai). _Reclamar solo se hace en el panel._\n\n> 💡 El Pollen de misión funciona en todos los modelos estándar. Los modelos 💎 de pago requieren Pollen comprado.",
-      "get_started": "## 🔑 Para empezar\n\n**1.** Crea una cuenta gratis en enter.pollinations.ai\n**2.** Conectate en 1 clic: `/poll login`\n**3.** O usa una clave manual: `/poll connect sk_...`\n\nEscribe `/poll help` para ver todos los comandos.",
+      "get_started": "## 🔐 Conecta tu cuenta — recomendado\n\n**Simplemente escribe `/poll login`.** Se abre el navegador, inicias sesión con GitHub y autorizas, y el plugin se conecta automáticamente. **No hay que crear, copiar ni pegar una clave API.**\n\nEl BYOK manual es opcional y solo para quien ya tenga una clave Secret: `/poll connect sk_...`.\n\nEscribe `/poll help` para ver todos los comandos.",
       "quest_paid_title": "## 🎁 Quest & 💎 Pollen de Pago",
       "quest_paid_body": "El pollen se divide en dos columnas:\n\n- **🎁 Pollen Quest** — se gana completando **Quests** (gratis). El servidor lo consume primero.\n- **💎 Pollen de Pago** — comprado (tarjeta). Se usa cuando el Quest es insuficiente, o para modelos `paid_only`.\n\n> ⚠️ El plugin no puede leer el desglose en el servidor; estima Quest/Paid localmente y lee el desglose real (`meter_source`) desde `/account/usage`.\n\n**Modos:**\n- `quest` (QUEST_PREFERRED) — por defecto: Quest primero, fallback a Paid permitido.\n- `quest_only` (QUEST_ELIGIBLE_ONLY) — bloquea modelos paid_only, solo Quest best-effort.\n- `paid` (PAID_ALLOWED) — Paid permitido.\n- `manual` — sin política automática."
     },
@@ -199,7 +199,7 @@
       "arg_trans": "Fondo transparente (solo gptimage)",
       "arg_save_to": "Directorio de salida",
       "arg_filename": "Nombre de archivo",
-      "req_key": "❌ **Requiere clave API**.\n💡 Usa `/poll connect <clave>`.",
+      "req_key": "❌ **Requiere clave API**.\n💡 Usa `/poll connect <clave>`.\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "no_i2i": "⚠️ El modelo \"{model}\" no soporta I2I.\n💡 Soportados: {models}",
       "blocked": "❌ Bloqueado por Cost Guard.",
       "req_url_i2i": "❌ Debes subir archivos locales primero.\n💡 Usa `file_to_url`.",
@@ -242,7 +242,7 @@
       "recency_day": "24 horas.",
       "recency_week": "7 días.",
       "recency_month": "30 días.",
-      "req_key": "❌ Se necesita clave.",
+      "req_key": "❌ Se necesita clave.\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "insufficient_pollen": "❌ No hay Pollen.",
       "blocked": "🚫 Bloqueado.",
       "toast_success": "Finalizado con {model}",
@@ -265,7 +265,7 @@
       "arg_seed": "Semilla (-1 random)",
       "arg_save_to": "Directorio de salida",
       "arg_filename": "Nombre de archivo",
-      "req_key": "❌ La generación requiere clave API.\n🔧 Conecta con /poll connect",
+      "req_key": "❌ La generación requiere clave API.\n🔧 Conecta con /poll connect\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "warn_beta": "Modelo \"{model}\" beta",
       "invalid_duration": "❌ Duración inválida para {model}: {duration}s\n💡 Soportada: {min}-{max}s",
       "invalid_aspect": "❌ Aspect ratio no soportado por {model}: {aspect}\n💡 Soportados: {supported}",
@@ -314,7 +314,7 @@
       "arg_format": "Formato de audio (por defecto: mp3, openai-audio solo)",
       "arg_save_to": "Directorio de salida",
       "arg_filename": "Nombre de archivo",
-      "req_key": "❌ El TTS requiere una clave API Pollinations.\n🔧 Conecta tu clave con /poll connect",
+      "req_key": "❌ El TTS requiere una clave API Pollinations.\n🔧 Conecta tu clave con /poll connect\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "warn_beta": "Modelo \"{model}\" no referenciado — mode (beta)",
       "unsupported_openai": "⚠️ Voz \"{voice}\" no soportada en openai-audio.\n💡 Voces OpenAI: {voices}",
       "unsupported_elevenlabs": "⚠️ Voz \"{voice}\" desconocida en elevenlabs.\n💡 Recomendadas: rachel, domi, bella, adam...\n📋 Total: {count} voces",
@@ -345,7 +345,7 @@
       "arg_seed": "Semilla (-1 random)",
       "arg_save_to": "Directorio de salida",
       "arg_filename": "Nombre de archivo",
-      "req_key": "❌ Requiere una clave API de Pollinations.",
+      "req_key": "❌ Requiere una clave API de Pollinations.\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "blocked": "❌ Operación bloqueada por Cost Guard.",
       "toast_start": "Gen música: {duration}s (~{time}s gen)",
       "res_title": "🎵 Música Generada",
@@ -373,7 +373,7 @@
       "arg_model": "Modelo STT (defecto: {model})",
       "arg_language": "Idioma (ej: \"en\", \"es\")",
       "arg_save": "Guardar transcripción a archivo (defecto: false)",
-      "req_key": "❌ La transcripción requiere una clave API.",
+      "req_key": "❌ La transcripción requiere una clave API.\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "err_unknown_model": "❌ Modelo STT desconocido: {model}\n💡 Disponibles: {models}",
       "toast_dl": "🎙️ STT: Descargando...",
       "err_dl": "❌ No se puede descargar audio: {error}",
@@ -397,7 +397,7 @@
     "polli_quests": {
       "desc": "Lista tus Misiones de Pollinations y muestra cuánto Pollen gratis puedes reclamar. Solo lectura. Completar misiones (incluso solo usando este plugin) gana Pollen; reclamar se hace en el panel.",
       "arg_filter": "Filtro: 'all' (predeterminado), 'available' (misiones abiertas) o 'claimable' (ganadas pero no reclamadas).",
-      "no_key": "🔑 No hay clave API configurada. Usa primero `/poll connect <clave>`.",
+      "no_key": "🔑 No hay clave API configurada. Usa primero `/poll connect <clave>`.\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "error": "⚠️ No se pudieron obtener las misiones: {error}",
       "empty": "No se encontraron misiones para esta cuenta.",
       "title": "## 🎯 Misiones de Pollinations",
@@ -455,7 +455,7 @@
       "degraded": "⚠️ Servicio de vídeo gratuito no disponible ({error}).\n💡 Alternativa: usa `polli_gen_video` con tu clave Pollinations."
     },
     "polli_login": {
-      "desc": "🔐 Inicia un acceso rápido a Pollinations (device flow) para el usuario. Muestra un código corto + URL; el usuario inicia sesión con GitHub en su navegador, y el plugin se conecta AUTOMÁTICAMENTE tras aprobar (un aviso confirma). No se necesita clave API para ejecutarlo. Úsalo cuando el usuario quiera conectar su cuenta de Pollinations fácilmente, sin copiar y pegar una clave. Para una clave permanente, dile que use `/poll connect sk_...`.",
+      "desc": "🔐 MÉTODO DE CONEXIÓN RECOMENDADO. Cuando el usuario quiera conectar/iniciar sesión en Pollinations, llama automáticamente a esta herramienta en vez de pedirle que cree o pegue una clave API. Inicia el OAuth de dispositivo en el navegador con 1 clic: muestra la URL/código, el usuario inicia sesión con GitHub y autoriza, y el plugin se conecta automáticamente. No hace falta una clave API para empezar. Usa `/poll connect sk_...` solo si el usuario pide BYOK manual o ya tiene una clave Secret.",
       "arg_wait": "Si es true, espera a que termine un inicio de sesión en curso y devuelve el resultado final (✅ conectado / caducado). Llama primero sin wait para mostrar el código, luego de nuevo con wait:true tras pedir al usuario que autorice."
     },
     "object_remover": {
@@ -483,7 +483,7 @@
       "arg_save_to": "Directorio o ruta de archivo de salida personalizada",
       "arg_filename": "Nombre de archivo personalizado (sin extensión)",
       "arg_timeout": "Timeout por llamada en segundos (10–3600). Sin reenvío automático.",
-      "req_key": "❌ polli_gen_3d requiere una clave API (/poll login).",
+      "req_key": "❌ polli_gen_3d requiere una clave API (/poll login).\\n💡 Conéctate con `/poll login` (recomendado, OAuth en 1 clic). BYOK manual: `/poll connect sk_...`.",
       "unknown_model": "Modelo '{model}' no está en el registro 3D — passthrough (beta)",
       "invalid_image_url": "❌ URL de imagen inválida. Usa http:// o https://",
       "invalid_timeout": "❌ timeout_seconds inválido: {reason}",
