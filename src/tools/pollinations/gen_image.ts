@@ -148,13 +148,15 @@ export const polliGenImageTool: ToolDefinition = tool({
                 params.set('image', args.reference_image);
             }
 
-            // Quality (gptimage only)
-            if (args.quality && model.startsWith('gptimage')) {
+            const isGptImage = model.startsWith('gptimage') || model.startsWith('openai/gpt-image-');
+
+            // Quality (GPT image models, including canonical IDs)
+            if (args.quality && isGptImage) {
                 params.set('quality', args.quality);
             }
 
             // Transparent (gptimage only)
-            if (args.transparent !== undefined && model.startsWith('gptimage')) {
+            if (args.transparent !== undefined && isGptImage) {
                 params.set('transparent', String(args.transparent));
             }
 
