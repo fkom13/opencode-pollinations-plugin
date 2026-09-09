@@ -630,6 +630,26 @@ async function testVideoEndpoint() {
     assert(!/if\s*\(\s*model\s*===/.test(gen3dSrc), 'gen_3d: no scattered if(model===) branches');
 }
 
+function testCanonicalImageOptions() {
+    log.section('Canonical GPT Image Options');
+    // Execute the compiled tool's actual query-building block without generation.
+    const source = fs.readFileSync(path.join(DIST, 'tools/pollinations/gen_image.js'), 'utf-8');
+    const start = source.indexOf('const params = new URLSearchParams(');
+    const end = source.indexOf('const promptEncoded =', start);
+    assert(start >= 0 && end > start, 'image query builder found');
+    const buildParams = new Function('args', 'model', 'width', 'height', source.slice(start, end) + '\nreturn params;');
+    for (const model of ['gptimage', 'gptimage-large', 'openai/gpt-image-1-mini', 'openai/gpt-image-1.5', 'openai/gpt-image-2']) {
+        const params = buildParams({ quality: 'high', transparent: false }, model, 1024, 1024);
+        assert(params.get('model') === model, `${model}: request ID preserved`);
+        assert(params.get('quality') === 'high', `${model}: quality preserved`);
+        assert(params.get('transparent') === 'false', `${model}: explicit false preserved`);
+    }
+    const other = buildParams({ quality: 'high', transparent: true }, 'tongyi-mai/z-image-turbo', 1024, 1024);
+    assert(!other.has('quality') && !other.has('transparent'), 'non-GPT filtering unchanged');
+    const omitted = buildParams({}, 'openai/gpt-image-1-mini', 1024, 1024);
+    assert(!omitted.has('quality') && !omitted.has('transparent'), 'omitted options stay omitted');
+}
+
 // ─── MAIN ────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -651,6 +671,7 @@ async function main() {
     await testTestClassification();
     await testConvergenceContracts();
     await testVideoEndpoint();
+    testCanonicalImageOptions();
 
     console.log('\n' + '═'.repeat(60) + '\n');
     console.log(`📊 v6.5 Results: ${colors.green}${passed} passed${colors.reset}, ${colors.red}${failed} failed${colors.reset}`);
