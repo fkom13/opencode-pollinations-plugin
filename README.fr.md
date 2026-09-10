@@ -1,4 +1,4 @@
-# 🌸 Plugin Pollinations AI pour OpenCode (v6.5.0)
+# 🌸 Plugin Pollinations AI pour OpenCode (v6.5.5)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -27,7 +27,13 @@
 
 ---
 
-## ✨ Nouveautés v6.5.0
+## ✨ Nouveautés v6.5.5
+
+- ✂️ **RMBG sans clé résilient** : `remove_background` utilise maintenant **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, le stockage/roulement des clés et `rmbg_keys` sont retirés du plugin actif.
+- 🎞️ **Contrat P‑Video gratuit corrigé** : sortie vérifiée 1–10 s, 720p/1080p, 24/48 fps, sept ratios, seed/draft/prompt upsampling/audio et image de première frame/audio optionnels ; quota par IP lu en direct.
+- 🖼️ **Génération/édition image gratuite étendue** : édition de 1 à 3 images, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition avec quota live par IP.
+- 🧬 **Les vrais octets média gagnent partout** : les outils image reverse sauvegardent JPEG/PNG/WebP selon les magic bytes, corrigeant les JPEG auparavant enregistrés sous un nom `.png`.
+- 🌍 **Convergence six langues** : runtime, onboarding, six README et manuel technique maintenu sont alignés sur le comportement réel des outils gratuits.
 
 - 🧊 **Génération 3D (`polli_gen_3d`)** : Génération de modèles 3D (`trellis-2`, `hyper3d-rodin`) au format standard `.glb` avec protection Cost Guard et reprise sur cache.
 - 🛡️ **Protection Anti-Double Facturation** : Retries chat strictement limités au code 429 ; les timeouts et coupures réseau ne rejouent jamais de requêtes payantes.
@@ -53,12 +59,12 @@ Au-delà de la discussion textuelle, connecter votre clé donne aux Agents OpenC
 - 🌐 `polli_web_search` : Outil de recherche web connecté et contextes spécialisés (`gemini-search`, `perplexity...`).
 
 ### 🧰 Outils Bonus Créateurs Gratuits (Toujours disponibles — sans clé API)
-- 🆓 `gen_edit_image_free` : Génération et édition d'images gratuite (~20/jour, tout modèle, sans clé).
-- 🆓 `gen_video_free` : Texte-vers-vidéo gratuit avec image et audio d'entrée optionnels (~5/jour, sans clé).
-- 🧹 `object_remover` : Suppression d'objets par prompt en direct (30-120s, sans clé).
-- 📐 `image_upscaler` : Agrandissement 2x/4x gratuit (30-120s, sans clé).
-- ✨ `image_enhancer` : Amélioration IA — débruitage, netteté, restauration (30-120s, sans clé).
-- ✂️ `remove_background` : Suppression de fond d'image IA via rmbg (bgeraser.com) — gratuit.
+- 🆓 `gen_edit_image_free` : Génération gratuite et **édition de 1 à 3 images**, quota par IP lu en direct, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition. Sans clé.
+- 🆓 `gen_video_free` : P‑Video gratuit, **1–10 s vérifiées**, 720p/1080p, 24/48 fps, 7 ratios, seed/draft/prompt upsampling/audio, avec image de première frame ou audio optionnels. Quota par IP lu en direct, sans clé.
+- 🧹 `object_remover` : Suppression gratuite d’objets par prompt ; le média renvoyé est validé par magic bytes et sauvegardé avec sa vraie extension.
+- 📐 `image_upscaler` : Agrandissement gratuit 2x/4x ; la sortie JPEG/PNG/WebP est détectée dans les octets réels, jamais supposée depuis le nom de fichier.
+- ✨ `image_enhancer` : Amélioration gratuite 1K/2K/4K (débruitage, netteté, restauration), avec détection du vrai format de sortie.
+- ✂️ `remove_background` : Détourage sans clé avec chaîne résiliente **bgeraser reverse → fallback ClearBackdrop**. Aucun provider payant, aucune rotation de clés ; format/extension réels auto-détectés.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url` : Utilitaires développeurs.
 
 ### 💻 Liste Complète des Commandes Terminal

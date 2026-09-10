@@ -42,7 +42,7 @@
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       POLLINATIONS PLUGIN (v6.1-beta)                        │
+│                       POLLINATIONS PLUGIN (v6.5.x)                        │
 │                                                                             │
 │  ┌──────────────────────────── Server ────────────────────────────────────┐ │
 │  │ index.ts │ config.ts │ proxy.ts │ generate-config.ts │ quota.ts       │ │
@@ -55,7 +55,7 @@
 │  │  gen_audio       gen_palette  extract_audio                            │ │
 │  │  gen_music       gen_qrcode   extract_frames                           │ │
 │  │  gen_video                    file_to_url                              │ │
-│  │  transcribe_audio             rmbg_keys                               │ │
+│  │  transcribe_audio             gen_edit_image_free · gen_video_free    │ │
 │  │  polli_web_search                                                      │ │
 │  └───────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
@@ -267,7 +267,7 @@ interface PollinationsConfigV5 {
 
 **Constants:**
 ```typescript
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 1; // conservative same-request retry: HTTP 429 only
 const RETRY_DELAY_MS = 1000;
 ```
 
@@ -290,7 +290,7 @@ MODE: quest_only (QUEST_ELIGIBLE_ONLY, best-effort)
 MODE: paid (PAID_ALLOWED)
   IF quota read failed → fallback to free
   IF walletBalance < wallet floor → fallback to free
-  IF wallet < threshold AND tierRatio ≤ threshold → fallback to free/mistral
+  IF walletBalance < thresholds.wallet → fallback to free/openai-fast
 
 MODE: manual
   No automatic switching. User controls everything.
@@ -341,7 +341,7 @@ chunkStr = chunkStr.replace(
 **Model Format Returned to OpenCode:**
 ```typescript
 interface OpenCodeModel {
-    id: string;       // "free/gemini" or "enter/gpt-4o"
+    id: string;       // "free/<model-id>" or "enter/<model-id>"
     name: string;     // "[Free] Gemini Flash"
     object: string;   // "model"
     variants?: {
@@ -550,86 +550,83 @@ Located in `src/tools/power/`.
 
 | Tool File | Tool Name | Description |
 |-----------|-----------|-------------|
-| `remove_background.ts` | `remove_background` | Remove image background (free or BackgroundCut HD) |
-| `rmbg_keys.ts` | `rmbg_keys` | Manage BackgroundCut API keys (`list`, `add`, `remove`, `clear`) |
+| `remove_background.ts` | `remove_background` | No-key RMBG: bgeraser reverse primary → ClearBackdrop fallback; magic-byte output validation |
 | `extract_audio.ts` | `extract_audio` | Extract the audio track from a video file |
 | `extract_frames.ts` | `extract_frames` | Extract frames from a video at a given interval |
 | `file_to_url.ts` | `file_to_url` | Upload a local file and return a public URL |
 
-**Background Removal — Multi-Key Rotation:**
+**Background Removal — no-key resilient chain:**
 
-The `remove_background` tool implements key rotation across a pool of BackgroundCut API keys stored in `~/.pollinations/backgroundcut_keys.json`:
+`remove_background` has no paid provider, no key store and no rotation tool. The active chain is intentionally simple:
 
-1. Try the active key (round-robin index)
-2. On `402` (no credits), `429` (rate limit), or `401` (expired) → rotate to next key
-3. If all keys fail → fall back to the free provider (`cut`) automatically
-4. If `provider=backgroundcut` is explicitly set (not `auto`) → throw error instead of silently falling back
+1. Resolve the input from a local path, HTTP(S) URL or data URI.
+2. Validate the real input media type from bytes.
+3. Try the bgeraser reverse backend first.
+4. If bgeraser fails in `provider=auto`, retry once through ClearBackdrop (`https://api.clearbackdrop.com/v1/remove`).
+5. Validate the returned image bytes and persist with the real detected extension (JPEG/PNG/WebP), even when an upstream filename or Content-Type is wrong.
+6. `provider=bgeraser` and `provider=clearbackdrop` force one provider; `provider=auto` is the recommended resilient mode.
 
-**rmbg_keys Actions:**
+There is deliberately **no `rmbg_keys` tool and no BackgroundCut path** in the current runtime.
 
-| Action | Arguments | Description |
-|--------|-----------|-------------|
-| `list` | — | Show all stored keys (masked) with active indicator |
-| `add` | `key=<apikey>` | Add a new BackgroundCut key |
-| `remove` | `key=<apikey>` | Remove a specific key |
-| `clear` | — | Remove all keys, revert to free provider |
+**Free creator media contracts:**
 
-Key storage format (`~/.pollinations/backgroundcut_keys.json`):
-```json
-{
-    "keys": ["bgcut_xxx...", "bgcut_yyy..."],
-    "currentIndex": 0
-}
-```
+| Tool | Current no-key contract | Resilience |
+|------|-------------------------|------------|
+| `gen_edit_image_free` | text generation or 1–3 image edit; ratios `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`; `custom` generation 256–1440 (multiple of 16); `match_input_image` edit; seed, prompt upsampling, edit turbo | Live per-IP quota; magic-byte output detection |
+| `gen_video_free` | P‑Video 1–10 s verified output; 720p/1080p; 24/48 fps; seven aspect ratios; optional first-frame image/audio; seed, draft, prompt upsampling, save-audio | Live `p-video` quota; same-job polling only; MP4/WebM magic-byte validation |
+| `object_remover` | prompt-based object removal | Input/output magic-byte validation; real extension |
+| `image_upscaler` | 2× / 4× | Real JPEG/PNG/WebP extension follows bytes |
+| `image_enhancer` | target longest side 1K / 2K / 4K | Real JPEG/PNG/WebP extension follows bytes |
+| `remove_background` | bgeraser → ClearBackdrop | One free fallback; no keys; real extension |
+
+The free playground quotas are intentionally read at execution time rather than documented as fixed constants. P‑Video accepts a submitted duration greater than 10 seconds but the free backend was verified to return approximately 10 seconds, so the public tool enforces 1–10 seconds.
 
 ---
 
 ## Configuration Schemas
 
-### `~/.pollinations/config.json`
+### Pollinations config (`config.json`)
+
+Platform location is resolved by `getConfigDir()`:
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/pollinations/config.json`
+- macOS: `~/Library/Application Support/pollinations/config.json`
+- Windows: `%APPDATA%\pollinations\config.json`
+
+Representative v6.5.x config:
 ```json
 {
-    "version": "6.1.0",
-    "mode": "pro",
-    "apiKey": "pk_xxxxxxxxxxxx",
-    "gui": {
-        "status": "alert",
-        "logs": "error"
-    },
-    "thresholds": {
-        "tier": 10,
-        "wallet": 5
-    },
-    "fallbacks": {
-        "free": {
-            "main": "free/mistral",
-            "agent": "free/openai-fast"
-        },
-        "enter": {
-            "agent": "free/gemini"
-        }
-    },
-    "enablePaidTools": false,
-    "statusBar": true
+  "version": "6.5.x",
+  "mode": "quest",
+  "gui": { "status": "alert", "logs": "none" },
+  "thresholds": { "quest": 0.05, "wallet": 0.5 },
+  "fallbacks": {
+    "free": { "main": "free/openai-fast", "agent": "free/openai-fast" },
+    "enter": { "agent": "free/openai-fast" }
+  },
+  "enablePaidTools": false,
+  "enableDeveloperTools": false,
+  "costThreshold": 0.15,
+  "costConfirmationRequired": true,
+  "statusBar": true,
+  "costEstimator": true,
+  "lang": "en"
 }
 ```
 
-### `~/.local/share/opencode/auth.json`
+`thresholds.quest` and `thresholds.wallet` are absolute Pollen floors. Older configuration names and removed refill fields are migrated/purged on load; see `docs/V65_MIGRATION.md` for the compatibility mapping.
+
+### OpenCode auth (`auth.json`)
+
+The plugin checks platform-specific OpenCode auth locations plus `OPENCODE_AUTH` / `OPENCODE_CONFIG_DIR`. A compatible entry is:
 ```json
 {
-    "pollinations": {
-        "key": "pk_xxxxxxxxxxxx"
-    }
+  "pollinations": {
+    "key": "sk_..."
+  }
 }
 ```
 
-### `~/.pollinations/backgroundcut_keys.json`
-```json
-{
-    "keys": ["bgcut_key1...", "bgcut_key2..."],
-    "currentIndex": 0
-}
-```
+`/poll login` is the recommended path; it performs the browser/device flow so the user normally never has to paste the key manually. The most recently updated valid key between plugin config and OpenCode auth wins.
 
 ---
 
@@ -646,7 +643,7 @@ Key storage format (`~/.pollinations/backgroundcut_keys.json`):
 **Request Body:**
 ```typescript
 interface ChatRequest {
-    model: string;          // "free/gemini" or "enter/gpt-4o"
+    model: string;          // "free/<model-id>" or "enter/<model-id>"
     messages: Message[];
     stream?: boolean;       // Default: true
     tools?: Tool[];
@@ -670,11 +667,14 @@ data: [DONE]
 
 ### Retry Logic
 ```typescript
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 1000;
+const MAX_RETRIES = 1; // one conservative retry, 429 only
 ```
-Retried: `429`, `5xx`, network errors.
-Not retried: `400`, `401`, `404`.
+
+Blind replay policy for the **same chat request**:
+- Retried once: `429` only.
+- Never blindly replayed: abort, network error, timeout, `402`, ambiguous `5xx`/`520`, or other `4xx`.
+
+This is deliberately stricter than the Safety Net. After a definitive enterprise failure (`401`, `402`, `403`, `429`, `502`), the router may make one explicit **different-route free fallback** request; that transition is surfaced as a Safety Net event rather than treated as an invisible retry.
 
 ### Transparent Fallback Flow
 ```text
@@ -696,8 +696,8 @@ Inject "⚠️ Switched to free model" warning into stream
 | Issue | Severity | Status |
 |-------|----------|--------|
 | Signature map unbounded growth | Low | Fix scheduled (LRU eviction) |
-| 30s quota cache — can be stale | Low | Mitigated by Ledger in v6.1 |
-| Model list requires restart to update | Low | Config watcher planned |
+| Account/quota data can change between checks | Low | Live reads + conservative billing guards; server remains source of truth |
+| Upstream catalogs can change during long sessions | Low | Model Registry TTL refresh + offline fallback |
 
 ---
 
@@ -706,7 +706,7 @@ Inject "⚠️ Switched to free model" warning into stream
 **API Key Storage — Transmission:**
 - Key is only ever sent to `gen.pollinations.ai`
 - Header: `Authorization: Bearer <key>`
-- Never logged in plaintext (except debug-level logs, which are opt-in)
+- Never intentionally logged in plaintext; user-facing diagnostics mask key material
 
 **Log Files:**
 
@@ -725,7 +725,7 @@ Inject "⚠️ Switched to free model" warning into stream
 
 ## Roadmap
 
-### ✅ Shipped (Cumulative — up to v6.1-beta)
+### ✅ Shipped (Cumulative — up to v6.5.x)
 
 | Feature | Since | Notes |
 |---------|-------|-------|
@@ -746,19 +746,19 @@ Inject "⚠️ Switched to free model" warning into stream
 | Paid-only model enforcement | v5.5 | walletBalance check |
 | Smart Fetch quota system | v6.1-b22 | Recursive API fetch replaces local Ledger |
 | Stealth notifications | v6.1 | Toasts only in paid sessions |
-| Tools system | v6.1 | 15+ tools in tools/ |
+| Tools system | v6.1 → v6.5.x | 24 runtime tools; capability/artifact contracts |
 | gen_image, gen_audio, gen_music | v6.1 | Pollinations generation |
 | gen_video, transcribe_audio | v6.1 | Multimodal |
 | polli_web_search | v6.1 | Web research |
 | gen_diagram, gen_palette, gen_qrcode | v6.1 | Design tools |
-| remove_background + key rotation | v6.1 | BackgroundCut + free fallback |
+| remove_background resilient free chain | v6.5.x | bgeraser reverse → ClearBackdrop; no key store/rotation |
 | extract_audio, extract_frames | v6.1 | Media power tools |
 | file_to_url | v6.1 | Local file upload |
 | status.ts status bar module | v6.1 | Session idle hook |
 
 ---
 
-### 🔜 Short Term (v6.2 – v6.5, Q1–Q2 2026)
+### 🔜 Maintenance / Next after v6.5.x
 
 | Feature | Priority | Effort | Description |
 |---------|----------|--------|-------------|
@@ -832,7 +832,7 @@ Open an [issue](https://github.com/fkom13/opencode-pollinations-plugin/issues) t
 |---------|--------|-------|
 | ~~v5.3~~ | ~~Q1 2026~~ | ~~Stabilization~~ → merged into v5.9 |
 | ~~v5.4~~ | ~~Q2 2026~~ | ~~UX~~ → merged into v5.9 |
-| **v6.2.7.1** | **Now** | **Media Fallback, Hourly Quotas, API Explorer V4** |
+| **v6.5.x** | **Current** | **Quest/Paid convergence, Artifact Core, resilient free media tools, 3D** |
 | v6.3 – v6.5 | Q2 2026 | Tests, hot-reload, logging |
 | v7.0 | Q4 2026 | Smart Routing |
 | v8.0 | 2027 | Platform |

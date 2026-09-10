@@ -17,7 +17,6 @@ import { fileToUrlTool } from './power/file_to_url.js';
 import { removeBackgroundTool } from './power/remove_background.js';
 import { extractFramesTool } from './power/extract_frames.js';
 import { extractAudioTool } from './power/extract_audio.js';
-import { rmbgKeysTool } from './power/rmbg_keys.js';
 
 // === FREE BONUS: standalone always-free image gen/edit + video (no key, no Pollen) ===
 import { genEditImageFreeTool } from './pollinations/gen_edit_image_free.js';
@@ -79,7 +78,6 @@ export function createToolRegistry(): Record<string, any> {
     tools['remove_background'] = removeBackgroundTool;
     tools['extract_frames'] = extractFramesTool;
     tools['extract_audio'] = extractAudioTool;
-    tools['rmbg_keys'] = rmbgKeysTool;
 
     // Bonus tool: always-free image gen/edit (works without a Pollinations key)
     tools['gen_edit_image_free'] = genEditImageFreeTool;

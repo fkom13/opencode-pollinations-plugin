@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [6.5.5] — 2026-09-10
+
+### 🆓 Free media tools
+
+- **Resilient RMBG** — `remove_background` is now strictly no-key: bgeraser reverse first, then ClearBackdrop as the single free fallback. BackgroundCut support, local BackgroundCut key storage/rotation and the `rmbg_keys` tool are removed from the active runtime.
+- **Free P-Video recalibration** — `gen_video_free` exposes the verified playground contract: 1–10 s output, 720p/1080p, 24/48 fps, seven aspect ratios, seed, draft, prompt upsampling, save-audio, optional first-frame image and optional audio. Quota/availability is read live per IP.
+- **Free image gen/edit expansion** — `gen_edit_image_free` supports 1–3 edit images, complete aspect-ratio controls, generation-only custom dimensions (256–1440, multiples of 16), seed, prompt upsampling and edit turbo, with live per-IP quota.
+- **Reverse image tools hardened** — `object_remover`, `image_upscaler` and `image_enhancer` use the shared Artifact Core for input/output validation and real extension persistence.
+
+### 📦 Artifact resilience
+
+- **Magic bytes are authoritative** — JPEG/PNG/WebP/MP4/WebM outputs are persisted according to their real bytes instead of an upstream filename or guessed Content-Type. This fixes reverse-tool JPEG responses previously saved as `.png`.
+- **Same-job recovery only** — async free video polling never blindly submits a replacement generation when the original job is ambiguous or slow.
+- **Clean builds** — the npm build now removes `dist/` before TypeScript compilation so deleted tools cannot survive as stale publish artifacts.
+
+### 🌍 Docs & i18n
+
+- Runtime descriptions, onboarding and free-tool status text are aligned across **English, French, Spanish, German, Italian and Chinese**.
+- All six READMEs document the current no-key tools, live quota behavior and verified P-Video limits.
+- `TECHNICAL_MANUAL.md` now reflects v6.5.x routing/retry semantics, current config paths, Artifact Core behavior and the no-key RMBG chain. Historical audit/migration documents remain unchanged as historical evidence.
+
+### 🧪 Validation
+
+- Verified experimentally that submitting P-Video with `duration=12` still returns approximately **10.04 s**, so the public free tool enforces 1–10 s.
+- Final 6.5.5 validation passed: 102 base + 185 v6.5 contract + 108 i18n assertions, 0 UX vocabulary violations; clean-build tarball contains 129 files with no removed RMBG runtime artifacts or detected secret patterns.
+
 ## [6.5.1] — 2026-08-30
 
 ### Convergence fixes

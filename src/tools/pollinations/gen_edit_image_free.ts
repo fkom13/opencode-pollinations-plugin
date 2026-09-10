@@ -1,92 +1,58 @@
-/**
- * gen_edit_image_free — Always-Free image generation & editing (BONUS tool)
- *
- * Independent FREE-bucket tool: works for ANY OpenCode model, with or WITHOUT a
- * Pollinations API key. Acts as an "always free" fallback for image gen/edit,
- * outside the Pollinations economy (no Pollen, no cost guard).
- *
- * Backed by a public image playground (reverse-engineered open endpoint).
- * Direct-only: the request goes from the END USER's IP, respecting the
- * playground's own 20-generations/IP/day free limit (gen + edit SHARE the same
- * counter). Past the daily quota, prefer Pollinations models.
- */
-
+/** Always-free P-Image / P-Image-Edit playground client. */
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
-import * as fs from 'fs';
 import * as path from 'path';
-import {
-    httpsGet,
-    httpsPost,
-    ensureDir,
-    generateFilename,
-    getDefaultOutputDir,
-    formatFileSize,
-    sanitizeFilename,
-} from './shared.js';
+import { httpsGet, httpsPost, getDefaultOutputDir, formatFileSize } from './shared.js';
 import { emitStatusToast } from '../../server/toast.js';
 import { t } from '../../locales/index.js';
-
-// ─── Constants ─────────────────────────────────────────────────────────────
+import { persistArtifact, resolveArtifactInput } from './artifact-core.js';
 
 const PLAYGROUND = 'https://p-image-playground-production.up.railway.app';
 const STATUS_URL = `${PLAYGROUND}/api/generation-status`;
 const GEN_URL = `${PLAYGROUND}/api/generate-image`;
 const EDIT_URL = `${PLAYGROUND}/api/generate-image-edit`;
-const VALID_RATIOS = ['16:9', '1:1', '9:16'];
 
-interface QuotaStatus {
-    count: number;
-    max: number;
-    remaining: number;
-    canGenerate: boolean;
-}
+export const FREE_IMAGE_PROFILE = Object.freeze({
+    ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', 'custom', 'match_input_image'] as const,
+    customSize: { min: 256, max: 1440, multiple: 16 },
+    maxEditImages: 3,
+    acceptedMime: ['image/jpeg', 'image/png', 'image/webp'],
+});
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
+interface QuotaStatus { count: number; max: number; remaining: number; canGenerate: boolean; }
 
-async function fetchQuota(): Promise<QuotaStatus | null> {
+export async function getFreeImageQuota(): Promise<QuotaStatus | null> {
     try {
         const res = await httpsGet(STATUS_URL);
-        return JSON.parse(res.data.toString());
-    } catch {
-        return null;
-    }
+        const q = JSON.parse(res.data.toString());
+        return typeof q?.canGenerate === 'boolean' ? q : null;
+    } catch { return null; }
 }
 
-/**
- * Normalize an image input into a data: URI.
- * Accepts: data: URIs (passthrough), local file paths, http(s) URLs (downloaded).
- */
 async function toDataUri(img: string): Promise<string> {
-    if (img.startsWith('data:')) return img;
-
-    if (/^https?:\/\//i.test(img)) {
-        const res = await httpsGet(img);
-        const ext = (img.split('?')[0].split('.').pop() || 'jpeg').toLowerCase();
-        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        return `data:${mime};base64,${res.data.toString('base64')}`;
-    }
-
-    if (fs.existsSync(img)) {
-        const ext = path.extname(img).toLowerCase().replace('.', '');
-        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        return `data:${mime};base64,${fs.readFileSync(img).toString('base64')}`;
-    }
-
-    // Assume already raw base64
-    return img;
+    const a = await resolveArtifactInput(img, 'image');
+    if (!FREE_IMAGE_PROFILE.acceptedMime.includes(a.mime as any)) throw new Error(`Unsupported image type ${a.mime}; use JPEG, PNG or WebP`);
+    return `data:${a.mime};base64,${a.buf.toString('base64')}`;
 }
 
-// ─── Tool Definition ──────────────────────────────────────────────────────
+function validateCustomSize(width?: number, height?: number): string | null {
+    if (width === undefined || height === undefined) return 'custom aspect_ratio requires both width and height';
+    for (const [name, value] of [['width', width], ['height', height]] as const) {
+        if (!Number.isInteger(value) || value < 256 || value > 1440 || value % 16 !== 0) return `${name} must be 256..1440 and a multiple of 16`;
+    }
+    return null;
+}
 
 export const genEditImageFreeTool: ToolDefinition = tool({
     description: t('tools.gen_edit_image_free.desc'),
-
     args: {
         prompt: tool.schema.string().describe(t('tools.gen_edit_image_free.arg_prompt')),
-        images: tool.schema.array(tool.schema.string()).optional()
-            .describe(t('tools.gen_edit_image_free.arg_images')),
-        aspect_ratio: tool.schema.enum(['16:9', '1:1', '9:16']).optional()
-            .describe(t('tools.gen_edit_image_free.arg_aspect')),
+        images: tool.schema.array(tool.schema.string()).optional().describe(t('tools.gen_edit_image_free.arg_images')),
+        aspect_ratio: tool.schema.enum(['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', 'custom', 'match_input_image']).optional().describe(t('tools.gen_edit_image_free.arg_aspect')),
+        width: tool.schema.number().int().min(256).max(1440).optional().describe(t('tools.gen_edit_image_free.arg_width')),
+        height: tool.schema.number().int().min(256).max(1440).optional().describe(t('tools.gen_edit_image_free.arg_height')),
+        seed: tool.schema.number().int().min(0).max(2147483647).optional().describe(t('tools.gen_edit_image_free.arg_seed')),
+        prompt_upsampling: tool.schema.boolean().optional().describe(t('tools.gen_edit_image_free.arg_prompt_upsampling')),
+        turbo: tool.schema.boolean().optional().describe(t('tools.gen_edit_image_free.arg_turbo')),
         save_to: tool.schema.string().optional().describe(t('tools.gen_edit_image_free.arg_save_to')),
         filename: tool.schema.string().optional().describe(t('tools.gen_edit_image_free.arg_filename')),
     },
@@ -94,88 +60,63 @@ export const genEditImageFreeTool: ToolDefinition = tool({
     async execute(args, context) {
         const isEdit = Array.isArray(args.images) && args.images.length > 0;
         const mode = isEdit ? 'edit' : 'generate';
-
-        // Validate edit input count (playground supports 1-3)
-        if (isEdit && args.images!.length > 3) {
-            return t('tools.gen_edit_image_free.too_many_images');
+        if (isEdit && args.images!.length > FREE_IMAGE_PROFILE.maxEditImages) return t('tools.gen_edit_image_free.too_many_images', { max: FREE_IMAGE_PROFILE.maxEditImages });
+        if (!isEdit && args.aspect_ratio === 'match_input_image') return t('tools.gen_edit_image_free.invalid_params', { error: 'match_input_image is edit-only' });
+        if (isEdit && args.aspect_ratio === 'custom') return t('tools.gen_edit_image_free.invalid_params', { error: 'custom width/height is generation-only' });
+        if (!isEdit && args.aspect_ratio === 'custom') {
+            const e = validateCustomSize(args.width, args.height);
+            if (e) return t('tools.gen_edit_image_free.invalid_params', { error: e });
         }
 
-        // 1. Check the per-IP daily quota (read-only, free)
-        const quota = await fetchQuota();
-        if (quota && !quota.canGenerate) {
-            return t('tools.gen_edit_image_free.quota_exhausted', { max: quota.max });
-        }
-
-        context.metadata({ title: `🆓 ${isEdit ? 'Edit' : 'Image'} (free)` });
+        const quota = await getFreeImageQuota();
+        if (quota && !quota.canGenerate) return t('tools.gen_edit_image_free.quota_exhausted', { max: quota.max });
+        context.metadata({ title: `🆓 P-Image ${isEdit ? 'Edit' : ''}`.trim(), metadata: quota ? { remaining: quota.remaining, max: quota.max } : undefined });
         emitStatusToast('info', t('tools.gen_edit_image_free.working', { mode }), '🆓 gen_edit_image_free');
 
         try {
-            // 2. Build request and call the playground (from the user's IP)
-            let apiResp: any;
+            const aspect = args.aspect_ratio || (isEdit ? 'match_input_image' : '16:9');
+            const payload: any = { prompt: args.prompt, aspect_ratio: aspect, disable_safety_checker: false };
+            if (args.seed !== undefined) payload.seed = args.seed;
+            if (!isEdit && args.prompt_upsampling !== undefined) payload.prompt_upsampling = args.prompt_upsampling;
+            if (!isEdit && aspect === 'custom') { payload.width = args.width; payload.height = args.height; }
             if (isEdit) {
-                const processed = await Promise.all(args.images!.map(toDataUri));
-                const res = await httpsPost(EDIT_URL, { prompt: args.prompt, images: processed });
-                apiResp = JSON.parse(res.data.toString());
-            } else {
-                const aspect = args.aspect_ratio && VALID_RATIOS.includes(args.aspect_ratio)
-                    ? args.aspect_ratio : '16:9';
-                const res = await httpsPost(GEN_URL, {
-                    prompt: args.prompt,
-                    aspect_ratio: aspect,
-                    disable_safety_checker: false,
-                });
-                apiResp = JSON.parse(res.data.toString());
+                payload.images = await Promise.all(args.images!.map(toDataUri));
+                if (args.turbo !== undefined) payload.turbo = args.turbo;
             }
 
-            if (!apiResp || !apiResp.success || !apiResp.imageUrl) {
-                const reason = apiResp?.error || 'unknown';
-                emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: String(reason).substring(0, 60) }), '🆓 gen_edit_image_free', { freeTool: true });
-                return t('tools.gen_edit_image_free.api_error', { error: String(reason) });
+            const res = await httpsPost(isEdit ? EDIT_URL : GEN_URL, payload);
+            const apiResp = JSON.parse(res.data.toString());
+            if (!apiResp?.success || !apiResp.imageUrl) {
+                const reason = apiResp?.error || apiResp?.details || 'unknown response';
+                return t('tools.gen_edit_image_free.api_error', { error: String(reason).slice(0, 240) });
             }
-
-            // 3. Download the produced image and save it locally
             const dl = await httpsGet(apiResp.imageUrl);
 
             let outputDir = getDefaultOutputDir('images');
-            let filename = args.filename ? sanitizeFilename(args.filename) : undefined;
+            let filename = args.filename;
             if (args.save_to) {
-                if (args.save_to.match(/\.(png|jpe?g|webp)$/i)) {
-                    outputDir = path.dirname(args.save_to);
-                    filename = path.basename(args.save_to);
-                } else {
-                    outputDir = args.save_to;
-                }
+                if (/\.(png|jpe?g|webp|gif)$/i.test(args.save_to)) { outputDir = path.dirname(args.save_to); filename = path.basename(args.save_to); }
+                else outputDir = args.save_to;
             }
-            ensureDir(outputDir);
-            filename = filename || generateFilename(isEdit ? 'edit' : 'image', 'free', 'jpg');
-            const filePath = path.join(outputDir, filename.includes('.') ? filename : `${filename}.jpg`);
-            fs.writeFileSync(filePath, dl.data);
-
-            // 4. Re-read quota for an accurate "remaining" figure
-            const after = await fetchQuota();
-            const fileSize = fs.statSync(filePath).size;
-
-            const lines: string[] = [];
-            lines.push(t(isEdit ? 'tools.gen_edit_image_free.res_title_edit' : 'tools.gen_edit_image_free.res_title_gen'));
-            lines.push('━━━━━━━━━━━━━━━━━━');
-            lines.push(t('tools.gen_edit_image_free.res_prompt', { prompt: args.prompt.substring(0, 100) }));
-            lines.push(t('tools.gen_edit_image_free.res_file', { path: filePath }));
-            lines.push(t('tools.gen_edit_image_free.res_size', { size: formatFileSize(fileSize) }));
-            if (after) {
-                lines.push(t('tools.gen_edit_image_free.res_quota', { remaining: after.remaining, max: after.max }));
-            }
-            lines.push('');
-            lines.push(t('tools.gen_edit_image_free.res_note'));
-
-            const quotaMsg = after ? ` | ${after.remaining}/${after.max}/j` : '';
-            emitStatusToast('success', t('tools.gen_edit_image_free.success', { mode }) + quotaMsg, '🆓 gen_edit_image_free', { filePath, freeTool: true });
+            const persisted = persistArtifact(dl.data, { outputDir, filename, preferredExt: 'jpg' });
+            const after = await getFreeImageQuota();
+            const lines = [
+                t(isEdit ? 'tools.gen_edit_image_free.res_title_edit' : 'tools.gen_edit_image_free.res_title_gen'), '━━━━━━━━━━━━━━━━━━',
+                t('tools.gen_edit_image_free.res_prompt', { prompt: args.prompt.substring(0, 100) }),
+                t('tools.gen_edit_image_free.res_params', { aspect, seed: args.seed === undefined ? 'random' : String(args.seed) }),
+                t('tools.gen_edit_image_free.res_file', { path: persisted.filePath }),
+                t('tools.gen_edit_image_free.res_size', { size: formatFileSize(persisted.size) }),
+                t('tools.gen_edit_image_free.res_format', { format: (persisted.detected?.format || persisted.ext).toUpperCase() }),
+                after ? t('tools.gen_edit_image_free.res_quota', { remaining: after.remaining, max: after.max }) : '',
+                '', t('tools.gen_edit_image_free.res_note'),
+            ].filter(Boolean);
+            const quotaMsg = after ? ` | ${after.remaining}/${after.max}` : '';
+            emitStatusToast('success', t('tools.gen_edit_image_free.success', { mode }) + quotaMsg, '🆓 gen_edit_image_free', { filePath: persisted.filePath, freeTool: true });
             return lines.join('\n');
-
         } catch (err: any) {
             const msg = err.message || String(err);
-            emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: msg.substring(0, 60) }), '🆓 gen_edit_image_free', { freeTool: true });
-            // Graceful degradation: explicitly point to Pollinations models
-            return t('tools.gen_edit_image_free.degraded', { error: msg.substring(0, 150) });
+            emitStatusToast('error', t('tools.gen_edit_image_free.failed', { error: msg.substring(0, 80) }), '🆓 gen_edit_image_free', { freeTool: true });
+            return t('tools.gen_edit_image_free.degraded', { error: msg.substring(0, 200) });
         }
     },
 });

@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI 插件 - OpenCode版 (v6.5.0)
+# 🌸 Pollinations AI 插件 - OpenCode版 (v6.5.5)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -27,7 +27,13 @@
 
 ---
 
-## ✨ v6.5.0 新功能
+## ✨ v6.5.5 新功能
+
+- ✂️ **可靠的免密 RMBG**：`remove_background` 现在采用 **bgeraser reverse → ClearBackdrop fallback**。活动插件已移除 BackgroundCut、密钥存储/轮换和 `rmbg_keys`。
+- 🎞️ **修正免费 P‑Video 契约**：已验证输出 1–10 秒，720p/1080p、24/48 fps、7 种宽高比、seed/draft/提示词增强/音频，以及可选首帧图像/音频；每 IP 配额实时读取。
+- 🖼️ **扩展免费图像生成/编辑**：支持编辑 1–3 张图像、完整宽高比、自定义 256–1440 尺寸、seed、提示词增强和编辑 turbo，并实时读取每 IP 配额。
+- 🧬 **真实媒体字节优先**：reverse 图像工具根据 magic bytes 保存 JPEG/PNG/WebP，修复 JPEG 响应被错误命名为 `.png` 的问题。
+- 🌍 **六语言一致性**：运行时文案、onboarding、六份 README 与维护中的技术手册已与当前免费工具行为对齐。
 
 - 🧊 **3D 生成 (`polli_gen_3d`)**：支持生成标准 `.glb` 3D 模型（`trellis-2`, `hyper3d-rodin`），内置 Cost Guard 预警与缓存恢复。
 - 🛡️ **彻底杜绝重复扣费**：对话重试严格限制为 HTTP 429；超时和网络中断绝不会重新提交付费请求。
@@ -53,12 +59,12 @@
 - 🌐 `polli_web_search` : 面向全球互联与深度资料调研辅助模型 (`gemini-search`, `perplexity...`)。
 
 ### 🧰 免费的创作者辅助系统 (永远可以使用 — 无需密钥)
-- 🆓 `gen_edit_image_free` : 免费生成与编辑图像（约 20 次/天，任何模型，无密钥）。
-- 🆓 `gen_video_free` : 免费文生视频，支持首帧图像与音频输入（约 5 次/天，无密钥）。
-- 🧹 `object_remover` : 提示词即时物体抹除（30-120秒，无密钥）。
-- 📐 `image_upscaler` : 免费 2x/4x 图像无损放大（30-120秒，无密钥）。
-- ✨ `image_enhancer` : AI 图像画质增强 — 降噪、锐化、画质修复（30-120秒，无密钥）。
-- ✂️ `remove_background` : 超快原生 AI 自动抠图功能 (rmbg / bgeraser)。
+- 🆓 `gen_edit_image_free`：免费图像生成与 **1–3 张图像编辑**，实时读取每 IP 配额，支持完整宽高比、自定义 256–1440 尺寸、seed、提示词增强和编辑 turbo。无需密钥。
+- 🆓 `gen_video_free`：免费 P‑Video，已验证 **1–10 秒**，支持 720p/1080p、24/48 fps、7 种宽高比、seed/draft/提示词增强/音频，以及可选首帧图像或音频。实时读取每 IP 配额，无需密钥。
+- 🧹 `object_remover`：免费按提示词移除对象；返回媒体通过 magic bytes 校验，并按真实格式保存扩展名。
+- 📐 `image_upscaler`：免费 2x/4x 放大；JPEG/PNG/WebP 根据真实字节识别，不再根据文件名猜测。
+- ✨ `image_enhancer`：免费 1K/2K/4K 图像增强（降噪、锐化、修复），自动识别真实输出格式。
+- ✂️ `remove_background`：无需密钥的背景移除，采用可靠链路 **bgeraser reverse → ClearBackdrop fallback**。无付费 provider、无密钥轮换；自动识别真实格式/扩展名。
 - 🛠️ `gen_qrcode`、`gen_diagram`、`gen_palette`、`extract_frames`、`extract_audio`、`file_to_url` 实用开发者辅助。
 
 ### 💻 本地终端命令集列表

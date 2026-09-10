@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin para OpenCode (v6.5.0)
+# 🌸 Pollinations AI Plugin para OpenCode (v6.5.5)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -27,7 +27,13 @@
 
 ---
 
-## ✨ Novedades v6.5.0
+## ✨ Novedades v6.5.5
+
+- ✂️ **RMBG resistente sin clave**: `remove_background` usa ahora **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, el almacenamiento/rotación de claves y `rmbg_keys` se eliminaron del plugin activo.
+- 🎞️ **Contrato P‑Video gratuito corregido**: salida verificada 1–10 s, 720p/1080p, 24/48 fps, siete relaciones, seed/draft/mejora de prompt/audio e imagen inicial/audio opcionales; cuota por IP leída en vivo.
+- 🖼️ **Generación/edición de imagen gratis ampliada**: edición de 1–3 imágenes, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición con cuota por IP en vivo.
+- 🧬 **Mandandan los bytes reales del medio**: las herramientas reverse guardan JPEG/PNG/WebP según magic bytes, corrigiendo respuestas JPEG antes guardadas con nombre `.png`.
+- 🌍 **Convergencia en seis idiomas**: runtime, onboarding, los seis README y el manual técnico mantenido reflejan el comportamiento actual.
 
 - 🧊 **Generación 3D (`polli_gen_3d`)**: Generación de modelos 3D (`trellis-2`, `hyper3d-rodin`) en formato estándar `.glb` con protección Cost Guard y recuperación desde caché.
 - 🛡️ **Cero Doble Facturación**: Reintentos de chat estrictamente limitados al error 429; los timeouts y cortes de red nunca vuelven a enviar peticiones de pago.
@@ -53,12 +59,12 @@ Aparte de conversar, cuando conectas tu API Key, el Agente OpenCode adquiere sup
 - 🌐 `polli_web_search` : Búsqueda web inteligente y conocimiento en tiempo real (`gemini-search`, `perplexity...`).
 
 ### 🧰 Herramientas de Creador Gratuitas (Siempre disponibles — sin clave API)
-- 🆓 `gen_edit_image_free` : Generación y edición de imágenes gratis (~20/día, cualquier modelo, sin clave).
-- 🆓 `gen_video_free` : Texto-a-vídeo gratis con imagen y audio de entrada opcionales (~5/día, sin clave).
-- 🧹 `object_remover` : Eliminación de objetos por prompt directamente (30-120s, sin clave).
-- 📐 `image_upscaler` : Aumento de resolución 2x/4x gratis (30-120s, sin clave).
-- ✨ `image_enhancer` : Mejora de imagen por IA — reducción de ruido, nitidez, restauración (30-120s, sin clave).
-- ✂️ `remove_background` : Eliminación de fondo mediante rmbg (bgeraser.com) — gratis.
+- 🆓 `gen_edit_image_free` : Generación gratis y **edición de 1–3 imágenes**, cuota por IP leída en vivo, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición. Sin clave.
+- 🆓 `gen_video_free` : P‑Video gratis, **1–10 s verificados**, 720p/1080p, 24/48 fps, 7 relaciones, seed/draft/mejora de prompt/audio, con imagen inicial o audio opcionales. Cuota por IP en vivo, sin clave.
+- 🧹 `object_remover` : Eliminación gratis de objetos por prompt; el resultado se valida por magic bytes y se guarda con su extensión real.
+- 📐 `image_upscaler` : Aumento 2x/4x gratis; la salida JPEG/PNG/WebP se detecta por los bytes reales, nunca por el nombre del archivo.
+- ✨ `image_enhancer` : Mejora gratis 1K/2K/4K (reducción de ruido, nitidez y restauración), con detección del formato real.
+- ✂️ `remove_background` : Eliminación de fondo sin clave con cadena resistente **bgeraser reverse → fallback ClearBackdrop**. Sin proveedor de pago ni rotación de claves; formato/extensión reales autodetectados.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Utilidades para desarrolladores.
 
 ### 💻 Lista Completa de Comandos en Terminal
