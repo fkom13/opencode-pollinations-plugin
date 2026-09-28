@@ -107,6 +107,7 @@ export interface PollinationsConfigV5 {
     };
 
     enablePaidTools: boolean;
+    communityModels: { enabled: boolean; };
     enableDeveloperTools: boolean; // Expose diagnostic/fuzzing tools (default: false)
     costThreshold: number; // Default 0.15 🌻
     costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
@@ -150,6 +151,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
         enter: { agent: 'free/openai-fast' }
     },
     enablePaidTools: false,
+    communityModels: { enabled: true },
     enableDeveloperTools: false,
     costThreshold: 0.15, // Default 0.15 🌻
     costConfirmationRequired: true, // Ask confirmation when cost exceeds threshold
@@ -216,7 +218,7 @@ export function loadConfig(): PollinationsConfigV5 {
 }
 
 function readConfigFromDisk(): PollinationsConfigV5 {
-    let config: any = { ...DEFAULT_CONFIG_V5 };
+    let config: any = { ...DEFAULT_CONFIG_V5, communityModels: { ...DEFAULT_CONFIG_V5.communityModels } };
     let finalKey: string | undefined = undefined;
     let source: string = 'none';
 
@@ -243,7 +245,7 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         try {
             const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
             const custom = JSON.parse(raw);
-            config = { ...config, ...custom }; // Helper: We load the rest of config anyway
+            config = { ...config, ...custom, communityModels: { ...DEFAULT_CONFIG_V5.communityModels, ...(custom.communityModels || {}) } }; // Preserve nested defaults
             if (custom.apiKey && custom.apiKey.length > 5) configKey = custom.apiKey;
         } catch (e) {
             logConfig(`ERROR reading config.json: ${e}`);

@@ -33,6 +33,12 @@ export interface PollinationsModel {
     aliases: string[];
     pricing: ModelPricing;
     paid_only: boolean;
+    community: boolean;
+    source: 'official' | 'community';
+    agent?: boolean;
+    base_model?: string;
+    health?: { status?: string; success_rate?: number | null; requests?: number };
+    supported_endpoints?: string[];
     supportsI2X: boolean;       // input_modalities includes "image"
     outputType: ModelCategory;  // Derived from output_modalities[0]
     voices?: string[];

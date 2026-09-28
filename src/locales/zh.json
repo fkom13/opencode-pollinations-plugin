@@ -48,7 +48,11 @@
       "timeouts_long_role": "长时间生成的超时",
       "timeouts_max_role": "绝对超时上限",
       "timeouts_video_role": "视频生成超时",
-      "timeouts_3d_role": "3D 生成超时"
+      "timeouts_3d_role": "3D 生成超时",
+      "community_role": "显示支持工具调用的可靠 Community 聊天模型",
+      "community_state": "Community 模型：{state}",
+      "community_updated": "Community 模型：{state}（重启 OpenCode 以刷新模型列表）",
+      "community_values": "可选值：on、off"
     },
     "generic": {
       "add_key_hint": "💡 使用 /poll connect <key> 添加 API 密钥。\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",

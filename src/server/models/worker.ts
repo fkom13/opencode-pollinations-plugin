@@ -69,7 +69,7 @@ export class ToolRegistryWorker {
                     const cost = estimateVideoCost(m.name, 6);
                     const price = cost ? `${per1pollen(cost)} vidéos` : 'inconnu';
                     const specs = `${m.durationRange ? m.durationRange.join('-') + 's' : '?s'} / ${m.aspectRatios ? m.aspectRatios.length : '?'} ratios`;
-                    const isCommunity = (m as any).community === true || m.name.includes('/');
+                    const isCommunity = m.community === true;
                     const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                     videoTable += `| \`${m.name}\` ${badge} | ${m.supportsI2X ? 'T2V/I2V' : 'T2V'} | ${m.output_modalities?.includes('audio') || m.name === 'grok-video' ? '✅' : '❌'} | ${price} | ${specs} |\n`;
                 }
@@ -94,7 +94,7 @@ export class ToolRegistryWorker {
                 for (const m of imageModels.slice(0, 20)) {
                     const cost = estimateImageCost(m.name);
                     const price = cost ? `${per1pollen(cost)} images` : 'inconnu';
-                    const isCommunity = (m as any).community === true || m.name.includes('/');
+                    const isCommunity = m.community === true;
                     const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                     imageTable += `| \`${m.name}\` ${badge} | ${m.supportsI2X ? '✅' : '❌'} | Standard | ${price} |\n`;
                 }
@@ -120,7 +120,7 @@ export class ToolRegistryWorker {
                 audioTable += `|--------|-----------|---------|\n`;
 
                 for (const m of audioModels) {
-                    const isCommunity = (m as any).community === true || m.name.includes('/');
+                    const isCommunity = m.community === true;
                     const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                     const duration = m.durationRange ? `${m.durationRange.join('-')}s` : 'Standard';
                     audioTable += `| \`${m.name}\` ${badge} | ${duration} | Standard |\n`;
@@ -184,7 +184,7 @@ export class ToolRegistryWorker {
                     searchTable += `|--------|---------------------|\n`;
 
                     for (const m of searchModels) {
-                        const isCommunity = (m as any).community === true || m.name.includes('/');
+                        const isCommunity = m.community === true;
                         const badge = isCommunity ? '[👥]' : (m.paid_only ? '[💎 Paid]' : '[🌿 Quest]');
                         // Clean markdown piping conflicts
                         let cleanDesc = m.description.replace(/\|/g, '-');

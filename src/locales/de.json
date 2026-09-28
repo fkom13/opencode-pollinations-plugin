@@ -48,7 +48,11 @@
       "timeouts_long_role": "Timeout für lange Generierungen",
       "timeouts_max_role": "Absolutes Timeout-Limit",
       "timeouts_video_role": "Timeout für Video-Generierung",
-      "timeouts_3d_role": "Timeout für 3D-Generierung"
+      "timeouts_3d_role": "Timeout für 3D-Generierung",
+      "community_role": "Zuverlässige Community-Chatmodelle mit Tool-Calling anzeigen",
+      "community_state": "Community-Modelle: {state}",
+      "community_updated": "Community-Modelle: {state} (OpenCode neu starten, um die Modellliste zu aktualisieren)",
+      "community_values": "Werte: on, off"
     },
     "generic": {
       "add_key_hint": "💡 Verwenden Sie /poll connect <key>, um einen API-Schlüssel hinzuzufügen.\\n💡 Mit `/poll login` verbinden (empfohlen, 1-Klick-OAuth). Manuelles BYOK: `/poll connect sk_...`.",

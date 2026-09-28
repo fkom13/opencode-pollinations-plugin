@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+
+const root = path.resolve(__dirname, '../..');
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
+
+let passed = 0;
+function ok(name, fn) {
+  try { fn(); console.log(`✓ ${name}`); passed++; }
+  catch (e) { console.error(`✗ ${name}: ${e.message}`); process.exitCode = 1; }
+}
+
+console.log('\n🧪 v7 / OpenCode V2 Compatibility Contracts\n');
+ok('package has OpenCode v2 dependency', () => assert(pkg.dependencies['@opencode/plugin']));
+ok('package keeps OpenCode v1 dependency', () => assert(pkg.dependencies['@opencode-ai/plugin']));
+ok('package exposes ./tui bridge', () => assert(pkg.exports['./tui']));
+
+const index = read('src/index.ts');
+ok('dual export retains V1 server and V2 setup', () => assert(index.includes('server: PollinationsPlugin') && index.includes('...PollinationsV2')));
+
+const setup = read('bin/setup.js');
+ok('setup detects v-prefixed OpenCode v2 versions', () => assert(setup.includes('v?(\\d+)')));
+
+const config = read('src/server/config.ts');
+ok('community models default enabled', () => assert(/communityModels:\s*\{\s*enabled:\s*true\s*\}/.test(config)));
+
+const gen = read('src/server/generate-config.ts');
+ok('chat requires tool calling', () => assert(gen.includes('if (m.tools !== true) return')));
+ok('managed agents excluded from primary chat catalog', () => assert(gen.includes('if (m.agent === true) return')));
+ok('community toggle controls community chat exposure', () => assert(gen.includes('config.communityModels?.enabled === false')));
+
+const fetcher = read('src/server/models/fetcher.ts');
+ok('community/source metadata preserved', () => assert(fetcher.includes("source: (raw.community") && fetcher.includes('community: raw.community')));
+ok('agent metadata preserved', () => assert(fetcher.includes('agent: raw.agent === true')));
+ok('health and endpoints metadata preserved', () => assert(fetcher.includes('health: raw.health') && fetcher.includes('supported_endpoints: raw.supported_endpoints')));
+
+const worker = read('src/server/models/worker.ts');
+ok('slash heuristic for community removed', () => assert(!worker.includes("name.includes('/')")));
+
+const commands = read('src/server/commands.ts');
+ok('/poll config community command exists', () => assert(commands.includes("key === 'community'")));
+
+
+const v2 = read('src/v2.ts');
+ok('v2 registers provider with transform API', () => assert(v2.includes('ctx.provider.transform')));
+ok('v2 registers tools with transform API', () => assert(v2.includes('ctx.tool.transform')));
+ok('v2 forwards legacy metadata to tool progress', () => assert(v2.includes('await toolContext.progress(metadata)')));
+ok('v2 cleanup closes proxy and worker', () => assert(v2.includes('ToolRegistryWorker.stop()') && v2.includes('proxy.close()')));
+
+if (!process.exitCode) console.log(`\n📊 v7 contracts: ${passed} passed, 0 failed\n`);

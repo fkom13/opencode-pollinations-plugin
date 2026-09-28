@@ -14,6 +14,7 @@ const require = createRequire(import.meta.url);
 
 import { log } from './server/logger.js';
 import { ModelRegistry } from './server/models/index.js';
+import { PollinationsV2 } from './v2.js';
 
 const sessionModels = new Map<string, string>();
 
@@ -161,4 +162,4 @@ export const PollinationsPlugin: Plugin = async (ctx) => {
     };
 };
 
-export default PollinationsPlugin;
+export default { ...PollinationsV2, server: PollinationsPlugin };

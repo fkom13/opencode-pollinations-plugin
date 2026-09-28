@@ -670,6 +670,7 @@ ${t('commands.config.table_headers')}
 ${t('commands.config.table_divider')}
 | **apiKey** | \`${k}\` | ${t('commands.config.api_key_role')} | \`/poll connect <key>\` |
 | **mode** | \`${config.mode}\` | ${t('commands.config.mode_role')} | \`/poll mode <quest/quest_only/paid/manual>\` |
+| **communityModels.enabled**| \`${config.communityModels?.enabled ?? true}\` | ${t('commands.config.community_role')} | \`/poll config community <on/off>\` |
 | **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | ${t('commands.config.enablePaidTools_role')} | \`/poll config enablePaidTools <true/false>\` |
 | **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | ${t('commands.config.costConfirmationRequired_role')} | \`/poll config costConfirmationRequired <true/false>\` |
 | **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | ${t('commands.config.costThreshold_role')} | \`/poll config costThreshold <X>\` |
@@ -693,6 +694,21 @@ ${t('commands.config.table_divider')}
             handled: true,
             response: markdownResponse
         };
+    }
+
+
+    if (key === 'community') {
+        const config = loadConfig();
+        if (!value) {
+            return { handled: true, response: `✅ ${t('commands.config.community_state', { state: config.communityModels?.enabled !== false ? 'on' : 'off' })}` };
+        }
+        const normalized = value.toLowerCase();
+        if (!['on', 'off', 'true', 'false'].includes(normalized)) {
+            return { handled: true, error: t('commands.config.community_values') };
+        }
+        const enabled = normalized === 'on' || normalized === 'true';
+        saveConfig({ communityModels: { enabled } });
+        return { handled: true, response: `✅ ${t('commands.config.community_updated', { state: enabled ? 'on' : 'off' })}` };
     }
 
     if (key === 'lang' && value) {

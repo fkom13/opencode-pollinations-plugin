@@ -28,6 +28,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./tui": {
+      "types": "./dist/tui.d.ts",
+      "default": "./dist/tui.js"
     }
   },
   "bin": {
@@ -40,13 +44,14 @@
   },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
-    "test": "npm run build && node scripts/tests/test-suite.cjs && node scripts/tests/test-v65.cjs && node scripts/tests/test-i18n.cjs && node scripts/tests/test-ux-vocab.cjs",
+    "test": "npm run build && node scripts/tests/test-suite.cjs && node scripts/tests/test-v65.cjs && node scripts/tests/test-v7.cjs && node scripts/tests/test-i18n.cjs && node scripts/tests/test-ux-vocab.cjs",
     "test:unit": "node scripts/tests/test-suite.cjs",
     "test:v65": "node scripts/tests/test-v65.cjs",
     "test:i18n": "node scripts/tests/test-i18n.cjs",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build && npm run test:unit && npm run test:v65 && npm run test:i18n && npm run test:vocab",
-    "test:vocab": "node scripts/tests/test-ux-vocab.cjs"
+    "prepublishOnly": "npm run build && npm run test:unit && npm run test:v65 && npm run test:v7 && npm run test:i18n && npm run test:vocab",
+    "test:vocab": "node scripts/tests/test-ux-vocab.cjs",
+    "test:v7": "node scripts/tests/test-v7.cjs"
   },
   "files": [
     "dist",
@@ -56,6 +61,7 @@
   ],
   "dependencies": {
     "@opencode-ai/plugin": "^1.0.85",
+    "@opencode/plugin": "^2.0.18",
     "qrcode": "^1.5.4",
     "zod": "^3.25.76"
   },

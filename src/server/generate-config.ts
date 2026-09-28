@@ -147,7 +147,9 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
 
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
-                if (m.tools !== true || m.community === true) return; // Exclude non-tool and community models
+                if (m.tools !== true) return; // OpenCode chat models must support tools
+                if (m.agent === true) return; // Managed Agents are discovered separately; do not nest them as the primary OpenCode model
+                if (m.community === true && config.communityModels?.enabled === false) return; // Community exposed by default; user can hide
                 const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
                 if (m.paid_only) {

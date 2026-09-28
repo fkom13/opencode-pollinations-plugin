@@ -8,6 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+import { spawnSync } from 'child_process';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -41,11 +42,24 @@ function saveJson(file, data) {
     fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
+function detectOpenCodeMajor() {
+    const candidates = [process.env.OPENCODE_BIN, 'opencode'].filter(Boolean);
+    for (const command of candidates) {
+        try {
+            const result = spawnSync(command, ['--version'], { encoding: 'utf8', timeout: 3000 });
+            const text = `${result.stdout || ''} ${result.stderr || ''}`;
+            const match = text.match(/(?:^|\s)v?(\d+)\.(\d+)\.(\d+)/);
+            if (match) return Number(match[1]);
+        } catch { }
+    }
+    return null;
+}
+
 function ensurePlugin(config) {
-    const plugins = Array.isArray(config.plugin)
-        ? [...config.plugin]
-        : Array.isArray(config.plugins)
-            ? [...config.plugins]
+    const plugins = Array.isArray(config.plugins)
+        ? [...config.plugins]
+        : Array.isArray(config.plugin)
+            ? [...config.plugin]
             : [];
 
     const already = plugins.some((p) => {
@@ -63,13 +77,16 @@ function ensurePlugin(config) {
         plugins.push(PLUGIN_SPEC);
     }
 
-    // Prefer singular "plugin" (OpenCode current) but keep existing key if present
-    if (Array.isArray(config.plugins) && !Array.isArray(config.plugin)) {
-        config.plugins = plugins;
-    } else {
-        config.plugin = plugins;
-        if (config.plugins) delete config.plugins;
-    }
+    // Preserve an explicit existing generation. On a fresh config, detect
+    // OpenCode: v2 uses `plugins`, v1 uses `plugin`.
+    let targetKey;
+    if (Array.isArray(config.plugins) && !Array.isArray(config.plugin)) targetKey = 'plugins';
+    else if (Array.isArray(config.plugin) && !Array.isArray(config.plugins)) targetKey = 'plugin';
+    else targetKey = detectOpenCodeMajor() >= 2 ? 'plugins' : 'plugin';
+
+    config[targetKey] = plugins;
+    const otherKey = targetKey === 'plugins' ? 'plugin' : 'plugins';
+    if (config[otherKey] !== undefined) delete config[otherKey];
 
     return { config, already, count: plugins.length };
 }
@@ -86,6 +103,7 @@ Usage:
 Config file:
   $OPENCODE_CONFIG_DIR/opencode.json
   or ~/.config/opencode/opencode.json
+  (auto-detects OpenCode v1 plugin vs v2 plugins on fresh configs)
 
 After install:
   1. Restart OpenCode
