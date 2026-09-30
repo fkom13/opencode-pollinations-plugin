@@ -97,7 +97,7 @@ function formatName(id: string, censored: boolean = true): string {
 
 // --- MAIN GENERATOR logic ---
 
-export async function generatePollinationsConfig(forceApiKey?: string, forceStrict: boolean = false): Promise<OpenCodeModel[]> {
+export async function generatePollinationsConfig(forceApiKey?: string, forceStrict: boolean = false, options: { network?: boolean } = {}): Promise<OpenCodeModel[]> {
     const config = loadConfig();
     const modelsOutput: OpenCodeModel[] = [];
 
@@ -115,22 +115,37 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
     });
 
     // 1. FREE UNIVERSE
-    try {
-        // Switch to main models endpoint (User provided curl confirms it has 'description')
-        const freeList = await fetchJson('https://text.pollinations.ai/models');
-        const list = Array.isArray(freeList) ? freeList : (freeList.data || []);
-
-        list.forEach((m: any) => {
-            const mapped = mapModel(m, 'free/', '');
-            modelsOutput.push(mapped);
+    // V2 startup uses network:false so the provider is registered immediately.
+    // The live catalog is refreshed after setup without blocking OpenCode.
+    if (options.network === false) {
+        modelsOutput.push({
+            id: 'free/openai-fast',
+            name: 'GPT-OSS 20B Reasoning (Free)',
+            object: 'model',
+            variants: {},
+            tool_call: true,
+            reasoning: true,
+            modalities: { input: ['text'], output: ['text'] },
+            limit: { context: 128000, output: 32768 }
         });
-        log(`Fetched ${modelsOutput.length} Free models.`);
-    } catch (e) {
-        log(`Error fetching Free models: ${e}`);
-        // Fallback Robust (Offline support)
-        modelsOutput.push({ id: "free/openai-fast", name: "GPT-5 Nano (Fallback)", object: "model", variants: {} });
-        modelsOutput.push({ id: "free/openai", name: "OpenAI (Fallback)", object: "model", variants: {} });
-        modelsOutput.push({ id: "free/gemini", name: "Gemini Flash (Fallback)", object: "model", variants: {} });
+        log(`Using immediate Free fallback (openai-fast) for startup.`);
+    } else {
+        try {
+            // Switch to main models endpoint (User provided curl confirms it has 'description')
+            const freeList = await fetchJson('https://text.pollinations.ai/models');
+            const list = Array.isArray(freeList) ? freeList : (freeList.data || []);
+
+            list.forEach((m: any) => {
+                const mapped = mapModel(m, 'free/', '');
+                modelsOutput.push(mapped);
+            });
+            log(`Fetched ${modelsOutput.length} Free models.`);
+        } catch (e) {
+            log(`Error fetching Free models: ${e}`);
+            // Fallback Robust (Offline support)
+            modelsOutput.push({ id: "free/openai-fast", name: "GPT-OSS 20B Reasoning (Fallback)", object: "model", variants: {}, tool_call: true, reasoning: true, modalities: { input: ['text'], output: ['text'] } });
+            modelsOutput.push({ id: "free/openai", name: "OpenAI (Fallback Alias)", object: "model", variants: {}, tool_call: true, modalities: { input: ['text'], output: ['text'] } });
+        }
     }
 
     // ALIAS Removed for Clean Config

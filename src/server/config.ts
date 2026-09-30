@@ -2,6 +2,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
+
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 // PATHS
 // PATHS & CROSS-PLATFORM LOGIC
@@ -134,7 +137,7 @@ export interface PollinationsConfigV5 {
 // LOAD PACKAGE VERSION
 let PKG_VERSION = '5.2.0';
 try {
-    const pkgPath = path.join(__dirname, '../../package.json');
+    const pkgPath = path.join(MODULE_DIR, '../../package.json');
     if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
         PKG_VERSION = pkg.version;

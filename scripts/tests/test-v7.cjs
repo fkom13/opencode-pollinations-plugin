@@ -16,7 +16,6 @@ function ok(name, fn) {
 console.log('\n🧪 v7 / OpenCode V2 Compatibility Contracts\n');
 ok('package has OpenCode v2 dependency', () => assert(pkg.dependencies['@opencode/plugin']));
 ok('package keeps OpenCode v1 dependency', () => assert(pkg.dependencies['@opencode-ai/plugin']));
-ok('package exposes ./tui bridge', () => assert(pkg.exports['./tui']));
 
 const index = read('src/index.ts');
 ok('dual export retains V1 server and V2 setup', () => assert(index.includes('server: PollinationsPlugin') && index.includes('...PollinationsV2')));
@@ -47,6 +46,8 @@ ok('/poll config community command exists', () => assert(commands.includes("key 
 const v2 = read('src/v2.ts');
 ok('v2 registers provider with transform API', () => assert(v2.includes('ctx.provider.transform')));
 ok('v2 registers tools with transform API', () => assert(v2.includes('ctx.tool.transform')));
+ok('v2 registers /poll through command transform', () => assert(v2.includes('ctx.command.transform') && v2.includes("name: 'poll'")));
+ok('v2 /poll responds through synthetic session message', () => assert(v2.includes('ctx.session.synthetic')));
 ok('v2 forwards legacy metadata to tool progress', () => assert(v2.includes('await toolContext.progress(metadata)')));
 ok('v2 cleanup closes proxy and worker', () => assert(v2.includes('ToolRegistryWorker.stop()') && v2.includes('proxy.close()')));
 

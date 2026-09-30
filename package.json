@@ -27,11 +27,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./tui": {
-      "types": "./dist/tui.d.ts",
-      "default": "./dist/tui.js"
+      "default": "./dist/index.js",
+      "import": "./dist/index.js"
     }
   },
   "bin": {

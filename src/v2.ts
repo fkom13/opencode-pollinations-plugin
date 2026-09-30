@@ -5,6 +5,7 @@ import type { AddressInfo } from 'net';
 import { createRequire } from 'module';
 import { generatePollinationsConfig } from './server/generate-config.js';
 import { loadConfig, migrateLegacyConfig } from './server/config.js';
+import { handleCommand } from './server/commands.js';
 import { handleChatCompletion } from './server/proxy.js';
 import { createToolRegistry } from './tools/index.js';
 import { ModelRegistry } from './server/models/index.js';
@@ -106,31 +107,49 @@ export const PollinationsV2 = Plugin.define({
     const proxy = await startProxyV2();
     if (!proxy.port) throw new Error('Pollinations local proxy failed to start');
     const localBaseUrl = `http://127.0.0.1:${proxy.port}/v1`;
-
-    try {
-      const config = loadConfig();
-      await ModelRegistry.refresh(config.apiKey);
-      const worker = await import('./server/models/worker.js');
-      worker.ToolRegistryWorker.start();
-    } catch (e) {
-      log(`[V2] ModelRegistry init failed (fallback remains available): ${e}`);
-    }
-
     const providerID = Provider.ID.make('pollinations');
-    const modelsArray = await generatePollinationsConfig();
-    const models = modelsArray.map((m) => mapV2Model(m, providerID));
+    let disposed = false;
+
+    // Register immediately from disk cache/fallback. Never block V2 startup on network.
+    let currentModels = (await generatePollinationsConfig(undefined, false, { network: false }))
+      .map((m) => mapV2Model(m, providerID));
+
     await ctx.provider.transform((editor) => {
-      editor.add({
-        info: {
-          ...Provider.Info.empty(providerID),
-          name: `Pollinations AI (v${version})`,
-          activation: 'enabled',
-          package: '@opencode/ai/providers/openai-compatible',
-          settings: { baseURL: localBaseUrl },
-        },
-        models,
-      });
+      const existing = editor.get('pollinations');
+      if (existing) {
+        editor.update('pollinations', (info) => {
+          info.name = `Pollinations AI (v${version})`;
+          info.activation = 'enabled';
+          info.package = '@opencode/ai/providers/openai-compatible';
+          info.settings = { ...(info.settings ?? {}), baseURL: localBaseUrl };
+        });
+        editor.models.set('pollinations', currentModels);
+      } else {
+        editor.add({
+          info: {
+            ...Provider.Info.empty(providerID),
+            name: `Pollinations AI (v${version})`,
+            activation: 'enabled',
+            package: '@opencode/ai/providers/openai-compatible',
+            settings: { baseURL: localBaseUrl },
+          },
+          models: currentModels,
+        });
+      }
     });
+
+    // V2 keeps provider/model inventories as replayable transforms. Explicitly
+    // replay them after registration; otherwise the transform may only take
+    // effect on a later external provider.updated event.
+    await ctx.model.transform((editor) => {
+      for (const model of currentModels) {
+        editor.update('pollinations', model.id, (draft) => {
+          Object.assign(draft, model);
+        });
+      }
+    });
+    await ctx.provider.reload();
+    await ctx.model.reload();
 
     const legacyTools = createToolRegistry();
     await ctx.tool.transform((editor) => {
@@ -155,17 +174,63 @@ export const PollinationsV2 = Plugin.define({
       }
     });
 
-    // V1 chat.message only cached the active session model. In V2 the model is
-    // known at request-context time, which is the appropriate equivalent.
     await ctx.session.hook('context', (event) => {
       if (String(event.model.providerID) === 'pollinations') {
         log(`[V2] Session ${event.sessionID} using ${event.model.providerID}/${event.model.id}`);
       }
     });
 
-    log(`[V2] Registered provider with ${models.length} models and ${Object.keys(legacyTools).length} tools.`);
+    // Native V2 slash command: avoids depending on the external TUI plugin host.
+    await ctx.command.transform((editor) => {
+      editor.add({
+        name: 'poll',
+        description: 'Pollinations account, quests, models and configuration',
+        async execute(input) {
+          const raw = String(input.prompt?.text || '').trim();
+          const args = raw.replace(/^\/?poll(?:inations)?\b/i, '').trim();
+          const command = `/poll ${args || 'help'}`;
+          const result = await handleCommand(command);
+          const text = result.error ? `❌ ${result.error}` : (result.response || '🌸 Pollinations');
+          await ctx.session.synthetic({
+            sessionID: input.sessionID,
+            text,
+            description: 'Pollinations command',
+            metadata: { plugin: 'pollinations', command },
+            delivery: input.delivery,
+            resume: false,
+          });
+        },
+      });
+    });
+    await ctx.command.reload();
+
+    try {
+      const worker = await import('./server/models/worker.js');
+      worker.ToolRegistryWorker.start();
+    } catch (e) {
+      log(`[V2] Tool registry worker start failed: ${e}`);
+    }
+
+    log(`[V2] Provider registered immediately with ${currentModels.length} cached/fallback models and ${Object.keys(legacyTools).length} tools.`);
+
+    // Refresh catalog asynchronously; replay provider/model transforms once live data arrives.
+    void (async () => {
+      try {
+        const config = loadConfig();
+        await ModelRegistry.refresh(config.apiKey);
+        const live = await generatePollinationsConfig();
+        if (disposed) return;
+        currentModels = live.map((m) => mapV2Model(m, providerID));
+        await ctx.provider.reload();
+        await ctx.model.reload();
+        log(`[V2] Live catalog refreshed: ${currentModels.length} models.`);
+      } catch (e) {
+        log(`[V2] Live catalog refresh failed; keeping startup catalog: ${e}`);
+      }
+    })();
 
     return async () => {
+      disposed = true;
       try {
         const worker = await import('./server/models/worker.js');
         worker.ToolRegistryWorker.stop();
