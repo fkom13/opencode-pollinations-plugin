@@ -7,7 +7,7 @@
  * Rule 2 (costConfirmationRequired): Suspends execution if cost > threshold, returns an ID.
  */
 
-import { loadConfig } from '../../server/config.js';
+import { loadConfig, CONFIG_DIR } from '../../server/config.js';
 import { emitStatusToast } from '../../server/toast.js';
 import { ModelRegistry } from '../../server/models/index.js';
 import { formatCost } from './shared.js';
@@ -29,7 +29,7 @@ export interface CostCheckResult {
 
 // ─── Pending Requests Store ────────────────────────────────────────────────
 
-const PENDING_STORE_PATH = path.join(os.homedir(), '.config', 'opencode', 'pollinations_pending_requests.json');
+const PENDING_STORE_PATH = path.join(CONFIG_DIR, 'pending_requests.json');
 
 export interface PendingRequest {
     id: string;
@@ -103,7 +103,7 @@ export function checkCostControl(
     args: any,
     modelName: string,
     estimatedCost: number,
-    category: 'image' | 'video' | 'audio' | '3d' = 'image'
+    category: 'image' | 'video' | 'audio' | 'text' | '3d' = 'image'
 ): CostCheckResult {
     const config = loadConfig();
     const enablePaid = config.enablePaidTools !== false; // default true

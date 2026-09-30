@@ -13,6 +13,8 @@
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
 import {
     getApiKey,
     httpsPost,
@@ -20,13 +22,50 @@ import {
     ensureDir,
     formatFileSize,
     getAudioModels,
+    isCostEstimatorEnabled,
 } from './shared.js';
 import { t } from '../../locales/index.js';
+import { ModelRegistry } from '../../server/models/index.js';
+import { loadConfig } from '../../server/config.js';
+import { checkCostControl } from './cost-guard.js';
+import { hasSystemFFprobe, runFFprobe } from '../ffmpeg.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const DEFAULT_MODEL = 'whisper-large-v3';
 const SUPPORTED_FORMATS = ['mp3', 'wav', 'm4a', 'webm', 'mp4', 'mpeg', 'mpga', 'ogg'];
+
+function probeAudioDurationSeconds(filePath: string): number | undefined {
+    if (!hasSystemFFprobe()) return undefined;
+    try {
+        const raw = runFFprobe([
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            filePath,
+        ]);
+        const seconds = Number(raw.trim());
+        return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function estimateSttCost(modelName: string, durationSeconds?: number): { cost: number; source: 'duration' | 'average' | 'conservative' } {
+    const model = ModelRegistry.getByNameOrAlias('audio', modelName);
+    const perSecond = Number(model?.pricing?.promptAudioSeconds ?? 0);
+    if (durationSeconds && perSecond > 0) {
+        return { cost: durationSeconds * perSecond, source: 'duration' };
+    }
+
+    const average = Number(model?.averageCost ?? 0);
+    if (average > 0) {
+        return { cost: average, source: 'average' };
+    }
+
+    const threshold = loadConfig().costThreshold ?? 0.15;
+    return { cost: Math.max(threshold * 2, 0.25), source: 'conservative' };
+}
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
 
@@ -46,23 +85,27 @@ export const polliSttTool: ToolDefinition = tool({
             return t('tools.polli_transcribe_audio.req_key');
         }
 
-        const model = args.model;
+        let model = args.model;
 
-        // Validate model
+        // Validate model, accepting live aliases (e.g. whisper-large-v3, scribe)
+        // and normalize to the canonical Pollinations model id for billing.
         const audioModels = getAudioModels();
+        const registryModel = ModelRegistry.getByNameOrAlias('audio', model);
+        if (registryModel) model = registryModel.name;
         const modelInfo = audioModels[model];
         if (!modelInfo || (modelInfo.type !== 'stt' && modelInfo.type !== 'both')) {
             const models = Object.entries(audioModels)
                 .filter(([, info]) => info.type === 'stt' || info.type === 'both')
                 .map(([name]) => name)
                 .join(', ');
-            return t('tools.polli_transcribe_audio.err_unknown_model', { model, models });
+            return t('tools.polli_transcribe_audio.err_unknown_model', { model: args.model, models });
         }
 
         // Check file
         let audioPath = args.file;
         let audioBuffer: Buffer;
         let fileName = 'audio.mp3';
+        let audioDurationSeconds: number | undefined;
 
         if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
             // Download from URL
@@ -83,6 +126,17 @@ export const polliSttTool: ToolDefinition = tool({
                     fileName = 'audio.mp3';
                 }
 
+                if (hasSystemFFprobe()) {
+                    const ext = path.extname(fileName) || '.audio';
+                    const tmpPath = path.join(os.tmpdir(), `polli-stt-${crypto.randomUUID()}${ext}`);
+                    try {
+                        fs.writeFileSync(tmpPath, audioBuffer);
+                        audioDurationSeconds = probeAudioDurationSeconds(tmpPath);
+                    } finally {
+                        try { fs.unlinkSync(tmpPath); } catch { }
+                    }
+                }
+
             } catch (err: any) {
                 return t('tools.polli_transcribe_audio.err_dl', { error: err.message });
             }
@@ -101,9 +155,19 @@ export const polliSttTool: ToolDefinition = tool({
 
             audioBuffer = fs.readFileSync(audioPath);
             fileName = path.basename(audioPath);
+            audioDurationSeconds = probeAudioDurationSeconds(audioPath);
         }
 
         const fileSize = audioBuffer.length;
+
+        // Cost Guard: prefer exact duration × live per-second pricing. If the
+        // duration cannot be measured, fall back to a deliberately conservative
+        // estimate so confirmation is required rather than spending blindly.
+        const sttEstimate = estimateSttCost(model, audioDurationSeconds);
+        const costCheck = checkCostControl('polli_stt', args, model, sttEstimate.cost, 'audio');
+        if (!costCheck.allowed) {
+            return costCheck.message || t('tools.polli_transcribe_audio.err_pollen');
+        }
 
         // Metadata
         context.metadata({ title: t('tools.polli_transcribe_audio.toast_start', { model, size: formatFileSize(fileSize) }) });
@@ -146,6 +210,10 @@ export const polliSttTool: ToolDefinition = tool({
                 t('tools.polli_transcribe_audio.res_size', { size: formatFileSize(fileSize) }),
                 t('tools.polli_transcribe_audio.res_model', { model }),
             ];
+
+            if (isCostEstimatorEnabled() && costCheck.message) {
+                lines.push(costCheck.message);
+            }
 
             if (detectedLanguage) {
                 lines.push(t('tools.polli_transcribe_audio.res_lang_det', { lang: detectedLanguage }));

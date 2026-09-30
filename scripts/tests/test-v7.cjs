@@ -51,4 +51,19 @@ ok('v2 /poll responds through synthetic session message', () => assert(v2.includ
 ok('v2 forwards legacy metadata to tool progress', () => assert(v2.includes('await toolContext.progress(metadata)')));
 ok('v2 cleanup closes proxy and worker', () => assert(v2.includes('ToolRegistryWorker.stop()') && v2.includes('proxy.close()')));
 
+const costGuard = read('src/tools/pollinations/cost-guard.ts');
+ok('cost guard pending store follows isolated Pollinations config dir', () => assert(costGuard.includes("path.join(CONFIG_DIR, 'pending_requests.json')")));
+ok('cost guard supports text models natively', () => assert(costGuard.includes("'audio' | 'text' | '3d'")));
+
+const confirm = read('src/tools/pollinations/polli_gen_confirm.ts');
+ok('confirmation dispatcher resolves tools from shared registry', () => assert(confirm.includes("import('../index.js')") && confirm.includes('createToolRegistry()[pendingReq.toolName]')));
+ok('confirmation dispatcher is not hard-coded to paid tool names', () => assert(!confirm.includes("'polli_gen_image':") && !confirm.includes("'polli_gen_3d':")));
+
+const stt = read('src/tools/pollinations/transcribe_audio.ts');
+ok('STT is protected by shared Cost Guard', () => assert(stt.includes("checkCostControl('polli_stt'")));
+ok('STT estimates live per-second audio pricing', () => assert(stt.includes('promptAudioSeconds') && stt.includes('probeAudioDurationSeconds')));
+
+const webSearch = read('src/tools/pollinations/polli_web_search.ts');
+ok('web search uses text Cost Guard category', () => assert(webSearch.includes("checkCostControl('polli_web_search', args, model, estimatedCost, 'text')")));
+
 if (!process.exitCode) console.log(`\n📊 v7 contracts: ${passed} passed, 0 failed\n`);

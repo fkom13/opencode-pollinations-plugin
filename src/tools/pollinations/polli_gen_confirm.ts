@@ -1,14 +1,6 @@
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
 import { getPendingRequest, removePendingRequest } from './cost-guard.js';
 import { t } from '../../locales/index.js';
-
-// Import tools to re-execute them
-import { polliGenImageTool } from './gen_image.js';
-import { polliGenVideoTool } from './gen_video.js';
-import { polliGenAudioTool } from './gen_audio.js';
-import { polliGenMusicTool } from './gen_music.js';
-import { polliGen3dTool } from './gen_3d.js';
-import { polliWebSearchTool } from './polli_web_search.js';
 import { formatCost } from './shared.js';
 
 export const polliGenConfirmTool: ToolDefinition = tool({
@@ -33,16 +25,10 @@ export const polliGenConfirmTool: ToolDefinition = tool({
             return t('tools.polli_gen_confirm.cancelled', { reqId });
         }
 
-        const toolRegistry: Record<string, any> = {
-            'polli_gen_image': polliGenImageTool,
-            'polli_gen_video': polliGenVideoTool,
-            'polli_gen_audio': polliGenAudioTool,
-            'polli_gen_music': polliGenMusicTool,
-            'polli_gen_3d': polliGen3dTool,
-            'polli_web_search': polliWebSearchTool,
-        };
-
-        const targetTool = toolRegistry[pendingReq.toolName];
+        // Resolve through the live registry so every future guarded tool
+        // (STT, managed agents, etc.) becomes confirmable automatically.
+        const { createToolRegistry } = await import('../index.js');
+        const targetTool = createToolRegistry()[pendingReq.toolName];
         if (!targetTool) {
             return t('tools.polli_gen_confirm.unknown_tool', { toolName: pendingReq.toolName });
         }

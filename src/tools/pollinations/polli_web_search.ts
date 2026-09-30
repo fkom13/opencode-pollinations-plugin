@@ -65,7 +65,7 @@ export const polliWebSearchTool: ToolDefinition = tool({
 
         // Cost Guard
         const estimatedCost = estimateSearchCost(model);
-        const costCheck = checkCostControl('polli_web_search', args, model, estimatedCost, 'audio'); // text models use audio category for tokens
+        const costCheck = checkCostControl('polli_web_search', args, model, estimatedCost, 'text');
         if (!costCheck.allowed) {
             return costCheck.message || t('tools.polli_web_search.blocked');
         }
