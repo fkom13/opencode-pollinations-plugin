@@ -181,6 +181,8 @@ export async function handleCommand(command: string): Promise<CommandResult> {
             return await handleInfosCommand();
         case 'quests':
             return await handleQuestsCommand(args);
+        case 'agents':
+            return await handleAgentsCommand(args);
         case 'addKey': // External trigger
             // UI Pollution Fix: User hates appendPrompt.
             // Just return a message telling them to use the tool.
@@ -671,6 +673,8 @@ ${t('commands.config.table_divider')}
 | **apiKey** | \`${k}\` | ${t('commands.config.api_key_role')} | \`/poll connect <key>\` |
 | **mode** | \`${config.mode}\` | ${t('commands.config.mode_role')} | \`/poll mode <quest/quest_only/paid/manual>\` |
 | **communityModels.enabled**| \`${config.communityModels?.enabled ?? true}\` | ${t('commands.config.community_role')} | \`/poll config community <on/off>\` |
+| **managedAgents.enabled**| \`${config.managedAgents?.enabled ?? true}\` | ${t('commands.config.agents_role')} | \`/poll config agents <on/off>\` |
+| **managedAgents.budget**| \`${config.managedAgents?.budget ?? 0.60} 🌻\` | ${t('commands.config.agent_budget_role')} | \`/poll config agent_budget <pollen>\` |
 | **enablePaidTools**| \`${config.enablePaidTools ?? true}\` | ${t('commands.config.enablePaidTools_role')} | \`/poll config enablePaidTools <true/false>\` |
 | **costConfirmationRequired**| \`${config.costConfirmationRequired ?? true}\` | ${t('commands.config.costConfirmationRequired_role')} | \`/poll config costConfirmationRequired <true/false>\` |
 | **costThreshold**| \`${config.costThreshold ?? 0.15} 🌻\` | ${t('commands.config.costThreshold_role')} | \`/poll config costThreshold <X>\` |
@@ -709,6 +713,33 @@ ${t('commands.config.table_divider')}
         const enabled = normalized === 'on' || normalized === 'true';
         saveConfig({ communityModels: { enabled } });
         return { handled: true, response: `✅ ${t('commands.config.community_updated', { state: enabled ? 'on' : 'off' })}` };
+    }
+
+    if (key === 'agents') {
+        const config = loadConfig();
+        if (!value) {
+            return { handled: true, response: `✅ ${t('commands.config.agents_state', { state: config.managedAgents?.enabled !== false ? 'on' : 'off' })}` };
+        }
+        const normalized = value.toLowerCase();
+        if (!['on', 'off', 'true', 'false'].includes(normalized)) {
+            return { handled: true, error: t('commands.config.agents_values') };
+        }
+        const enabled = normalized === 'on' || normalized === 'true';
+        saveConfig({ managedAgents: { ...(config.managedAgents || { budget: 0.60 }), enabled } });
+        return { handled: true, response: `✅ ${t('commands.config.agents_updated', { state: enabled ? 'on' : 'off' })}` };
+    }
+
+    if (key === 'agent_budget') {
+        const config = loadConfig();
+        if (!value) {
+            return { handled: true, response: `✅ ${t('commands.config.agent_budget_state', { budget: config.managedAgents?.budget ?? 0.60 })}` };
+        }
+        const budget = parseFloat(value);
+        if (!Number.isFinite(budget) || budget <= 0 || budget > 1000) {
+            return { handled: true, error: t('commands.config.agent_budget_values') };
+        }
+        saveConfig({ managedAgents: { ...(config.managedAgents || { enabled: true }), budget } });
+        return { handled: true, response: `✅ ${t('commands.config.agent_budget_updated', { budget })}` };
     }
 
     if (key === 'lang' && value) {
@@ -851,7 +882,7 @@ ${t('commands.config.table_divider')}
 
     return {
         handled: true,
-        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_quest, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, lang`
+        error: `Clé inconnue: ${key}. Clés: status_gui, logs_gui, threshold_quest, threshold_wallet, status_bar, cost_estimator, enablePaidTools, costThreshold, costConfirmationRequired, agents, agent_budget, lang`
     };
 }
 
@@ -867,6 +898,8 @@ function handleHelpCommand(): CommandResult {
         { key: 'status_bar',        values: 'true/false',                          i18n: 'commands.help.config.status_bar' },
         { key: 'cost_estimator',    values: 'true/false',                          i18n: 'commands.help.config.cost_estimator' },
         { key: 'enablePaidTools',   values: 'true/false',                          i18n: 'commands.help.config.enablePaidTools' },
+        { key: 'agents',            values: 'on/off',                              i18n: 'commands.help.config.agents' },
+        { key: 'agent_budget',      values: 'number (pollen)',                     i18n: 'commands.help.config.agent_budget' },
         { key: 'costThreshold',     values: 'number (pollen)',                     i18n: 'commands.help.config.costThreshold' },
         { key: 'costConfirmationRequired', values: 'true/false',                   i18n: 'commands.help.config.costConfirmationRequired' },
     ];
@@ -905,6 +938,59 @@ function parseNameDesc(m: PollinationsModel): { nom: string, desc: string } {
         return { nom: parts[0].trim(), desc: parts.slice(1).join(" - ").trim() };
     }
     return { nom: displayName, desc: "" };
+}
+
+async function handleAgentsCommand(args: string[]): Promise<CommandResult> {
+    const config = loadConfig();
+    try {
+        await ModelRegistry.refresh(config.apiKey);
+    } catch {
+        // Keep the disk cache if live refresh is unavailable.
+    }
+
+    const query = args.join(' ').trim().toLowerCase();
+    let agents = ModelRegistry.all().filter((m) => m.agent === true);
+    if (query) {
+        agents = agents.filter((m) =>
+            m.name.toLowerCase().includes(query) ||
+            (m.title || '').toLowerCase().includes(query) ||
+            (m.description || '').toLowerCase().includes(query) ||
+            (m.base_model || '').toLowerCase().includes(query)
+        );
+    }
+
+    agents.sort((a, b) => {
+        const ah = a.health?.status === 'healthy' ? 0 : 1;
+        const bh = b.health?.status === 'healthy' ? 0 : 1;
+        if (ah !== bh) return ah - bh;
+        return (a.title || a.name).localeCompare(b.title || b.name);
+    });
+
+    if (agents.length === 0) {
+        return { handled: true, response: t('commands.agents.empty', { query: query || '*' }) };
+    }
+
+    const budget = config.managedAgents?.budget ?? 0.60;
+    const lines = [
+        t('commands.agents.title', { count: agents.length }),
+        '',
+        t('commands.agents.note', { budget }),
+        '',
+    ];
+
+    for (const agent of agents.slice(0, 50)) {
+        const runtime = agent.base_model ? 'prompt' : 'unknown';
+        const base = agent.base_model || 'not exposed';
+        const tools = agent.tools === true ? 'yes' : 'no/unknown';
+        const health = agent.health?.status || 'unknown';
+        lines.push(`- \`${agent.name}\` — **${agent.title || agent.name}** — base: \`${base}\` — runtime: ${runtime} — tools: ${tools} — health: ${health}`);
+    }
+
+    if (agents.length > 50) {
+        lines.push('', t('commands.agents.truncated', { count: agents.length - 50 }));
+    }
+
+    return { handled: true, response: lines.join('\n') };
 }
 
 export async function handleModelsCommand(args: string[]): Promise<CommandResult> {

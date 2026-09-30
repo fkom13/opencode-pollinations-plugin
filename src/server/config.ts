@@ -114,6 +114,10 @@ export interface PollinationsConfigV5 {
 
     enablePaidTools: boolean;
     communityModels: { enabled: boolean; };
+    managedAgents: {
+        enabled: boolean;
+        budget: number; // Logical per-run budget guard in Pollen; not a server-side key cap.
+    };
     enableDeveloperTools: boolean; // Expose diagnostic/fuzzing tools (default: false)
     costThreshold: number; // Default 0.15 🌻
     costConfirmationRequired: boolean; // Ask confirmation when cost exceeds threshold (default: true)
@@ -158,6 +162,7 @@ const DEFAULT_CONFIG_V5: PollinationsConfigV5 = {
     },
     enablePaidTools: false,
     communityModels: { enabled: true },
+    managedAgents: { enabled: true, budget: 0.60 },
     enableDeveloperTools: false,
     costThreshold: 0.15, // Default 0.15 🌻
     costConfirmationRequired: true, // Ask confirmation when cost exceeds threshold
@@ -199,6 +204,19 @@ export function migrateV65Config(raw: any): any {
         }
     }
 
+    if (!raw.managedAgents || typeof raw.managedAgents !== 'object') {
+        raw.managedAgents = {
+            enabled: true,
+            budget: Math.max(0.60, Number(raw.costThreshold ?? 0.15) * 4),
+        };
+    } else {
+        if (raw.managedAgents.enabled === undefined) raw.managedAgents.enabled = true;
+        const budget = Number(raw.managedAgents.budget);
+        if (!Number.isFinite(budget) || budget <= 0) {
+            raw.managedAgents.budget = Math.max(0.60, Number(raw.costThreshold ?? 0.15) * 4);
+        }
+    }
+
     // Purge dead refill concepts from persisted config.
     if ('refillOverride' in raw) {
         logConfig('Removing deprecated refillOverride');
@@ -224,7 +242,11 @@ export function loadConfig(): PollinationsConfigV5 {
 }
 
 function readConfigFromDisk(): PollinationsConfigV5 {
-    let config: any = { ...DEFAULT_CONFIG_V5, communityModels: { ...DEFAULT_CONFIG_V5.communityModels } };
+    let config: any = {
+        ...DEFAULT_CONFIG_V5,
+        communityModels: { ...DEFAULT_CONFIG_V5.communityModels },
+        managedAgents: { ...DEFAULT_CONFIG_V5.managedAgents },
+    };
     let finalKey: string | undefined = undefined;
     let source: string = 'none';
 
@@ -251,7 +273,20 @@ function readConfigFromDisk(): PollinationsConfigV5 {
         try {
             const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
             const custom = JSON.parse(raw);
-            config = { ...config, ...custom, communityModels: { ...DEFAULT_CONFIG_V5.communityModels, ...(custom.communityModels || {}) } }; // Preserve nested defaults
+            const legacyAgentBudget = Math.max(
+                DEFAULT_CONFIG_V5.managedAgents.budget,
+                Number(custom.costThreshold ?? DEFAULT_CONFIG_V5.costThreshold) * 4,
+            );
+            config = {
+                ...config,
+                ...custom,
+                communityModels: { ...DEFAULT_CONFIG_V5.communityModels, ...(custom.communityModels || {}) },
+                managedAgents: {
+                    ...DEFAULT_CONFIG_V5.managedAgents,
+                    ...(custom.managedAgents || {}),
+                    budget: custom.managedAgents?.budget ?? legacyAgentBudget,
+                },
+            }; // Preserve nested defaults and derive a conservative first agent budget for legacy configs.
             if (custom.apiKey && custom.apiKey.length > 5) configKey = custom.apiKey;
         } catch (e) {
             logConfig(`ERROR reading config.json: ${e}`);

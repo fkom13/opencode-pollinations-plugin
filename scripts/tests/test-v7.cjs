@@ -25,6 +25,7 @@ ok('setup detects v-prefixed OpenCode v2 versions', () => assert(setup.includes(
 
 const config = read('src/server/config.ts');
 ok('community models default enabled', () => assert(/communityModels:\s*\{\s*enabled:\s*true\s*\}/.test(config)));
+ok('managed agents default enabled with dedicated budget', () => assert(/managedAgents:\s*\{\s*enabled:\s*true,\s*budget:\s*0\.60\s*\}/.test(config)));
 
 const gen = read('src/server/generate-config.ts');
 ok('chat requires tool calling', () => assert(gen.includes('if (m.tools !== true) return')));
@@ -41,7 +42,16 @@ ok('slash heuristic for community removed', () => assert(!worker.includes("name.
 
 const commands = read('src/server/commands.ts');
 ok('/poll config community command exists', () => assert(commands.includes("key === 'community'")));
+ok('/poll agents command exists', () => assert(commands.includes("case 'agents'") && commands.includes('handleAgentsCommand')));
+ok('managed-agent budget commands exist', () => assert(commands.includes("key === 'agents'") && commands.includes("key === 'agent_budget'")));
 
+const toolsIndex = read('src/tools/index.ts');
+ok('polli_agent is registered through shared tool registry', () => assert(toolsIndex.includes("tools['polli_agent'] = polliAgentTool")));
+
+const agentTool = read('src/tools/pollinations/polli_agent.ts');
+ok('managed-agent estimator uses Pollinations prompt-agent runtime bounds', () => assert(agentTool.includes('PROMPT_AGENT_MAX_STEPS = 8') && agentTool.includes('PROMPT_AGENT_MAX_TOOL_CALLS = 16')));
+ok('managed-agent estimator forces unknown runtimes above budget', () => assert(agentTool.includes('budget * 1.25')));
+ok('polli_agent uses dedicated budget as Cost Guard threshold', () => assert(agentTool.includes('costLimit: budget') && agentTool.includes('confirmationRequired: true') && agentTool.includes('estimatedIsMax: true')));
 
 const v2 = read('src/v2.ts');
 ok('v2 registers provider with transform API', () => assert(v2.includes('ctx.provider.transform')));

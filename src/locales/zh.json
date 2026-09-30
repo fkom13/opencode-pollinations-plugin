@@ -17,7 +17,9 @@
         "enablePaidTools": "钱包保护（阻止付费工具）",
         "costThreshold": "费用警告阈值",
         "costConfirmationRequired": "消费前请求确认",
-        "threshold_quest": "Quest 余额告警阈值（pollen）"
+        "threshold_quest": "Quest 余额告警阈值（pollen）",
+        "agents": "启用 Managed Agent 委派",
+        "agent_budget": "每次 Agent 运行的逻辑预算（pollen）"
       },
       "connection": "**🔐 连接你的 Pollinations 账户（推荐）**\n- **`/poll login`**：一键浏览器 OAuth。使用 GitHub 登录并授权，插件会自动连接——无需复制粘贴 API 密钥。推荐用于账户、Quest 和 Paid 功能。\n- **`/poll connect sk_...`**：仅当你已经拥有 Pollinations Secret 密钥时使用手动 BYOK。"
     },
@@ -52,7 +54,15 @@
       "community_role": "显示支持工具调用的可靠 Community 聊天模型",
       "community_state": "Community 模型：{state}",
       "community_updated": "Community 模型：{state}（重启 OpenCode 以刷新模型列表）",
-      "community_values": "可选值：on、off"
+      "community_values": "可选值：on、off",
+      "agents_role": "启用显式 Managed Agent 委派",
+      "agent_budget_role": "每次 Managed Agent 运行的逻辑预算",
+      "agents_state": "Managed Agents：{state}",
+      "agents_values": "可选值：on、off",
+      "agents_updated": "Managed Agents：{state}",
+      "agent_budget_state": "Managed Agent 预算：{budget} 🌻",
+      "agent_budget_values": "需要正数预算（0 < 预算 ≤ 1000）。",
+      "agent_budget_updated": "Managed Agent 预算 = {budget} 🌻"
     },
     "generic": {
       "add_key_hint": "💡 使用 /poll connect <key> 添加 API 密钥。\\n💡 使用 `/poll login` 连接（推荐，一键 OAuth）。手动 BYOK：`/poll connect sk_...`。",
@@ -153,6 +163,12 @@
       "opened": "🌐 正在打开浏览器进行授权…",
       "still_waiting": "⏳ 仍在等待你在浏览器中授权。批准后，请再次以 wait:true 调用 polli_login 以确认。",
       "success_limited": "⚠️ 已连接，但你的密钥似乎受限 (未授予 Profile/Usage)。配额显示、免费宇宙回退和钱包控制可能无法工作。请重新登录并授予 Profile + Usage，或使用完整密钥。"
+    },
+    "agents": {
+      "title": "## 🤖 Managed Agents（{count}）",
+      "empty": "没有 Managed Agent 匹配 `{query}`。",
+      "note": "Agent 不会出现在普通聊天模型列表中，只通过 `polli_agent` 显式调用。本地单次运行预算：**{budget} 🌻**。",
+      "truncated": "… 另有 {count} 个 Agent 未显示。"
     }
   },
   "proxy": {
@@ -579,6 +595,24 @@
       "res_format": "格式：{format}",
       "res_provider": "Provider：{provider}",
       "res_fallback": "已使用 fallback：ClearBackdrop"
+    },
+    "polli_agent": {
+      "desc": "将一个有边界的任务委派给 Pollinations Managed Agent。Managed Agent 与普通聊天模型保持分离。插件会计算刻意保守的单次运行成本估算，并应用独立的 Agent 预算。Prompt Agent 在 Pollinations 侧最多 8 个模型步骤和 16 次工具调用；code/endpoint/未知 runtime 被视为更高风险并要求确认。该预算是本地安全保护，并非服务端硬性消费上限。",
+      "arg_agent": "Managed Agent 模型 ID 或别名（例如 owner/agent-name）。",
+      "arg_task": "要委派给 Managed Agent 的独立任务。",
+      "disabled": "Managed Agent 委派已禁用。使用 `/poll config agents on` 启用。",
+      "req_key": "调用 Managed Agent 需要 Pollinations 账户密钥。使用 `/poll login`。",
+      "unknown": "未知 Managed Agent：{agent}。使用 `/poll agents` 查看可用 Agent。",
+      "estimate_block": "🤖 Agent：`{agent}`\nRuntime：`{runtime}`\n保守估算：**{estimate}**\n已配置 Agent 预算：**{budget}**",
+      "toast_start": "Agent {agent}（估算 {estimate}）",
+      "empty": "Managed Agent 未返回文本结果。",
+      "result_title": "## 🤖 Managed Agent — {agent}",
+      "result_estimate": "保守估算：{estimate} · Agent 预算：{budget}",
+      "result_bounds": "托管 Prompt Agent 上限：最多 {steps} 个模型步骤 / {tools} 次工具调用。",
+      "result_unknown_runtime": "内部 runtime 未公开；估算已刻意放大，且并非硬性上限。",
+      "err_payment": "Managed Agent 因 Pollen 或预算不足而被拒绝。",
+      "err_auth": "Managed Agent 授权失败。请用 `/poll login` 重新连接。",
+      "err_generic": "Managed Agent 失败：{error}"
     }
   },
   "connect_response": {

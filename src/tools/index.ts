@@ -41,6 +41,7 @@ import { polliGenConfirmTool } from './pollinations/polli_gen_confirm.js';
 import { polliStatusTool } from './pollinations/polli_status.js';
 import { polliConfigTool } from './pollinations/polli_config.js';
 import { polliQuestsTool } from './pollinations/polli_quests.js';
+import { polliAgentTool } from './pollinations/polli_agent.js';
 
 import * as fs from 'fs';
 
@@ -108,6 +109,11 @@ export function createToolRegistry(): Record<string, any> {
         // Unified search tool
         tools['polli_web_search'] = polliWebSearchTool;
 
+        // Managed-agent delegation stays separate from normal chat models.
+        if (config.managedAgents?.enabled !== false) {
+            tools['polli_agent'] = polliAgentTool;
+        }
+
         // Cost Guard Confirmation tool
         tools['polli_gen_confirm'] = polliGenConfirmTool;
 
@@ -148,5 +154,6 @@ export {
     polliGenConfirmTool,
     polliStatusTool,
     polliConfigTool,
-    polliQuestsTool
+    polliQuestsTool,
+    polliAgentTool
 };

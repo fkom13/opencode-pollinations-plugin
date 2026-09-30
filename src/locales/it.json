@@ -17,7 +17,9 @@
         "enablePaidTools": "Protezione wallet (blocca strumenti a pagamento)",
         "costThreshold": "Soglia di avviso costo",
         "costConfirmationRequired": "Chiedi conferma prima di spendere",
-        "threshold_quest": "Soglia di allerta saldo Quest (pollen)"
+        "threshold_quest": "Soglia di allerta saldo Quest (pollen)",
+        "agents": "Abilita la delega ai Managed Agents",
+        "agent_budget": "Budget logico per esecuzione Agent (pollen)"
       },
       "connection": "**🔐 Collega il tuo account Pollinations (consigliato)**\n- **`/poll login`**: OAuth nel browser con 1 clic. Accedi con GitHub, autorizza e il plugin si collega automaticamente — nessuna chiave API da copiare/incollare. È il percorso consigliato per account, Quest e funzioni Paid.\n- **`/poll connect sk_...`**: BYOK manuale solo se possiedi già una chiave Secret Pollinations."
     },
@@ -52,7 +54,15 @@
       "community_role": "Mostra modelli chat Community affidabili con tool calling",
       "community_state": "Modelli Community: {state}",
       "community_updated": "Modelli Community: {state} (riavvia OpenCode per aggiornare l’elenco dei modelli)",
-      "community_values": "Valori: on, off"
+      "community_values": "Valori: on, off",
+      "agents_role": "Abilita la delega esplicita ai Managed Agents",
+      "agent_budget_role": "Budget logico per esecuzione Managed Agent",
+      "agents_state": "Managed Agents: {state}",
+      "agents_values": "Valori: on, off",
+      "agents_updated": "Managed Agents: {state}",
+      "agent_budget_state": "Budget Managed Agent: {budget} 🌻",
+      "agent_budget_values": "È richiesto un budget numerico positivo (0 < budget ≤ 1000).",
+      "agent_budget_updated": "Budget Managed Agent = {budget} 🌻"
     },
     "generic": {
       "add_key_hint": "💡 Usa /poll connect <key> per aggiungere una chiave API.\\n💡 Connettiti con `/poll login` (consigliato, OAuth in 1 clic). BYOK manuale: `/poll connect sk_...`.",
@@ -153,6 +163,12 @@
       "opened": "🌐 Apertura del browser per autorizzare…",
       "still_waiting": "⏳ In attesa della tua autorizzazione nel browser. Una volta approvata, richiama polli_login con wait:true per confermare.",
       "success_limited": "⚠️ Connesso, ma la tua chiave sembra limitata (Profile/Usage non concessi). La visualizzazione della quota, il fallback sull'universo gratuito e il controllo del wallet potrebbero non funzionare. Riesegui il login concedendo Profile + Usage, o usa una chiave completa."
+    },
+    "agents": {
+      "title": "## 🤖 Managed Agents ({count})",
+      "empty": "Nessun Managed Agent corrisponde a `{query}`.",
+      "note": "Gli agenti restano fuori dalla normale lista dei modelli chat e vengono chiamati esplicitamente tramite `polli_agent`. Budget locale per esecuzione: **{budget} 🌻**.",
+      "truncated": "… {count} agenti aggiuntivi non mostrati."
     }
   },
   "proxy": {
@@ -579,6 +595,24 @@
       "res_format": "Formato: {format}",
       "res_provider": "Provider: {provider}",
       "res_fallback": "Fallback utilizzato: ClearBackdrop"
+    },
+    "polli_agent": {
+      "desc": "Delega un’attività limitata a un Managed Agent Pollinations. I Managed Agents restano separati dai normali modelli chat. Il plugin calcola una stima deliberatamente conservativa del costo per esecuzione e applica il budget Agent dedicato. I Prompt Agents sono limitati da Pollinations a 8 step modello e 16 chiamate tool; runtime code/endpoint/sconosciuti sono considerati più rischiosi e richiedono conferma. Questo budget è una protezione locale, non un hard cap lato server.",
+      "arg_agent": "ID modello o alias del Managed Agent (es. owner/agent-name).",
+      "arg_task": "Attività autonoma da delegare al Managed Agent.",
+      "disabled": "La delega ai Managed Agents è disattivata. Attivala con `/poll config agents on`.",
+      "req_key": "È richiesta una chiave account Pollinations. Usa `/poll login`.",
+      "unknown": "Managed Agent sconosciuto: {agent}. Usa `/poll agents` per vedere quelli disponibili.",
+      "estimate_block": "🤖 Agent: `{agent}`\nRuntime: `{runtime}`\nStima conservativa: **{estimate}**\nBudget Agent configurato: **{budget}**",
+      "toast_start": "Agent {agent} (stima {estimate})",
+      "empty": "Il Managed Agent non ha restituito testo.",
+      "result_title": "## 🤖 Managed Agent — {agent}",
+      "result_estimate": "Stima conservativa: {estimate} · Budget Agent: {budget}",
+      "result_bounds": "Limite Prompt Agent ospitato: fino a {steps} step modello / {tools} chiamate tool.",
+      "result_unknown_runtime": "Il runtime interno non è esposto; la stima è stata ampliata intenzionalmente e non è un hard cap.",
+      "err_payment": "Esecuzione Managed Agent rifiutata per Pollen o budget insufficiente.",
+      "err_auth": "Autorizzazione Managed Agent fallita. Riconnettiti con `/poll login`.",
+      "err_generic": "Managed Agent fallito: {error}"
     }
   },
   "connect_response": {

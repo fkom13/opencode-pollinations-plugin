@@ -8,14 +8,11 @@
  */
 
 import { loadConfig, CONFIG_DIR } from '../../server/config.js';
-import { emitStatusToast } from '../../server/toast.js';
 import { ModelRegistry } from '../../server/models/index.js';
 import { formatCost } from './shared.js';
 import { t } from '../../locales/index.js';
-import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 
 // ─── Types ───────────────────────────────────────────────────────────────
 
@@ -25,6 +22,13 @@ export interface CostCheckResult {
     confirmationRequired?: boolean;
     pendingRequestId?: string;
     message?: string;
+}
+
+export interface CostControlOptions {
+    costLimit?: number;
+    confirmationRequired?: boolean;
+    enablePaidTools?: boolean;
+    estimatedIsMax?: boolean;
 }
 
 // ─── Pending Requests Store ────────────────────────────────────────────────
@@ -103,19 +107,22 @@ export function checkCostControl(
     args: any,
     modelName: string,
     estimatedCost: number,
-    category: 'image' | 'video' | 'audio' | 'text' | '3d' = 'image'
+    category: 'image' | 'video' | 'audio' | 'text' | '3d' = 'image',
+    options: CostControlOptions = {},
 ): CostCheckResult {
     const config = loadConfig();
-    const enablePaid = config.enablePaidTools !== false; // default true
-    const askConfirm = config.costConfirmationRequired === true; // default true
-    const costLimit = config.costThreshold ?? 0.0;
+    const enablePaid = options.enablePaidTools ?? (config.enablePaidTools !== false);
+    const askConfirm = options.confirmationRequired ?? (config.costConfirmationRequired === true);
+    const costLimit = options.costLimit ?? config.costThreshold ?? 0.0;
 
     const m = ModelRegistry.getByNameOrAlias(category, modelName);
 
     // Détection token-based (si le modèle a une de ces propriétés de tarification, il est variable)
     const _isTokenBased = isTokenBased(category, modelName);
 
-    const maxCost = _isTokenBased ? estimatedCost * 3 : estimatedCost;
+    const maxCost = options.estimatedIsMax
+        ? estimatedCost
+        : (_isTokenBased ? estimatedCost * 3 : estimatedCost);
 
     // ─── Bypass Check (For polli_gen_confirm) ────────────────
     if (args && (args as any)[Symbol.for('polli_confirmed')]) {

@@ -17,7 +17,9 @@
         "enablePaidTools": "Protection wallet (bloque outils payants)",
         "costThreshold": "Seuil d'alerte coût",
         "costConfirmationRequired": "Demander confirmation avant dépense",
-        "threshold_quest": "Seuil d'alerte du solde Quest (pollen)"
+        "threshold_quest": "Seuil d'alerte du solde Quest (pollen)",
+        "agents": "Activer la délégation aux Managed Agents",
+        "agent_budget": "Budget logique par exécution d’Agent (pollen)"
       },
       "connection": "**🔐 Connectez votre compte Pollinations (recommandé)**\n- **`/poll login`** : OAuth navigateur en 1 clic. Connectez-vous avec GitHub, autorisez, et le plugin se connecte automatiquement — aucune clé API à copier-coller. C’est le chemin recommandé pour le compte, les Quêtes et les fonctions Paid.\n- **`/poll connect sk_...`** : BYOK manuel uniquement si vous avez déjà une clé Secret Pollinations."
     },
@@ -52,7 +54,15 @@
       "community_role": "Afficher les modèles chat Community fiables avec tool calling",
       "community_state": "Modèles Community : {state}",
       "community_updated": "Modèles Community : {state} (redémarrez OpenCode pour actualiser la liste des modèles)",
-      "community_values": "Valeurs : on, off"
+      "community_values": "Valeurs : on, off",
+      "agents_role": "Activer la délégation explicite aux Managed Agents",
+      "agent_budget_role": "Budget logique par exécution de Managed Agent",
+      "agents_state": "Managed Agents : {state}",
+      "agents_values": "Valeurs : on, off",
+      "agents_updated": "Managed Agents : {state}",
+      "agent_budget_state": "Budget Managed Agent : {budget} 🌻",
+      "agent_budget_values": "Budget numérique positif requis (0 < budget ≤ 1000).",
+      "agent_budget_updated": "Budget Managed Agent = {budget} 🌻"
     },
     "generic": {
       "add_key_hint": "💡 Utilisez /poll connect <clé> pour ajouter une clé API.\\n💡 Connectez-vous avec `/poll login` (recommandé, OAuth 1 clic). BYOK manuel : `/poll connect sk_...`.",
@@ -153,6 +163,12 @@
       "opened": "🌐 Ouverture de votre navigateur pour autoriser…",
       "still_waiting": "⏳ En attente de votre autorisation dans le navigateur. Une fois validé, rappelez polli_login avec wait:true pour confirmer.",
       "success_limited": "⚠️ Connecté, mais votre clé semble limitée (Profile/Usage non accordés). L'affichage du quota, le repli vers l'univers gratuit et le contrôle du wallet peuvent ne pas fonctionner. Relancez login en accordant Profile + Usage, ou utilisez une clé complète."
+    },
+    "agents": {
+      "title": "## 🤖 Managed Agents ({count})",
+      "empty": "Aucun Managed Agent ne correspond à `{query}`.",
+      "note": "Les agents restent hors de la liste normale des modèles de chat et sont appelés explicitement via `polli_agent`. Budget local par exécution : **{budget} 🌻**.",
+      "truncated": "… {count} agents supplémentaires non affichés."
     }
   },
   "proxy": {
@@ -579,6 +595,24 @@
       "res_format": "Format : {format}",
       "res_provider": "Provider : {provider}",
       "res_fallback": "Fallback utilisé : ClearBackdrop"
+    },
+    "polli_agent": {
+      "desc": "Délègue une tâche bornée à un Managed Agent Pollinations. Les Managed Agents restent séparés des modèles de chat normaux. Le plugin calcule une estimation volontairement conservatrice du coût par exécution et applique le budget Agent dédié. Les Prompt Agents sont bornés côté Pollinations à 8 étapes modèle et 16 appels tools ; les runtimes code/endpoint/inconnus sont considérés plus risqués et exigent une confirmation. Ce budget est une protection locale, pas un plafond serveur strict.",
+      "arg_agent": "ID ou alias du Managed Agent (par exemple owner/agent-name).",
+      "arg_task": "Tâche autonome à déléguer au Managed Agent.",
+      "disabled": "La délégation aux Managed Agents est désactivée. Activez-la avec `/poll config agents on`.",
+      "req_key": "Une clé de compte Pollinations est requise. Utilisez `/poll login`.",
+      "unknown": "Managed Agent inconnu : {agent}. Utilisez `/poll agents` pour lister les agents disponibles.",
+      "estimate_block": "🤖 Agent : `{agent}`\nRuntime : `{runtime}`\nEstimation conservatrice : **{estimate}**\nBudget Agent configuré : **{budget}**",
+      "toast_start": "Agent {agent} (estimation {estimate})",
+      "empty": "Le Managed Agent n’a renvoyé aucun résultat texte.",
+      "result_title": "## 🤖 Managed Agent — {agent}",
+      "result_estimate": "Estimation conservatrice : {estimate} · Budget Agent : {budget}",
+      "result_bounds": "Borne Prompt Agent hébergé : jusqu’à {steps} étapes modèle / {tools} appels tools.",
+      "result_unknown_runtime": "Le runtime interne n’est pas exposé ; l’estimation a été volontairement élargie et ne constitue pas un plafond strict.",
+      "err_payment": "L’exécution du Managed Agent a été refusée pour solde ou budget Pollen insuffisant.",
+      "err_auth": "Échec d’autorisation du Managed Agent. Reconnectez-vous avec `/poll login`.",
+      "err_generic": "Échec du Managed Agent : {error}"
     }
   },
   "connect_response": {
