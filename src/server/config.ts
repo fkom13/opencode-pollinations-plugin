@@ -49,9 +49,12 @@ function getExternalConfigPaths() {
 
 
     // 1. Linux Standard (Current)
-    // ... rest of function ...
-    candidatesAuth.push(path.join(HOMEDIR, '.local', 'share', 'opencode', 'auth.json'));
-    candidatesConfig.push(path.join(HOMEDIR, '.config', 'opencode', 'opencode.json'));
+    // Respect XDG overrides so isolated OpenCode installations (such as the
+    // v2 dev sandbox) do not silently inherit credentials/config from v1.
+    const xdgDataHome = process.env.XDG_DATA_HOME || path.join(HOMEDIR, '.local', 'share');
+    const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(HOMEDIR, '.config');
+    candidatesAuth.push(path.join(xdgDataHome, 'opencode', 'auth.json'));
+    candidatesConfig.push(path.join(xdgConfigHome, 'opencode', 'opencode.json'));
 
     // 2. Windows Standard (%APPDATA%)
     if (process.platform === 'win32') {

@@ -457,7 +457,7 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         const body: ChatRequest = JSON.parse(bodyRaw);
         const config = loadConfig();
 
-        log(`[Proxy Request] Mode: ${config.mode}, HasKey: ${!!config.apiKey}`);
+        log(`[Proxy Request] Mode: ${config.mode}, HasKey: ${!!config.apiKey}, Tools: ${Array.isArray(body.tools) ? body.tools.length : 0}`);
 
         // 0. COMMAND HANDLING
         if (body.messages && body.messages.length > 0) {
@@ -550,11 +550,9 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         let isFallbackActive = false;
         let fallbackReason = "";
 
-        // LOAD QUOTA FOR SAFETY CHECKS
-        const { getQuotaStatus, formatQuotaForToast } = await import('./quota.js');
-        const quota = await getQuotaStatus(false);
-
-        // A. Resolve Base Target
+        // A. Resolve Base Target BEFORE any account/quota call.
+        // Free models must remain fully anonymous and must never be blocked by
+        // an invalid/missing Pollinations account key.
         if (actualModel.startsWith('enter/')) {
             isEnterprise = true;
             actualModel = actualModel.replace('enter/', '');
@@ -562,6 +560,21 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             isEnterprise = false;
             actualModel = actualModel.replace('free/', '');
         }
+
+        // LOAD QUOTA ONLY FOR ENTERPRISE/ACCOUNT ROUTES.
+        // Previously this ran unconditionally, so free/openai-fast triggered
+        // /account/balance 401s before routing to the public free endpoint.
+        const { getQuotaStatus, formatQuotaForToast } = await import('./quota.js');
+        const quota = isEnterprise
+            ? await getQuotaStatus(false)
+            : {
+                questBalance: 0,
+                walletBalance: 0,
+                totalBalance: 0,
+                canUseEnterprise: false,
+                isUsingWallet: false,
+                needsAlert: false
+              };
 
         // A.1 PAID-ONLY MODEL RESOLUTION (v6.5)
         // Paid-only models always debit pack (upstream contract). The dynamic
