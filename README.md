@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v6.5.5)
+# 🌸 Pollinations AI Plugin for OpenCode (v7.0.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -24,6 +24,17 @@
 
 - 🌍 **Transparent**: Our code, roadmap, and discussions are fully public.
 - ⚖️ **Fair Economy**: A single currency (**Pollen 🌻**) for all media and models. Predictable and transparent pricing. No vendor lock-in.
+
+---
+
+## 🚀 What's new in v7.0.0?
+
+- 🔁 **OpenCode v1 + v2 dual-stack**: one official Pollinations plugin package now supports both OpenCode generations. The installer preserves v1 `plugin` and v2 `plugins` conventions, while the runtime keeps one shared provider/tool core.
+- 🤖 **Managed Agents without polluting chat models**: Pollinations entries flagged `agent:true` stay out of the normal model picker and are delegated explicitly through `polli_agent`. Use `/poll agents [search]` to discover them.
+- 💰 **Dedicated Agent budget**: `/poll config agent_budget <pollen>` controls a separate logical per-run safety envelope (default **0.60 🌻**). Hosted Prompt Agents are estimated conservatively against Pollinations' 8-model-step / 16-tool-call runtime bounds; unknown runtimes force confirmation. This is a local guard, **not** a server-side hard spending cap.
+- 🌐 **Community models are first-class but controlled**: reliable community text models are exposed dynamically only when they advertise tool calling; `/poll config community on|off` controls their chat exposure.
+- 🛡️ **Generalized Cost Guard**: confirmation tickets are registry-driven instead of hard-coded, STT/transcription is now protected, text-model costs use the correct category, and pending confirmations respect isolated XDG config roots.
+- 🔐 **Clean v2 auth + free routing**: device login is isolated from v1 credentials, `/poll` is a native v2 command, and `free/*` calls no longer touch account/quota APIs before routing to the anonymous free universe.
 
 ---
 
@@ -57,6 +68,7 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Voice synthesis (ElevenLabs, OpenAI TTS) and Generative Music.
 - 🎙️ `polli_stt` : High-flying voice transcription (Whisper V3).
 - 🌐 `polli_web_search` : Connected Web & Specialized Search context (`gemini-search`, `perplexity...`).
+- 🤖 `polli_agent` : Explicit delegation to Pollinations Managed Agents with a dedicated per-run Agent budget and conservative Cost Guard estimation.
 
 ### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
 - 🆓 `gen_edit_image_free` : Free image generation **and 1–3 image editing**, with live per-IP quota, full aspect ratios, custom 256–1440 dimensions, seed, prompt upsampling and edit turbo. No key.

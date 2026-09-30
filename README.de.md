@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin für OpenCode (v6.5.5)
+# 🌸 Pollinations AI Plugin für OpenCode (v7.0.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -24,6 +24,17 @@
 
 - 🌍 **Transparent**: Unser Code, unsere Roadmap und unsere Diskussionen sind öffentlich.
 - ⚖️ **Faire Wirtschaft**: Eine einzige Währung (**Pollen 🌻**) für alle Medien und Modelle. Vorhersehbare und transparente Preise, keine Anbieterbindung (Vendor Lock-in).
+
+---
+
+## 🚀 Neu in v7.0.0
+
+- 🔁 **OpenCode v1 + v2 Dual-Stack**: ein Paket des offiziellen Pollinations-Plugins unterstützt beide OpenCode-Generationen und bewahrt `plugin` für v1 sowie `plugins` für v2 bei gemeinsamem Kern.
+- 🤖 **Managed Agents getrennt von Chat-Modellen**: `agent:true`-Einträge bleiben aus dem normalen Modell-Picker und werden explizit über `polli_agent` delegiert. `/poll agents [Suche]` listet sie.
+- 💰 **Eigenes Agent-Budget**: `/poll config agent_budget <pollen>` setzt ein separates logisches Budget pro Lauf (Standard **0,60 🌻**). Hosted Prompt Agents werden konservativ mit 8 Modellschritten / 16 Tool-Aufrufen geschätzt; unbekannte Runtimes erzwingen Bestätigung. Kein serverseitiges Hard-Cap.
+- 🌐 **Kontrollierte Community-Modelle**: zuverlässige Community-Textmodelle erscheinen dynamisch nur mit Tool-Calling; `/poll config community on|off` steuert die Chat-Sichtbarkeit.
+- 🛡️ **Generalisierter Cost Guard**: Registry-basierte Bestätigung, STT-Schutz, korrekte Text-Kategorie und XDG-isolierte Pending-Tickets.
+- 🔐 **Saubere v2-Auth und Free-Routen**: v2-Login erbt keine v1-Credentials mehr, `/poll` ist nativ in v2 und `free/*` umgeht Konto-/Quota-Abfragen vor dem anonymen Free-Universum.
 
 ---
 
@@ -57,6 +68,7 @@ Mit der Einbindung Ihres API-Schlüssels erhalten OpenCode-Agenten Zugriff auf m
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Magische Sprachsynthese (ElevenLabs, OpenAI TTS) und generative Musik.
 - 🎙️ `polli_stt` : Hochwertige Sprachumwandlung in Text (Whisper V3).
 - 🌐 `polli_web_search` : Vernetzte Websuche & Spezialkontexte (`gemini-search`, `perplexity...`).
+- 🤖 `polli_agent` : Explizite Delegation an Pollinations Managed Agents mit eigenem Agent-Budget pro Lauf und konservativer Cost-Guard-Schätzung.
 
 ### 🧰 Kostenlose Bonus-Werkzeuge für Entwickler (Immer verfügbar — kein Schlüssel nötig)
 - 🆓 `gen_edit_image_free` : Kostenlose Bildgenerierung und **Bearbeitung von 1–3 Bildern**, Live-Kontingent pro IP, vollständige Seitenverhältnisse, Custom-Größe 256–1440, Seed, Prompt-Upsampling und Edit-Turbo. Kein Schlüssel.

@@ -1,5 +1,5 @@
-# 📘 Technical Manual — OpenCode Pollinations Plugin v6.4
-> **Version**: 6.4.2 | **Status**: Stable | **Last Updated**: 2026-07-14
+# 📘 Technical Manual — OpenCode Pollinations Plugin v7.0
+> **Version**: 7.0.0 | **Status**: Release Candidate | **Last Updated**: 2026-09-30
 
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
@@ -28,56 +28,56 @@
 
 ## Architecture Overview
 
+### v7 dual-stack contract
+
+The published package exposes **one Pollinations integration** to two OpenCode host generations:
+
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              OPENCODE HOST                                   │
-│  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │                         Plugin Context (ctx)                            │ │
-│  │   • ctx.client.tui.showToast()  — Notifications                        │ │
-│  │   • config() hook               — Provider + model injection           │ │
-│  │   • tui.command.execute hook    — /pollinations commands                │ │
-│  │   • session.idle hook           — Status bar updates                   │ │
-│  └────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       POLLINATIONS PLUGIN (v6.5.x)                        │
-│                                                                             │
-│  ┌──────────────────────────── Server ────────────────────────────────────┐ │
-│  │ index.ts │ config.ts │ proxy.ts │ generate-config.ts │ quota.ts       │ │
-│  │ commands.ts │ toast.ts │ status.ts │ pollinations-api.ts               │ │
-│  └───────────────────────────────────────────────────────────────────────┘ │
-│                                                                             │
-│  ┌──────────────────────────── Tools ────────────────────────────────────┐ │
-│  │  pollinations/   design/    power/                                     │ │
-│  │  gen_image       gen_diagram  remove_background                        │ │
-│  │  gen_audio       gen_palette  extract_audio                            │ │
-│  │  gen_music       gen_qrcode   extract_frames                           │ │
-│  │  gen_video                    file_to_url                              │ │
-│  │  transcribe_audio             gen_edit_image_free · gen_video_free    │ │
-│  │  polli_web_search                                                      │ │
-│  └───────────────────────────────────────────────────────────────────────┘ │
-│                                                                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐ │
-│  │               HTTP PROXY SERVER (Dynamic Port — system 0)             │ │
-│  │   127.0.0.1:<dynamic>/v1/chat/completions → Pollinations APIs         │ │
-│  └───────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                    ┌─────────────────┴─────────────────┐
-                    ▼                                   ▼
-┌──────────────────────────────────┐  ┌────────────────────────────────────┐
-│       FREE UNIVERSE              │  │       ENTERPRISE UNIVERSE           │
-│  text.pollinations.ai            │  │  gen.pollinations.ai                │
-│  • /openai/chat/completions      │  │  • /v1/chat/completions             │
-│  • /models                       │  │  • /text/models                     │
-│  • No authentication             │  │  • /account/profile                 │
-│                                  │  │  • /account/balance                 │
-│                                  │  │  • /account/usage                   │
-│                                  │  │  • Bearer token required            │
-└──────────────────────────────────┘  └────────────────────────────────────┘
+OpenCode v1.x                         OpenCode v2.x
+    │                                    │
+    │ legacy plugin/server hooks          │ @opencode/plugin setup()
+    ▼                                    ▼
+ src/index.ts ─────── shared core ───── src/v2.ts
+                         │
+        ┌────────────────┼─────────────────┐
+        ▼                ▼                 ▼
+   Model Registry    Tool Registry      Cost Guard
+        │                │                 │
+        │                ├─ media/tools    ├─ paid_only block
+        │                ├─ polli_status   ├─ confirmation tickets
+        │                └─ polli_agent    └─ agent_budget override
+        │
+        ├─ official models
+        ├─ community models (chat only when tools=true)
+        └─ managed agents (agent=true; excluded from chat picker)
+                         │
+                         ▼
+              local OpenAI-compatible proxy
+                         │
+             Pollinations free / gen APIs
 ```
+
+- **OpenCode v1** consumes the legacy `ToolDefinition` objects directly.
+- **OpenCode v2** converts the same shared tool registry to v2 JSON schemas, registers the provider through replayable transforms, and registers `/poll` through the native command API.
+- The external v2 TUI extension is intentionally **not packaged**: OpenCode 2.0.x could produce a duplicated Solid `Keymap.Provider` context. `/poll` therefore lives in the server plugin and works without a parallel TUI plugin.
+- Free routing is anonymous: `free/*` never requires a quota/account read before reaching the public free endpoint.
+- v2 auth/config respects its active XDG roots so an isolated v2 installation does not silently inherit v1 credentials.
+
+### Community models vs Managed Agents
+
+`community:true` and `agent:true` are separate concepts in v7:
+
+- reliable **Community text models** may appear in the normal OpenCode model picker only when `tools === true` and `communityModels.enabled !== false`;
+- **Managed Agents** (`agent:true`) never appear as normal chat models; they are discovered with `/poll agents` and invoked explicitly through `polli_agent`;
+- `managedAgents.enabled` controls delegation exposure independently from Community model exposure.
+
+### Managed Agent budget model
+
+`managedAgents.budget` is a plugin-local logical budget per delegation (default **0.60 Pollen**). It does not modify the account key and is not represented as a server-side hard spending cap.
+
+For hosted Pollinations Prompt Agents, the estimator deliberately assumes the documented runtime ceiling of **8 model steps and 16 tool calls**, cumulative prompt growth, output/reasoning tokens, and an additional unknown-tool reserve because public agent metadata does not expose the selected MCP servers. Agents whose inner runtime/base model is not exposed are treated as unknown and are estimated above the configured budget so that confirmation is required.
+
+The same generic Cost Guard and `polli_gen_confirm` dispatcher are shared by OpenCode v1 and v2. STT, image/video/audio/music/3D, web search, and Managed Agent delegation all use the common guard where a Pollinations spend can occur.
 
 ---
 

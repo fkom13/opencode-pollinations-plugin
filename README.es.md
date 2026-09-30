@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin para OpenCode (v6.5.5)
+# 🌸 Pollinations AI Plugin para OpenCode (v7.0.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -24,6 +24,17 @@
 
 - 🌍 **Transparente**: Nuestro código, hoja de ruta (roadmap) y discusiones son de acceso público.
 - ⚖️ **Economía Justa**: Una moneda única (**Pollen 🌻**) para todo tipo de archivos multimedia y modelos. Precios predecibles, transparentes y sin ataduras propietarias.
+
+---
+
+## 🚀 Novedades v7.0.0
+
+- 🔁 **Dual-stack OpenCode v1 + v2**: un único paquete del plugin oficial de Pollinations soporta ambas generaciones de OpenCode, preservando `plugin` en v1 y `plugins` en v2 con un núcleo común.
+- 🤖 **Managed Agents separados del chat normal**: las entradas `agent:true` no aparecen en el selector de modelos y se delegan explícitamente mediante `polli_agent`. Usa `/poll agents [búsqueda]` para descubrirlas.
+- 💰 **Presupuesto Agent dedicado**: `/poll config agent_budget <pollen>` define una protección lógica independiente por ejecución (por defecto **0,60 🌻**). Los Prompt Agents alojados se estiman de forma conservadora con límites de 8 pasos de modelo / 16 llamadas a tools; runtimes desconocidos fuerzan confirmación. No es un hard cap del servidor.
+- 🌐 **Modelos Community controlados**: los modelos comunitarios fiables se exponen dinámicamente en chat solo si anuncian tool calling; `/poll config community on|off` controla su exposición.
+- 🛡️ **Cost Guard generalizado**: confirmaciones resueltas por registro, STT protegido, categoría correcta para costes de texto y tickets aislados por XDG.
+- 🔐 **Auth v2 y Free limpios**: login v2 aislado de credenciales v1, `/poll` nativo en v2 y rutas `free/*` sin consultas de cuenta/cuota antes del universo gratuito.
 
 ---
 
@@ -57,6 +68,7 @@ Aparte de conversar, cuando conectas tu API Key, el Agente OpenCode adquiere sup
 - 🔊 `polli_gen_audio` y `polli_gen_music` : Síntesis de voz mágica (ElevenLabs, OpenAI TTS) y Música de IA.
 - 🎙️ `polli_stt` : Alta eficiencia en el paso de voz a texto (Whisper V3).
 - 🌐 `polli_web_search` : Búsqueda web inteligente y conocimiento en tiempo real (`gemini-search`, `perplexity...`).
+- 🤖 `polli_agent` : Delegación explícita a Managed Agents de Pollinations con presupuesto Agent dedicado por ejecución y estimación conservadora del Cost Guard.
 
 ### 🧰 Herramientas de Creador Gratuitas (Siempre disponibles — sin clave API)
 - 🆓 `gen_edit_image_free` : Generación gratis y **edición de 1–3 imágenes**, cuota por IP leída en vivo, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición. Sin clave.

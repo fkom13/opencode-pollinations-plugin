@@ -5,6 +5,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [7.0.0] — 2026-09-30
+
+### 🔁 OpenCode v1 + v2 dual-stack
+
+- **One package, two host generations** — the official Pollinations OpenCode plugin keeps the legacy v1 server/plugin contract while adding an OpenCode v2 adapter through `@opencode/plugin`. Shared models, tools, billing and safety logic remain single-source.
+- **Native v2 provider lifecycle** — cached/free fallback models register immediately, then the live Pollinations catalog refreshes asynchronously without blocking OpenCode startup.
+- **Native `/poll` on v2** — slash commands are registered through the v2 server command API. The experimental external TUI extension was removed after reproducing `Keymap.Provider is missing`; no parallel TUI plugin is shipped.
+- **Installer generation detection** — fresh installs use v1 `plugin` or v2 `plugins` automatically while preserving an explicit existing generation.
+- **Validated on real hosts** — OpenCode 1.18.33 and 2.0.19 both load the same package build; chat, tools and Managed Agent delegation were exercised end-to-end on both.
+
+### 🌐 Community models & dynamic catalog
+
+- **Community models are explicit metadata** — no slash-name heuristic. Reliable community text models can enter the normal chat catalog only when the live entry advertises `tools: true`.
+- **Configurable exposure** — `/poll config community on|off`, enabled by default.
+- **Agent separation** — live entries with `agent: true` are deliberately excluded from the normal chat model picker.
+
+### 🤖 Managed Agent delegation
+
+- **`polli_agent`** — explicit delegation tool for Pollinations Managed Agents, shared by OpenCode v1 and v2. `/poll agents [search]` provides discovery without turning agents into ordinary chat models.
+- **Dedicated Agent budget** — `managedAgents.budget` / `/poll config agent_budget <pollen>` provides an independent local per-run safety envelope (default 0.60 🌻). `managedAgents.enabled` / `/poll config agents on|off` controls exposure.
+- **Conservative estimator** — hosted Prompt Agents are estimated against the Pollinations runtime ceiling of 8 model steps / 16 tool calls, cumulative context growth and an unknown-tool reserve. Runtimes without an exposed base model are treated as unknown and forced through confirmation.
+- **Honest safety semantics** — Agent budget is a plugin-local Cost Guard threshold, not a server-side hard spending cap and does not alter the account key budget.
+- **Real validation** — a Title Generator Managed Agent was delegated directly and through OpenCode v1/v2. The v2 Luna → `polli_agent` → GPT-5-nano child → Luna chain completed on Quest (`meter_source=tier`).
+
+### 🛡️ Cost Guard & billing safety
+
+- **Generic confirmation dispatcher** — `polli_gen_confirm` resolves pending tools through the shared Tool Registry instead of a hard-coded list, so new guarded tools can be resumed without bespoke dispatch code.
+- **STT protection** — transcription resolves live model aliases, measures audio duration with ffprobe where possible, uses live `promptAudioSeconds` pricing and participates in `paid_only` + confirmation protection.
+- **Correct text category** — `polli_web_search` uses text-model pricing metadata instead of the legacy audio-category workaround.
+- **XDG-isolated pending tickets** — confirmation state follows the active Pollinations config root, preventing v1/v2 cross-talk.
+
+### 🔐 Auth & free routing
+
+- **v2 credential isolation** — Linux config/auth discovery honors XDG roots, so an isolated v2 installation no longer silently inherits v1 credentials.
+- **Device login verified** — browser device flow hot-loads and persists the v2 account key without exposing it in configuration output.
+- **Free means free** — `free/*` routing resolves before quota/account checks, so `free/openai-fast` remains usable anonymously even when no account key exists or an old key is invalid.
+
+### 🌍 Docs, packaging & validation
+
+- English, French, Spanish, German, Italian and Chinese runtime strings and README files describe the v7 dual-stack, Community and Managed Agent behavior.
+- `TECHNICAL_MANUAL.md` documents the shared-core architecture and `docs/TECHNICAL_MANUAL.md` is synchronized.
+- Package dry-run contains `dist/index.js`, `dist/v2.js` and `dist/tools/pollinations/polli_agent.js`, with no external `dist/tui.js`.
+- Full test chain, v7 compatibility contracts, i18n parity and UX vocabulary guards pass before publication.
+
 ## [6.5.5] — 2026-09-10
 
 ### 🆓 Free media tools

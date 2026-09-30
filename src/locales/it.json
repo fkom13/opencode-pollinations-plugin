@@ -1,7 +1,7 @@
 {
   "commands": {
     "help": {
-      "title": "### 🌸 Plugin Pollinations - Comandi V6",
+      "title": "### 🌸 Plugin Pollinations - Comandi V7",
       "alias_note": "*(L'alias `/poll` è supportato e raccomandato al posto di `/pollinations` !)*",
       "mode_usage": "**Modalità e Uso**\n- **`/poll mode [modo]`**: Cambia la modalità (manual, quest, quest_only, paid).\n- **`/poll usage [full]`**: Mostra la dashboard (full = dettagli).\n- **`/poll fallback <main> [agent]`**: Configura la rete di sicurezza.",
       "configuration": "**Configurazione**\n- **`/poll config [chiave] [valore]`**:\n   - `lang`: en, fr, de, es, it, etc.\n   - `status_gui`: none, alert, all\n   - `logs_gui`: none, error, verbose\n   - `threshold_quest` / `threshold_wallet`: soglia in pollen (def. 0.05 / 0.5)\n   - `status_bar`: true/false\n   - `cost_estimator`: true/false (mostra i costi nell'output)\n   - `enablePaidTools`: true/false (blocca paid_only localmente — nessuna garanzia server)\n   - `costThreshold`: limite in pollen (predefinito: 0.15)\n   - `costConfirmationRequired`: true/false (conferma di spesa)",

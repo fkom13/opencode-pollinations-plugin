@@ -1,7 +1,7 @@
 {
   "commands": {
     "help": {
-      "title": "### 🌸 Pollinations 插件 - 命令 V6",
+      "title": "### 🌸 Pollinations 插件 - 命令 V7",
       "alias_note": "*(支持并推荐使用别名 `/poll` 代替 `/pollinations`！)*",
       "mode_usage": "**模式与用法**\n- **`/poll mode [模式]`**：切换模式 (manual, quest, quest_only, paid)。\n- **`/poll usage [full]`**：显示仪表盘 (full = 详情)。\n- **`/poll fallback <main> [agent]`**：配置安全网。",
       "configuration": "**配置**\n- **`/poll config [键] [值]`**：\n   - `lang`：en, fr, es, de, it, zh 等\n   - `status_gui`：none, alert, all\n   - `logs_gui`：none, error, verbose\n   - `threshold_quest` / `threshold_wallet`：pollen 阈值 (默认 0.05 / 0.5)\n   - `status_bar`：true/false\n   - `cost_estimator`：true/false (在输出中显示费用)\n   - `enablePaidTools`：true/false (本地阻止 paid_only — 无服务器保证)\n   - `costThreshold`：Pollen 限额 (默认：0.15)\n   - `costConfirmationRequired`：true/false (花费确认)",

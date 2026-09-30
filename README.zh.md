@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI 插件 - OpenCode版 (v6.5.5)
+# 🌸 Pollinations AI 插件 - OpenCode版 (v7.0.0)
 
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
@@ -24,6 +24,17 @@
 
 - 🌍 **完全透明**: 我们的底层代码、开发路线图(Roadmap)以致社区探讨全部对外公开。
 - ⚖️ **公平的经济模式**: 全平台使用统一计量单位 (**Pollen 🌻**) 代替繁琐的点券。透明定价，永不强制锁定平台 (No Vendor Lock-in)。
+
+---
+
+## 🚀 v7.0.0 新功能
+
+- 🔁 **OpenCode v1 + v2 双栈**：同一个 Pollinations 官方插件包同时支持两代 OpenCode；安装器保留 v1 的 `plugin` 与 v2 的 `plugins` 约定，共享同一 provider/tools 核心。
+- 🤖 **Managed Agents 与普通聊天模型分离**：`agent:true` 条目不会进入普通模型选择器，只通过 `polli_agent` 显式委派；使用 `/poll agents [搜索]` 查看可用 Agent。
+- 💰 **独立 Agent 预算**：`/poll config agent_budget <pollen>` 设置每次运行的本地逻辑预算（默认 **0.60 🌻**）。托管 Prompt Agent 按 Pollinations 的 8 个模型步骤 / 16 次工具调用上限做保守估算；未知 runtime 强制确认。该预算不是服务端硬性消费上限。
+- 🌐 **受控 Community 模型**：可靠的社区文本模型仅在声明 tool calling 时动态进入聊天；`/poll config community on|off` 控制暴露。
+- 🛡️ **统一 Cost Guard**：确认机制由 registry 驱动，STT 纳入保护，文本成本使用正确类别，pending ticket 按当前 XDG 配置隔离。
+- 🔐 **干净的 v2 认证与 Free 路由**：v2 登录不再继承 v1 credentials，`/poll` 成为 v2 原生命令，`free/*` 在进入匿名免费宇宙前不再调用账户/配额 API。
 
 ---
 
@@ -57,6 +68,7 @@
 - 🔊 `polli_gen_audio` & `polli_gen_music` : 拟真度极高的自然人声合成 (ElevenLabs, OpenAI TTS) 和 智能背景音乐编曲。
 - 🎙️ `polli_stt` : 媲美专家的 AI 语言文字转化抓取轨道 (基于 Whisper V3)。
 - 🌐 `polli_web_search` : 面向全球互联与深度资料调研辅助模型 (`gemini-search`, `perplexity...`)。
+- 🤖 `polli_agent`：显式委派给 Pollinations Managed Agent，使用独立的单次 Agent 预算与保守的 Cost Guard 估算。
 
 ### 🧰 免费的创作者辅助系统 (永远可以使用 — 无需密钥)
 - 🆓 `gen_edit_image_free`：免费图像生成与 **1–3 张图像编辑**，实时读取每 IP 配额，支持完整宽高比、自定义 256–1440 尺寸、seed、提示词增强和编辑 turbo。无需密钥。
