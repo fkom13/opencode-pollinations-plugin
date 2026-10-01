@@ -59,9 +59,12 @@ OpenCode v1.x                         OpenCode v2.x
 
 - **OpenCode v1** consumes the legacy `ToolDefinition` objects directly.
 - **OpenCode v2** converts the same shared tool registry to v2 JSON schemas, registers the provider through replayable transforms, and registers `/poll` through the native command API.
+- The package default export follows OpenCode's official dual-version contract: V1 calls `server()`; V2 reads `id + setup()` and ignores `server()`. Both implementations remain in one npm package and one source tree.
+- For explicit local V1 tests, load `dist/index.js`. On PC2's OpenCode 2.0.19 local loader, use `dev/opencode-v2-local/`, a development-only adapter that exports the current `dist/v2.js`. This shim is not a second implementation and is excluded from the npm package.
 - The external v2 TUI extension is intentionally **not packaged**: OpenCode 2.0.x could produce a duplicated Solid `Keymap.Provider` context. `/poll` therefore lives in the server plugin and works without a parallel TUI plugin.
 - Free routing is anonymous: `free/*` never requires a quota/account read before reaching the public free endpoint.
 - v2 auth/config respects its active XDG roots so an isolated v2 installation does not silently inherit v1 credentials.
+- The canonical local-testing procedure is documented in `docs/LOCAL_TESTING.md`.
 
 ### Community models vs Managed Agents
 

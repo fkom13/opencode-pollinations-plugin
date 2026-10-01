@@ -143,6 +143,12 @@ Pollinations for OpenCode 已提供母语原生语言支持，沟通无缝顺畅
 
 ---
 
+## 🧪 本地开发：OpenCode V1 + V2
+
+V1 与 V2 **共用唯一的规范源码仓库**，只需运行一次 `npm run build`。本地显式测试时，OpenCode V1 加载 `dist/index.js`；PC2 上的 OpenCode 2.0.19 沙箱使用 `dev/opencode-v2-local/`，这个极小适配器只导出当前的 `dist/v2.js`。发布到 npm 的仍然是 **同一个混合包**：V1 调用 `server()`，V2 调用 `setup()`。
+
+完整流程：[`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md)。
+
 ## 🚀 起步向导指引 (Onboarding)
 
 ### 🐧 1. 跨平台系统预案配置 (NPM)

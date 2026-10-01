@@ -143,6 +143,12 @@ Pollinations se comunica fluidamente en varios idiomas usando bases directas:
 
 ---
 
+## 🧪 Desarrollo local: OpenCode V1 + V2
+
+Existe **un único repositorio fuente canónico** para ambas generaciones. Se compila una sola vez con `npm run build`. Para pruebas locales explícitas, OpenCode V1 carga `dist/index.js`; en nuestro sandbox PC2 con OpenCode 2.0.19, V2 carga `dev/opencode-v2-local/`, un adaptador mínimo que exporta el `dist/v2.js` actual. El paquete publicado sigue siendo **un único paquete híbrido**: V1 llama a `server()` y V2 a `setup()`.
+
+Procedimiento completo: [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md).
+
 ## 🚀 Instalación y Emparejamiento
 
 ### 🐧 1. Soporte a Todas las Plataformas vía NPM CLI

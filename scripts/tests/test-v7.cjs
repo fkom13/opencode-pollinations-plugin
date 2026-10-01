@@ -22,6 +22,8 @@ ok('dual export retains V1 server and V2 setup', () => assert(index.includes('se
 
 const setup = read('bin/setup.js');
 ok('setup detects v-prefixed OpenCode v2 versions', () => assert(setup.includes('v?(\\d+)')));
+const localV2Shim = read('dev/opencode-v2-local/index.js');
+ok('OpenCode 2.0.19 local shim delegates only to dist/v2.js', () => assert(localV2Shim.includes("../../dist/v2.js")));
 
 const config = read('src/server/config.ts');
 ok('community models default enabled', () => assert(/communityModels:\s*\{\s*enabled:\s*true\s*\}/.test(config)));

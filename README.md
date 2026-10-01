@@ -142,6 +142,12 @@ Pollinations for OpenCode natively speaks your language:
 
 ---
 
+## 🧪 Local development: OpenCode V1 + V2
+
+There is **one canonical source repository** for both generations. Build once with `npm run build`. For explicit local testing, OpenCode V1 should load `dist/index.js`; our PC2 OpenCode 2.0.19 sandbox loads `dev/opencode-v2-local/`, a tiny adapter that exports the current `dist/v2.js`. The published package remains a **single hybrid package**: V1 calls `server()`, V2 calls `setup()` according to OpenCode's official dual-version plugin contract.
+
+Full procedure: [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md).
+
 ## 🚀 Getting Started & Onboarding
 
 ### 🐧 1. Cross-Platform Configuration (NPM Installation)

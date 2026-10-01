@@ -1,0 +1,6 @@
+{
+  "name": "opencode-pollinations-plugin-v2-local",
+  "private": true,
+  "type": "module",
+  "exports": "./index.js"
+}
