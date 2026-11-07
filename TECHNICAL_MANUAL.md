@@ -1,5 +1,7 @@
 # 📘 Technical Manual — OpenCode Pollinations Plugin v6.4
 > **Version**: 6.4.2 | **Status**: Stable | **Last Updated**: 2026-07-14
+> **Availability notice (November 2026):** Pruna free P-Video is discontinued; this manual retains historical v6.x technical notes.
+
 
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
@@ -55,7 +57,7 @@
 │  │  gen_audio       gen_palette  extract_audio                            │ │
 │  │  gen_music       gen_qrcode   extract_frames                           │ │
 │  │  gen_video                    file_to_url                              │ │
-│  │  transcribe_audio             gen_edit_image_free · gen_video_free    │ │
+│  │  transcribe_audio             gen_edit_image_free                     │ │
 │  │  polli_web_search                                                      │ │
 │  └───────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
@@ -573,13 +575,12 @@ There is deliberately **no `rmbg_keys` tool and no BackgroundCut path** in the c
 | Tool | Current no-key contract | Resilience |
 |------|-------------------------|------------|
 | `gen_edit_image_free` | text generation or 1–3 image edit; ratios `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`; `custom` generation 256–1440 (multiple of 16); `match_input_image` edit; seed, prompt upsampling, edit turbo | Live per-IP quota; magic-byte output detection |
-| `gen_video_free` | P‑Video 1–10 s verified output; 720p/1080p; 24/48 fps; seven aspect ratios; optional first-frame image/audio; seed, draft, prompt upsampling, save-audio | Live `p-video` quota; same-job polling only; MP4/WebM magic-byte validation |
 | `object_remover` | prompt-based object removal | Input/output magic-byte validation; real extension |
 | `image_upscaler` | 2× / 4× | Real JPEG/PNG/WebP extension follows bytes |
 | `image_enhancer` | target longest side 1K / 2K / 4K | Real JPEG/PNG/WebP extension follows bytes |
 | `remove_background` | bgeraser → ClearBackdrop | One free fallback; no keys; real extension |
 
-The free playground quotas are intentionally read at execution time rather than documented as fixed constants. P‑Video accepts a submitted duration greater than 10 seconds but the free backend was verified to return approximately 10 seconds, so the public tool enforces 1–10 seconds.
+**Availability update (November 2026):** The personal Pruna P-Video Playground is discontinued. `gen_video_free` shipped in v6.5.5 but no longer works and is removed from v7. `gen_edit_image_free` remains available. `polli_gen_video` is authenticated and may incur charges; earlier free-video quota information is historical.
 
 ---
 

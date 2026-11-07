@@ -1,5 +1,7 @@
 # 🌸 Pollinations AI Plugin per OpenCode (v6.5.5)
 
+> ⚠️ **Service update, November 2026.** Il Playground personale Pruna P-Video non esiste più. `gen_video_free` può ancora comparire nel pacchetto v6.5.5 pubblicato, ma non funziona ed è rimosso in v7. `gen_edit_image_free` resta disponibile; `polli_gen_video` richiede autenticazione e può consumare Pollen.
+
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>Il Ponte definitivo tra OpenCode e l'ecosistema Pollinations.ai</h3>
@@ -30,7 +32,6 @@
 ## ✨ Novità v6.5.5
 
 - ✂️ **RMBG resiliente senza chiave**: `remove_background` usa ora **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, archivio/rotazione chiavi e `rmbg_keys` sono stati rimossi dal plugin attivo.
-- 🎞️ **Contratto P‑Video gratuito corretto**: output verificato 1–10 s, 720p/1080p, 24/48 fps, sette rapporti, seed/draft/prompt upsampling/audio e immagine iniziale/audio opzionali; quota per IP letta live.
 - 🖼️ **Generazione/modifica immagini gratis ampliata**: modifica di 1–3 immagini, rapporti completi, dimensioni custom 256–1440, seed, prompt upsampling e turbo modifica con quota per IP live.
 - 🧬 **Prevalgono i byte reali del media**: gli strumenti reverse salvano JPEG/PNG/WebP in base ai magic bytes, correggendo le risposte JPEG prima nominate `.png`.
 - 🌍 **Convergenza in sei lingue**: runtime, onboarding, sei README e manuale tecnico mantenuto sono allineati al comportamento attuale.
@@ -42,7 +43,7 @@
 - 📦 **Artifact Core (Magic Bytes)**: Verifica fisica binaria (JPEG, PNG, GLB, MP4, MP3, WebM) che garantisce estensioni di file corrette su disco.
 - ⏱️ **Gerarchia di Timeout Configurabile**: Controllo dettagliato dei timeout per chiamata, per modello e per capacità con `/poll config timeouts.*`.
 - 🎯 **Quest & Login in 1 Clic**: Tracciamento retroattivo delle quest (`/poll quests`) e login automatico nel browser (`/poll login`).
-- 🆓 **6 Strumenti Creatore Gratuiti (senza chiave)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
+- 🆓 **Cinque strumenti creativi gratuiti (senza chiave)**: `gen_edit_image_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -60,7 +61,6 @@ Oltre alle discussioni testuali, connettere la tua chiave API fornisce agli Agen
 
 ### 🧰 Strumenti di Creazione Gratuiti (Sempre disponibili — senza chiave API)
 - 🆓 `gen_edit_image_free` : Generazione gratis e **modifica di 1–3 immagini**, quota per IP letta in tempo reale, rapporti completi, dimensioni custom 256–1440, seed, prompt upsampling e turbo modifica. Senza chiave.
-- 🆓 `gen_video_free` : P‑Video gratis, **1–10 s verificati**, 720p/1080p, 24/48 fps, 7 rapporti, seed/draft/prompt upsampling/audio, con immagine iniziale o audio opzionali. Quota per IP in tempo reale, senza chiave.
 - 🧹 `object_remover` : Rimozione gratuita di oggetti tramite prompt; il risultato viene validato dai magic bytes e salvato con la vera estensione.
 - 📐 `image_upscaler` : Upscale gratis 2x/4x; l’output JPEG/PNG/WebP viene rilevato dai byte reali, mai dedotto dal nome del file.
 - ✨ `image_enhancer` : Miglioramento gratis 1K/2K/4K (denoise, nitidezza, restauro), con rilevamento del formato reale.

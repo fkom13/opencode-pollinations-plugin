@@ -1,5 +1,7 @@
 # 🌸 Plugin Pollinations AI pour OpenCode (v6.5.5)
 
+> ⚠️ **Service update, November 2026.** Le Playground personnel Pruna P-Video a disparu. `gen_video_free` peut figurer dans la version v6.5.5 déjà publiée mais ne fonctionne plus et est supprimé en v7. `gen_edit_image_free` reste disponible ; `polli_gen_video` exige une authentification et peut coûter des Pollens.
+
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>La Passerelle ultime entre OpenCode et l'écosystème Pollinations.ai</h3>
@@ -30,7 +32,6 @@
 ## ✨ Nouveautés v6.5.5
 
 - ✂️ **RMBG sans clé résilient** : `remove_background` utilise maintenant **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, le stockage/roulement des clés et `rmbg_keys` sont retirés du plugin actif.
-- 🎞️ **Contrat P‑Video gratuit corrigé** : sortie vérifiée 1–10 s, 720p/1080p, 24/48 fps, sept ratios, seed/draft/prompt upsampling/audio et image de première frame/audio optionnels ; quota par IP lu en direct.
 - 🖼️ **Génération/édition image gratuite étendue** : édition de 1 à 3 images, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition avec quota live par IP.
 - 🧬 **Les vrais octets média gagnent partout** : les outils image reverse sauvegardent JPEG/PNG/WebP selon les magic bytes, corrigeant les JPEG auparavant enregistrés sous un nom `.png`.
 - 🌍 **Convergence six langues** : runtime, onboarding, six README et manuel technique maintenu sont alignés sur le comportement réel des outils gratuits.
@@ -42,7 +43,7 @@
 - 📦 **Artifact Core (Magic Bytes)** : Vérification réelle des octets binaires (JPEG, PNG, GLB, MP4, MP3, WebM) garantissant la bonne extension de fichier sur le disque.
 - ⏱️ **Hiérarchie de Timeouts Configurable** : Contrôle fin des timeouts par appel, par modèle et par capacité via `/poll config timeouts.*`.
 - 🎯 **Quêtes & Connexion 1-Clic** : Suivi rétroactif des quêtes (`/poll quests`) et connexion automatique dans le navigateur (`/poll login`).
-- 🆓 **6 Outils Créateurs Gratuits (sans clé)** : `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
+- 🆓 **Cinq outils créatifs gratuits (sans clé)**: `gen_edit_image_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -60,7 +61,6 @@ Au-delà de la discussion textuelle, connecter votre clé donne aux Agents OpenC
 
 ### 🧰 Outils Bonus Créateurs Gratuits (Toujours disponibles — sans clé API)
 - 🆓 `gen_edit_image_free` : Génération gratuite et **édition de 1 à 3 images**, quota par IP lu en direct, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition. Sans clé.
-- 🆓 `gen_video_free` : P‑Video gratuit, **1–10 s vérifiées**, 720p/1080p, 24/48 fps, 7 ratios, seed/draft/prompt upsampling/audio, avec image de première frame ou audio optionnels. Quota par IP lu en direct, sans clé.
 - 🧹 `object_remover` : Suppression gratuite d’objets par prompt ; le média renvoyé est validé par magic bytes et sauvegardé avec sa vraie extension.
 - 📐 `image_upscaler` : Agrandissement gratuit 2x/4x ; la sortie JPEG/PNG/WebP est détectée dans les octets réels, jamais supposée depuis le nom de fichier.
 - ✨ `image_enhancer` : Amélioration gratuite 1K/2K/4K (débruitage, netteté, restauration), avec détection du vrai format de sortie.

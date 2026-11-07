@@ -3,6 +3,8 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [SemVer](https://semver.org/).
 
+> **Availability notice (November 2026, documentation only):** The Pruna P-Video Playground backing `gen_video_free` no longer exists. This tool may remain bundled in published v6.5.5 but no longer works and is removed in v7. Changelog entries below are historical, not current availability claims. `gen_edit_image_free` remains available and authenticated `polli_gen_video` may cost Pollen.
+
 ---
 
 ## [6.5.5] — 2026-09-10

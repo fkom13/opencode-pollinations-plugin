@@ -1,5 +1,7 @@
 # 🌸 Pollinations AI Plugin para OpenCode (v6.5.5)
 
+> ⚠️ **Service update, November 2026.** El Playground personal Pruna P-Video ha desaparecido. `gen_video_free` puede seguir en la versión v6.5.5 publicada, pero ya no funciona y se elimina en v7. `gen_edit_image_free` sigue disponible; `polli_gen_video` requiere autenticación y puede consumir Pollen.
+
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>El puente definitivo entre OpenCode y el ecosistema Pollinations.ai</h3>
@@ -30,7 +32,6 @@
 ## ✨ Novedades v6.5.5
 
 - ✂️ **RMBG resistente sin clave**: `remove_background` usa ahora **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, el almacenamiento/rotación de claves y `rmbg_keys` se eliminaron del plugin activo.
-- 🎞️ **Contrato P‑Video gratuito corregido**: salida verificada 1–10 s, 720p/1080p, 24/48 fps, siete relaciones, seed/draft/mejora de prompt/audio e imagen inicial/audio opcionales; cuota por IP leída en vivo.
 - 🖼️ **Generación/edición de imagen gratis ampliada**: edición de 1–3 imágenes, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición con cuota por IP en vivo.
 - 🧬 **Mandandan los bytes reales del medio**: las herramientas reverse guardan JPEG/PNG/WebP según magic bytes, corrigiendo respuestas JPEG antes guardadas con nombre `.png`.
 - 🌍 **Convergencia en seis idiomas**: runtime, onboarding, los seis README y el manual técnico mantenido reflejan el comportamiento actual.
@@ -42,7 +43,7 @@
 - 📦 **Artifact Core (Magic Bytes)**: Verificación física binaria (JPEG, PNG, GLB, MP4, MP3, WebM) garantizando extensiones correctas en disco.
 - ⏱️ **Jerarquía de Timeouts Configurable**: Control detallado de tiempos de espera por llamada, por modelo y por capacidad con `/poll config timeouts.*`.
 - 🎯 **Quests y Login en 1 Clic**: Seguimiento retroactivo de misiones (`/poll quests`) e inicio de sesión automático en navegador (`/poll login`).
-- 🆓 **6 Herramientas de Creador Gratuitas (sin clave)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
+- 🆓 **Cinco herramientas creativas gratuitas (sin clave)**: `gen_edit_image_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -60,7 +61,6 @@ Aparte de conversar, cuando conectas tu API Key, el Agente OpenCode adquiere sup
 
 ### 🧰 Herramientas de Creador Gratuitas (Siempre disponibles — sin clave API)
 - 🆓 `gen_edit_image_free` : Generación gratis y **edición de 1–3 imágenes**, cuota por IP leída en vivo, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición. Sin clave.
-- 🆓 `gen_video_free` : P‑Video gratis, **1–10 s verificados**, 720p/1080p, 24/48 fps, 7 relaciones, seed/draft/mejora de prompt/audio, con imagen inicial o audio opcionales. Cuota por IP en vivo, sin clave.
 - 🧹 `object_remover` : Eliminación gratis de objetos por prompt; el resultado se valida por magic bytes y se guarda con su extensión real.
 - 📐 `image_upscaler` : Aumento 2x/4x gratis; la salida JPEG/PNG/WebP se detecta por los bytes reales, nunca por el nombre del archivo.
 - ✨ `image_enhancer` : Mejora gratis 1K/2K/4K (reducción de ruido, nitidez y restauración), con detección del formato real.

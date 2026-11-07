@@ -1,5 +1,7 @@
 # 🌸 Pollinations AI Plugin for OpenCode (v6.5.5)
 
+> ⚠️ **Service update, November 2026.** The retired personal Pruna P-Video Playground is no longer available. `gen_video_free` may remain in published v6.5.5 but does not work and is removed in v7. `gen_edit_image_free` remains available; `polli_gen_video` requires Pollinations authentication and may cost Pollen.
+
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>The Ultimate Bridge between OpenCode and the Pollinations.ai Ecosystem.</h3>
@@ -30,7 +32,6 @@
 ## ✨ What's new in v6.5.5?
 
 - ✂️ **Resilient no-key RMBG**: `remove_background` now uses **bgeraser reverse → ClearBackdrop fallback**. BackgroundCut, key storage and `rmbg_keys` have been removed from the active plugin.
-- 🎞️ **Free P-Video contract corrected**: verified 1–10s output, 720p/1080p, 24/48 fps, seven aspect ratios, seed/draft/prompt upsampling/audio and optional first-frame image/audio; quota is read live per IP.
 - 🖼️ **Free image gen/edit expanded**: 1–3 image editing, full ratios, custom 256–1440 dimensions, seed, prompt upsampling and edit turbo with live per-IP quota.
 - 🧬 **Real media bytes win everywhere**: reverse image tools now persist JPEG/PNG/WebP according to magic bytes, fixing JPEG responses previously saved with `.png` names.
 - 🌍 **Six-language convergence**: runtime strings, onboarding, README files and the maintained technical manual are aligned with the current free-tool behavior.
@@ -42,7 +43,7 @@
 - 📦 **Artifact Core (Magic Bytes)**: True binary file verification ensures image, video, audio, and 3D files are saved with their real file extension.
 - ⏱️ **Configurable Timeout Hierarchy**: Fine-grained per-call, per-model, and per-capability timeout control via `/poll config timeouts.*`.
 - 🎯 **Quests & 1-Click Device Login**: Automatic quest tracking (`/poll quests`) and instant browser login (`/poll login`).
-- 🆓 **6 Free Creator Tools (No API key needed)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
+- 🆓 **Five free creator tools (no key)**: `gen_edit_image_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -60,7 +61,6 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 
 ### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
 - 🆓 `gen_edit_image_free` : Free image generation **and 1–3 image editing**, with live per-IP quota, full aspect ratios, custom 256–1440 dimensions, seed, prompt upsampling and edit turbo. No key.
-- 🆓 `gen_video_free` : Free P‑Video, verified **1–10s**, 720p/1080p, 24/48 fps, 7 aspect ratios, seed/draft/prompt upsampling/audio, plus optional first-frame image or audio. Live per-IP quota, no key.
 - 🧹 `object_remover` : Remove objects by prompt for free; returned media is validated by magic bytes and saved with its real extension.
 - 📐 `image_upscaler` : Free 2x/4x upscale; JPEG/PNG/WebP output is detected from real bytes, never assumed from the filename.
 - ✨ `image_enhancer` : Free 1K/2K/4K enhancement (denoise, sharpen, restore), with real output-format detection.
