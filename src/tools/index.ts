@@ -1,10 +1,12 @@
 /**
  * Tool Registry — Conditional Injection System
  * 
- * Free Universe (no key): 8 tools always available
- * Enter Universe (with key): +6 Pollinations tools
- * 
- * Tools are injected ONCE at plugin init. Restart needed after /poll connect.
+ * Free Universe (no key): 13 tools available, including device login.
+ * Enter Universe (with key): 25 tools in the current v7 registry.
+ *
+ * On OpenCode V2, a successful /poll login or /poll connect triggers
+ * a tool/model/provider reload. OpenCode V1 may still require restart
+ * to refresh its startup-time tool/provider inventory.
  */
 
 import { loadConfig } from '../server/config.js';
@@ -18,9 +20,8 @@ import { removeBackgroundTool } from './power/remove_background.js';
 import { extractFramesTool } from './power/extract_frames.js';
 import { extractAudioTool } from './power/extract_audio.js';
 
-// === FREE BONUS: standalone always-free image gen/edit + video (no key, no Pollen) ===
+// === FREE BONUS: standalone image gen/edit (no key, no Pollen) ===
 import { genEditImageFreeTool } from './pollinations/gen_edit_image_free.js';
-import { genVideoFreeTool } from './pollinations/gen_video_free.js';
 import { polliLoginTool } from './pollinations/polli_login.js';
 
 // === FREE BONUS: standalone image processing tools (no key, no API, direct calls) ===
@@ -42,6 +43,7 @@ import { polliStatusTool } from './pollinations/polli_status.js';
 import { polliConfigTool } from './pollinations/polli_config.js';
 import { polliQuestsTool } from './pollinations/polli_quests.js';
 import { polliAgentTool } from './pollinations/polli_agent.js';
+import { polliDecisionTool } from './pollinations/polli_decision.js';
 
 import * as fs from 'fs';
 
@@ -83,9 +85,6 @@ export function createToolRegistry(): Record<string, any> {
     // Bonus tool: always-free image gen/edit (works without a Pollinations key)
     tools['gen_edit_image_free'] = genEditImageFreeTool;
 
-    // Bonus tool: always-free video generation (works without a Pollinations key)
-    tools['gen_video_free'] = genVideoFreeTool;
-
     // Login tool: device-flow login, callable by any model (no key needed to run)
     tools['polli_login'] = polliLoginTool;
 
@@ -113,6 +112,9 @@ export function createToolRegistry(): Record<string, any> {
         if (config.managedAgents?.enabled !== false) {
             tools['polli_agent'] = polliAgentTool;
         }
+
+        // Typed decisions: live zero-price-first catalog, billed calls require approval.
+        tools['polli_decision'] = polliDecisionTool;
 
         // Cost Guard Confirmation tool
         tools['polli_gen_confirm'] = polliGenConfirmTool;
@@ -155,5 +157,6 @@ export {
     polliStatusTool,
     polliConfigTool,
     polliQuestsTool,
-    polliAgentTool
+    polliAgentTool,
+    polliDecisionTool
 };

@@ -9,8 +9,31 @@ interface BalanceResponse {
     total?: number;       // PR #12449 (new format)
     allowance?: number;   // PR #12449 — Quest allowance if present (not in prod yet)
     pack?: number;        // PR #12449 — paid pollen if present (not in prod yet)
-    balance?: number;     // legacy format (single combined number)
+    balance?: number;     // key-scoped spending balance (including per-key budget)
+    accountBalance?: { total?: number; tier?: number; paid?: number }; // current live API
     currency?: string;
+}
+
+/** Normalize current nested wallet fields without confusing the account's
+ * global Quest stash with a narrow key's remaining spending allowance.
+ * The upstream key balance is a cap on *either* bucket, not Quest-only.
+ */
+export function normalizeBalanceBuckets(b: BalanceResponse, estimatedQuest: number = 0) {
+    const numberOr = (v: unknown, fallback: number): number => {
+        if (v === undefined || v === null || v === '') return fallback;
+        const n = Number(v);
+        return Number.isFinite(n) ? Math.max(0, n) : fallback;
+    };
+    // A restricted key can have 5 Pollen remaining while the account has
+    // 70 Quest + 15 Paid globally. Use 5 as the maximum spendable allowance.
+    const keyBalance = numberOr(b.balance ?? b.total ?? b.accountBalance?.total, 0);
+    const questRaw = numberOr(b.accountBalance?.tier ?? b.allowance, estimatedQuest);
+    const paidRaw = numberOr(b.accountBalance?.paid ?? b.pack, Math.max(0, keyBalance - questRaw));
+    return {
+        totalBalance: keyBalance,
+        questBalance: Math.min(keyBalance, questRaw),
+        walletBalance: Math.min(keyBalance, paidRaw),
+    };
 }
 
 /**
@@ -134,21 +157,11 @@ export async function getQuotaStatus(forceRefresh = false): Promise<QuotaStatus>
         }
         const questEstimate = cachedStash?.questStash ?? 0;
 
-        const totalBalance = balanceRes.total
-            ?? balanceRes.balance
-            ?? 0;
-
-        // Quest balance: native allowance when available (PR #12541 not in prod),
-        // else best-effort stash estimate.
-        const questBalance = balanceRes.allowance !== undefined
-            ? Math.max(0, balanceRes.allowance)
-            : questEstimate;
-
-        // Paid pollen: native pack when available, else total minus quest estimate.
-        const paidPollenNative = balanceRes.pack;
-        const walletBalance = paidPollenNative !== undefined
-            ? Math.max(0, paidPollenNative)
-            : Math.max(0, totalBalance - questBalance);
+        // Prefer the native accountBalance split returned by today's API;
+        // apply the key-specific ceiling from {balance}. Older endpoints
+        // continue to use the stash estimate as a documented fallback.
+        const { totalBalance, questBalance, walletBalance } =
+            normalizeBalanceBuckets(balanceRes, questEstimate);
 
         const cleanQuestBalance = Math.max(0, parseFloat(questBalance.toFixed(4)));
         const cleanWalletBalance = Math.max(0, parseFloat(walletBalance.toFixed(4)));

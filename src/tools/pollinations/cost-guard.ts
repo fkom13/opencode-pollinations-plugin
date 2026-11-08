@@ -79,7 +79,7 @@ export function removePendingRequest(id: string) {
 
 // ─── Main Function ───────────────────────────────────────────────────────
 
-export function isTokenBased(category: 'image' | 'video' | 'audio' | 'text' | '3d', modelName: string): boolean {
+export function isTokenBased(category: 'image' | 'video' | 'audio' | 'text' | '3d' | 'decision', modelName: string): boolean {
     const m = ModelRegistry.getByNameOrAlias(category, modelName);
     return !!(m?.pricing && (
         m.pricing.completionImageTokens !== undefined ||
@@ -107,7 +107,7 @@ export function checkCostControl(
     args: any,
     modelName: string,
     estimatedCost: number,
-    category: 'image' | 'video' | 'audio' | 'text' | '3d' = 'image',
+    category: 'image' | 'video' | 'audio' | 'text' | '3d' | 'decision' = 'image',
     options: CostControlOptions = {},
 ): CostCheckResult {
     const config = loadConfig();
@@ -116,6 +116,11 @@ export function checkCostControl(
     const costLimit = options.costLimit ?? config.costThreshold ?? 0.0;
 
     const m = ModelRegistry.getByNameOrAlias(category, modelName);
+
+    // Unknown/invalid estimates must never silently bypass a spending guard.
+    if (!Number.isFinite(estimatedCost) || estimatedCost < 0) {
+        return { allowed: false, reason: 'invalid_cost_estimate', message: 'Cost estimate unavailable or invalid; paid generation blocked.' };
+    }
 
     // Détection token-based (si le modèle a une de ces propriétés de tarification, il est variable)
     const _isTokenBased = isTokenBased(category, modelName);

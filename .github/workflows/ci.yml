@@ -2,49 +2,55 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'v7-qa/**']
   pull_request:
     branches: [main, master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-test:
-    name: Build & Test (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    name: '${{ matrix.os }} / Node ${{ matrix.node }}'
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20, 22]
+        include:
+          - { os: ubuntu-latest, node: 18 }
+          - { os: ubuntu-latest, node: 20 }
+          - { os: ubuntu-latest, node: 22 }
+          - { os: windows-latest, node: 22 }
+          - { os: macos-latest, node: 22 }
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-
-      - name: Install
-        run: npm ci || npm install
-
-      - name: Build
-        run: npm run build
-
-      - name: Unit tests
-        run: npm run test:unit
+      - name: Reproducible install
+        run: npm ci
+      - name: Build and complete offline regression suite
+        run: npm run prepublishOnly
         env:
-          SKIP_NETWORK: "1"
-
-      - name: i18n parity
-        run: npm run test:i18n
-
-      - name: Packaging sanity
+          SKIP_NETWORK: '1'
+      - name: Verify dual-client package contents
         run: |
-          test -f bin/setup.js
-          test -f dist/index.js
-          test -f dist/index.d.ts
-          node -e "const p=require('./package.json'); if(p.engines&&p.engines.vscode) process.exit(1); if(p.activationEvents) process.exit(1);"
-          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
-          grep -q 'bin/setup.js' /tmp/pack.txt
-          grep -q 'dist/index.js' /tmp/pack.txt
+          node -e "const fs=require('node:fs'); for(const p of ['bin/setup.js','dist/index.js','dist/index.d.ts','dist/v2.js','dist/server/proxy.js']) { if(!fs.existsSync(p)) { console.error('missing '+p); process.exitCode=1; } }"
+          node -e "const p=require('./package.json');if(p.engines?.vscode||p.activationEvents) process.exit(1);if(!p.exports?.['.']) process.exit(2);"
+          npm pack --dry-run --json > pack.json
+          node -e "const p=require('./pack.json')[0];const files=p.files.map(x=>x.path);for(const n of ['dist/index.js','dist/v2.js','bin/setup.js']) if(!files.includes(n)) throw new Error('missing tarball '+n);if(files.some(n=>/\\.env|secret|credential|auth\\.json/i.test(n))) throw new Error('sensitive path found');console.log('PACKAGE_OK',p.version,files.length,p.size);"
+      - name: Upload packaging diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pack-${{ matrix.os }}-node${{ matrix.node }}
+          path: pack.json
+          if-no-files-found: ignore
+          retention-days: 7

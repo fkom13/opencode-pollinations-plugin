@@ -30,7 +30,7 @@
 ## 🚀 Novità v7.0.0
 
 - 🔁 **Dual-stack OpenCode v1 + v2**: un solo pacchetto del plugin ufficiale Pollinations supporta entrambe le generazioni OpenCode, mantenendo `plugin` in v1 e `plugins` in v2 con un core condiviso.
-- 🤖 **Managed Agents separati dai modelli chat**: le voci `agent:true` restano fuori dal selettore normale e vengono delegate esplicitamente tramite `polli_agent`. Usa `/poll agents [ricerca]` per scoprirle.
+- 🤖 **Agenti Community ancora selezionabili**: i modelli `agent:true` restano nel selettore OpenCode per compatibilità e si possono chiamare anche con `polli_agent` o `/poll agents [ricerca]`. ⚠️ La chat diretta può consumare Pollen variabile; il budget Agent vale solo per `polli_agent`.
 - 💰 **Budget Agent dedicato**: `/poll config agent_budget <pollen>` imposta una protezione logica separata per esecuzione (default **0,60 🌻**). I Prompt Agents ospitati sono stimati in modo conservativo sui limiti di 8 step modello / 16 chiamate tool; runtime sconosciuti richiedono conferma. Non è un hard cap lato server.
 - 🌐 **Community models controllati**: i modelli community affidabili compaiono dinamicamente in chat solo con tool calling; `/poll config community on|off` controlla l’esposizione.
 - 🛡️ **Cost Guard generalizzato**: conferme basate sul registry, STT protetto, categoria corretta per i costi testo e ticket pending isolati via XDG.
@@ -40,20 +40,18 @@
 
 ## ✨ Novità v6.5.5
 
-- ✂️ **RMBG resiliente senza chiave**: `remove_background` usa ora **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, archivio/rotazione chiavi e `rmbg_keys` sono stati rimossi dal plugin attivo.
-- 🎞️ **Contratto P‑Video gratuito corretto**: output verificato 1–10 s, 720p/1080p, 24/48 fps, sette rapporti, seed/draft/prompt upsampling/audio e immagine iniziale/audio opzionali; quota per IP letta live.
+- ✂️ **RMBG resiliente senza chiave**: `remove_background` usa ora **BGNinja (10/giorno/IP, 2 simultanei) → fallback legacy BGEraser → ClearBackdrop con chiave gratuita opzionale**. BackgroundCut, archivio/rotazione chiavi e `rmbg_keys` sono stati rimossi dal plugin attivo.
 - 🖼️ **Generazione/modifica immagini gratis ampliata**: modifica di 1–3 immagini, rapporti completi, dimensioni custom 256–1440, seed, prompt upsampling e turbo modifica con quota per IP live.
 - 🧬 **Prevalgono i byte reali del media**: gli strumenti reverse salvano JPEG/PNG/WebP in base ai magic bytes, correggendo le risposte JPEG prima nominate `.png`.
 - 🌍 **Convergenza in sei lingue**: runtime, onboarding, sei README e manuale tecnico mantenuto sono allineati al comportamento attuale.
 
-- 🧊 **Generazione 3D (`polli_gen_3d`)**: Generazione di modelli 3D (`trellis-2`, `hyper3d-rodin`) in formato standard `.glb` con protezione Cost Guard e recupero da cache.
+- 🧊 **Generazione 3D (`polli_gen_3d`)**: Generazione di modelli 3D (`trellis-2`, `hyper3d-rodin`) nei formati reali GLB/PLY con protezione Cost Guard e recupero da cache.
 - 🛡️ **Zero Doppia Fatturazione**: Retry chat rigorosamente limitati al codice HTTP 429; timeout e interruzioni di rete non inviano mai richieste di pagamento duplicate.
 - 🧠 **Normalizzazione del Reasoning**: Pulizia automatica dei flussi SSE per DeepSeek, Kimi e Qwen — nessuna perdita di testo di pensiero nella chat.
 - 💰 **Semantica Quest & Paid Trasparente**: Nuove modalità di fatturazione (`quest`, `quest_only`, `paid`, `manual`) con soglie di allerta in Pollen assoluto.
-- 📦 **Artifact Core (Magic Bytes)**: Verifica fisica binaria (JPEG, PNG, GLB, MP4, MP3, WebM) che garantisce estensioni di file corrette su disco.
+- 📦 **Artifact Core (Magic Bytes)**: Verifica fisica binaria (JPEG, PNG, GLB, PLY, MP4, MP3, WebM) che garantisce estensioni di file corrette su disco.
 - ⏱️ **Gerarchia di Timeout Configurabile**: Controllo dettagliato dei timeout per chiamata, per modello e per capacità con `/poll config timeouts.*`.
 - 🎯 **Quest & Login in 1 Clic**: Tracciamento retroattivo delle quest (`/poll quests`) e login automatico nel browser (`/poll login`).
-- 🆓 **6 Strumenti Creatore Gratuiti (senza chiave)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -64,7 +62,7 @@ Oltre alle discussioni testuali, connettere la tua chiave API fornisce agli Agen
 ### 💎 Strumenti Generativi Integrati (ENTER ONLY - richiede API key)
 - 🎨 `polli_gen_image` : Modelli di generazione immagini all'avanguardia (`Flux`, `Sana`, `Midjourney`, ecc.).
 - 🎬 `polli_gen_video` : Potenti modelli Testo-a-Video e Immagine-a-Video (`Wan`, `Veo`, `LTX`, `Reveal`).
-- 🧊 `polli_gen_3d` : Generazione di risorse 3D ad alta fedeltà (`trellis-2`, `hyper3d-rodin`) con output GLB.
+- 🧊 `polli_gen_3d` : Generazione di risorse 3D ad alta fedeltà (`trellis-2`, `hyper3d-rodin`) con output GLB o PLY secondo il fornitore.
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Sintesi vocale magica (ElevenLabs, OpenAI TTS) e Musica Generativa.
 - 🎙️ `polli_stt` : Trascrizione vocale di altissimo livello (Whisper V3).
 - 🌐 `polli_web_search` : Ricerca Web connessa & ricerca specializzata sui dati (`gemini-search`, `perplexity...`).
@@ -72,11 +70,10 @@ Oltre alle discussioni testuali, connettere la tua chiave API fornisce agli Agen
 
 ### 🧰 Strumenti di Creazione Gratuiti (Sempre disponibili — senza chiave API)
 - 🆓 `gen_edit_image_free` : Generazione gratis e **modifica di 1–3 immagini**, quota per IP letta in tempo reale, rapporti completi, dimensioni custom 256–1440, seed, prompt upsampling e turbo modifica. Senza chiave.
-- 🆓 `gen_video_free` : P‑Video gratis, **1–10 s verificati**, 720p/1080p, 24/48 fps, 7 rapporti, seed/draft/prompt upsampling/audio, con immagine iniziale o audio opzionali. Quota per IP in tempo reale, senza chiave.
 - 🧹 `object_remover` : Rimozione gratuita di oggetti tramite prompt; il risultato viene validato dai magic bytes e salvato con la vera estensione.
 - 📐 `image_upscaler` : Upscale gratis 2x/4x; l’output JPEG/PNG/WebP viene rilevato dai byte reali, mai dedotto dal nome del file.
 - ✨ `image_enhancer` : Miglioramento gratis 1K/2K/4K (denoise, nitidezza, restauro), con rilevamento del formato reale.
-- ✂️ `remove_background` : Rimozione sfondo senza chiave con catena resiliente **bgeraser reverse → fallback ClearBackdrop**. Nessun provider a pagamento né rotazione chiavi; formato/estensione reali rilevati automaticamente.
+- ✂️ `remove_background` : Rimozione sfondo senza chiave con catena resiliente **BGNinja (10/giorno/IP, 2 simultanei) → fallback legacy BGEraser → ClearBackdrop con chiave gratuita opzionale**. Nessun provider a pagamento né rotazione chiavi; formato/estensione reali rilevati automaticamente.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Utility per sviluppatori integrate.
 
 ### 💻 Elenco Completo dei Comandi del Terminale
@@ -86,6 +83,7 @@ Usa l'alias **`/poll`** o **`/pollinations`** nel tuo terminale della conversazi
 - `/poll connect <chiave>` : Configurazione manuale "Bring Your Own Key" (`sk_...`).
 - `/poll quests` : Visualizza le tue quest e il Pollen gratuito da riscattare. 🎯
 - `/poll usage full` : Dashboard in tempo reale (Statistiche), Quest attive e Saldo del Portafoglio.
+- `/poll status` : Stato del conto e saldi (alias di /poll usage).
 - `/poll config` : Regolazioni fini (Cost Guard, timeout, log, lingua, interfaccia).
 - `/poll models` : Controlla quali modelli sono al momento online.
 - `/poll pricing` : Controlla la tabella dei prezzi live (Stime medie).
@@ -181,6 +179,8 @@ Il browser si apre automaticamente. Accedi con GitHub e clicca **Authorize**; il
 ```bash
 /poll connect sk_la_tua_chiave_qui
 ```
+
+> **Stessa connessione in v1/v2:** `/poll login` usa Pollinations Connect. La chiave pubblica `pk_` identifica l’app; dopo il consenso l’utente riceve una `sk_` privata con permessi, budget e scadenza. Prima possono comparire soltanto modelli guida/gratuiti; poi v2 aggiorna il catalogo senza riavvio. I permessi amministrativi `Keys` non servono. Preferisci il browser per non salvare la chiave nella cronologia; `/poll connect sk_...` è per terminali locali attendibili.
 
 ---
 

@@ -30,7 +30,7 @@
 ## 🚀 v7.0.0 新功能
 
 - 🔁 **OpenCode v1 + v2 双栈**：同一个 Pollinations 官方插件包同时支持两代 OpenCode；安装器保留 v1 的 `plugin` 与 v2 的 `plugins` 约定，共享同一 provider/tools 核心。
-- 🤖 **Managed Agents 与普通聊天模型分离**：`agent:true` 条目不会进入普通模型选择器，只通过 `polli_agent` 显式委派；使用 `/poll agents [搜索]` 查看可用 Agent。
+- 🤖 **社区托管 Agent 保留在模型选择器中**：为兼容旧版，`agent:true` 模型仍可直接选择，也可通过 `polli_agent` 或 `/poll agents [搜索]` 调用。⚠️ 直接聊天可能产生不固定的下游 Pollen 消耗；独立 Agent 预算仅适用于 `polli_agent`。
 - 💰 **独立 Agent 预算**：`/poll config agent_budget <pollen>` 设置每次运行的本地逻辑预算（默认 **0.60 🌻**）。托管 Prompt Agent 按 Pollinations 的 8 个模型步骤 / 16 次工具调用上限做保守估算；未知 runtime 强制确认。该预算不是服务端硬性消费上限。
 - 🌐 **受控 Community 模型**：可靠的社区文本模型仅在声明 tool calling 时动态进入聊天；`/poll config community on|off` 控制暴露。
 - 🛡️ **统一 Cost Guard**：确认机制由 registry 驱动，STT 纳入保护，文本成本使用正确类别，pending ticket 按当前 XDG 配置隔离。
@@ -40,20 +40,18 @@
 
 ## ✨ v6.5.5 新功能
 
-- ✂️ **可靠的免密 RMBG**：`remove_background` 现在采用 **bgeraser reverse → ClearBackdrop fallback**。活动插件已移除 BackgroundCut、密钥存储/轮换和 `rmbg_keys`。
-- 🎞️ **修正免费 P‑Video 契约**：已验证输出 1–10 秒，720p/1080p、24/48 fps、7 种宽高比、seed/draft/提示词增强/音频，以及可选首帧图像/音频；每 IP 配额实时读取。
+- ✂️ **可靠的免密 RMBG**：`remove_background` 现在采用 **BGNinja（每IP每天10张、同时2个）→ 旧版BGEraser备用 → 可选自有免费密钥的ClearBackdrop**。活动插件已移除 BackgroundCut、密钥存储/轮换和 `rmbg_keys`。
 - 🖼️ **扩展免费图像生成/编辑**：支持编辑 1–3 张图像、完整宽高比、自定义 256–1440 尺寸、seed、提示词增强和编辑 turbo，并实时读取每 IP 配额。
 - 🧬 **真实媒体字节优先**：reverse 图像工具根据 magic bytes 保存 JPEG/PNG/WebP，修复 JPEG 响应被错误命名为 `.png` 的问题。
 - 🌍 **六语言一致性**：运行时文案、onboarding、六份 README 与维护中的技术手册已与当前免费工具行为对齐。
 
-- 🧊 **3D 生成 (`polli_gen_3d`)**：支持生成标准 `.glb` 3D 模型（`trellis-2`, `hyper3d-rodin`），内置 Cost Guard 预警与缓存恢复。
+- 🧊 **3D 生成 (`polli_gen_3d`)**：支持生成服务端返回的真实 GLB/PLY 3D 模型（`trellis-2`, `hyper3d-rodin`），内置 Cost Guard 预警与缓存恢复。
 - 🛡️ **彻底杜绝重复扣费**：对话重试严格限制为 HTTP 429；超时和网络中断绝不会重新提交付费请求。
 - 🧠 **纯净思考流规范化**：自动过滤 DeepSeek、Kimi 和 Qwen 的思维链标签，拒绝思维内容污染对话区。
 - 💰 **透明的 Quest 与 Paid 计费体系**：全新计费模式（`quest`, `quest_only`, `paid`, `manual`）以及绝对 Pollen 阈值下限防护。
-- 📦 **Artifact Core（Magic Bytes 核心）**：基于真实文件魔数（JPEG, PNG, GLB, MP4, MP3, WebM）校验保存，确保磁盘后缀名绝对正确。
+- 📦 **Artifact Core（Magic Bytes 核心）**：基于真实文件魔数（JPEG, PNG, GLB, PLY, MP4, MP3, WebM）校验保存，确保磁盘后缀名绝对正确。
 - ⏱️ **可配置超时层级**：支持单次调用、单模型及按功能大类配置超时（`/poll config timeouts.*`）。
 - 🎯 **任务体系与一键登录**：追溯任务完成状态（`/poll quests`）以及浏览器一键授权登录（`/poll login`）。
-- 🆓 **6 大创作者免费工具（无需密钥）**：`gen_edit_image_free`、`gen_video_free`、`object_remover`、`image_upscaler`、`image_enhancer`、`remove_background`。
 
 ---
 
@@ -64,7 +62,7 @@
 ### 💎 高级生成网络集群 (ENTER ONLY - 需提供API密钥)
 - 🎨 `polli_gen_image` : 目前世界最知名的视觉核心 (`Flux`, `Sana`, `Midjourney`, 等等)。
 - 🎬 `polli_gen_video` : 强大的 文生视频 (T2V) 与 图生视频 (I2V) 引擎 (`Wan`, `Veo`, `LTX`, `Reveal`)。
-- 🧊 `polli_gen_3d` : 高质量 3D 资产生成工具 (`trellis-2`, `hyper3d-rodin`)，输出 GLB 格式。
+- 🧊 `polli_gen_3d` : 高质量 3D 资产生成工具 (`trellis-2`, `hyper3d-rodin`)，输出真实 GLB/PLY 格式。
 - 🔊 `polli_gen_audio` & `polli_gen_music` : 拟真度极高的自然人声合成 (ElevenLabs, OpenAI TTS) 和 智能背景音乐编曲。
 - 🎙️ `polli_stt` : 媲美专家的 AI 语言文字转化抓取轨道 (基于 Whisper V3)。
 - 🌐 `polli_web_search` : 面向全球互联与深度资料调研辅助模型 (`gemini-search`, `perplexity...`)。
@@ -72,11 +70,10 @@
 
 ### 🧰 免费的创作者辅助系统 (永远可以使用 — 无需密钥)
 - 🆓 `gen_edit_image_free`：免费图像生成与 **1–3 张图像编辑**，实时读取每 IP 配额，支持完整宽高比、自定义 256–1440 尺寸、seed、提示词增强和编辑 turbo。无需密钥。
-- 🆓 `gen_video_free`：免费 P‑Video，已验证 **1–10 秒**，支持 720p/1080p、24/48 fps、7 种宽高比、seed/draft/提示词增强/音频，以及可选首帧图像或音频。实时读取每 IP 配额，无需密钥。
 - 🧹 `object_remover`：免费按提示词移除对象；返回媒体通过 magic bytes 校验，并按真实格式保存扩展名。
 - 📐 `image_upscaler`：免费 2x/4x 放大；JPEG/PNG/WebP 根据真实字节识别，不再根据文件名猜测。
 - ✨ `image_enhancer`：免费 1K/2K/4K 图像增强（降噪、锐化、修复），自动识别真实输出格式。
-- ✂️ `remove_background`：无需密钥的背景移除，采用可靠链路 **bgeraser reverse → ClearBackdrop fallback**。无付费 provider、无密钥轮换；自动识别真实格式/扩展名。
+- ✂️ `remove_background`：无需密钥的背景移除，采用可靠链路 **BGNinja（每IP每天10张、同时2个）→ 旧版BGEraser备用 → 可选自有免费密钥的ClearBackdrop**。无付费 provider、无密钥轮换；自动识别真实格式/扩展名。
 - 🛠️ `gen_qrcode`、`gen_diagram`、`gen_palette`、`extract_frames`、`extract_audio`、`file_to_url` 实用开发者辅助。
 
 ### 💻 本地终端命令集列表
@@ -86,6 +83,7 @@
 - `/poll connect <密钥>` : 手动配置 "自带密钥 (BYOK)" (`sk_...`)。
 - `/poll quests` : 查看你的任务及可领取的免费 Pollen。🎯
 - `/poll usage full` : 个人资料控制台看板，观测实时 Quests 流量和预存花粉余额。
+- `/poll status` : 查看账户状态和余额（/poll usage 的快捷命令）。
 - `/poll config` : 针对超时、语言、防爆额度的参数深度微调。
 - `/poll models` : 即刻一览所有状态是在线的支持库模型。
 - `/poll pricing` : 核对全网 Pollen (期望折线花费) 平均列表价格。
@@ -181,6 +179,8 @@ V1 与 V2 **共用唯一的规范源码仓库**，只需运行一次 `npm run bu
 ```bash
 /poll connect sk_你的密钥
 ```
+
+> **v1/v2 使用相同连接流程：** `/poll login` 使用 Pollinations Connect。公开 `pk_` 用于标识应用；授权后用户获得带有模型权限、预算和到期时间的私有 `sk_`。授权前可能只显示引导/免费模型；授权后 v2 自动刷新目录，无需重启。无需 `Keys` 管理员权限。建议通过浏览器授权，避免将私钥写入命令历史；`/poll connect sk_...` 仅适用于可信本地终端。
 
 ---
 

@@ -381,7 +381,8 @@ export function saveConfig(updates: Partial<PollinationsConfigV5>) {
             fs.mkdirSync(CONFIG_DIR, { recursive: true });
         }
 
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2));
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2), { mode: 0o600 });
+        fs.chmodSync(CONFIG_FILE, 0o600); // Contains an API secret: private even after updating an existing file.
         return updated;
     } catch (e) {
         logConfig(`Error saving config: ${e}`);
@@ -408,7 +409,8 @@ export function saveKeyToAuthJson(key: string): boolean {
                 key: key
             };
 
-            fs.writeFileSync(authFile, JSON.stringify(authData, null, 2), 'utf-8');
+            fs.writeFileSync(authFile, JSON.stringify(authData, null, 2), { encoding: 'utf-8', mode: 0o600 });
+            fs.chmodSync(authFile, 0o600);
             logConfig(`Synchronized API key to native auth file: ${authFile}`);
             success = true;
             // Only write to the first valid one we find/create, or write to all existing?

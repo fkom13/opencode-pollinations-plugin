@@ -206,6 +206,7 @@ export class ModelRegistryImpl implements ModelRegistryInterface {
             '3d': this.list('3d').length,
             embedding: this.list('embedding').length,
             realtime: this.list('realtime').length,
+            decision: this.list('decision').length,
         };
     }
 }

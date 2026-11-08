@@ -1,7 +1,11 @@
 import * as https from 'https';
+import { execFile, spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { loadConfig, saveConfig, saveKeyToAuthJson, PollinationsConfigV5 } from './config.js';
 import { getQuotaStatus, QuotaStatus, fetchUsageForPeriod, calculateResetInfo } from './quota.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
+import { log } from './logger.js';
 import { DetailedUsageEntry } from './pollinations-api.js';
 import { generatePollinationsConfig } from './generate-config.js';
 import { ModelRegistry } from './models/index.js';
@@ -34,7 +38,7 @@ function checkEndpoint(ep: string, key: string): Promise<CheckResult> {
                     // Double Check Check Body for Logical Errors masked as 200
                     try {
                         const json = JSON.parse(data);
-                        if (json.error || json.success === false) {
+                        if (json.error || json.success === false || json.valid === false) {
                             resolve({ ok: false, reason: "API Logical Error", status: 200 });
                         } else {
                             resolve({ ok: true });
@@ -54,10 +58,10 @@ function checkEndpoint(ep: string, key: string): Promise<CheckResult> {
 }
 
 export async function checkKeyPermissions(key: string): Promise<CheckResult> {
-    // SINGLE CHECK to reduce latency and avoid rate-limits (HIGH-01)
-    const res = await checkEndpoint('/account/profile', key);
-    if (!res.ok) {
-        return { ok: false, reason: `/account/profile (${res.status})` };
+    // Accounting permission gates automatic billing. Profile access is optional.
+    for (const endpoint of ['/account/key/usage', '/account/balance']) {
+        const res = await checkEndpoint(endpoint, key);
+        if (!res.ok) return { ok: false, reason: `${endpoint} (${res.status})` };
     }
     return { ok: true };
 }
@@ -148,6 +152,20 @@ export function setClientForCommands(client: any) {
     globalClient = client;
 }
 
+// Connection changes must refresh OpenCode V2's live model transforms; V1 may have no subscriber.
+type ConnectionListener = () => Promise<void> | void;
+const connectionListeners = new Set<ConnectionListener>();
+export function subscribeConnectionChange(listener: ConnectionListener): () => void {
+    connectionListeners.add(listener);
+    return () => { connectionListeners.delete(listener); };
+}
+async function notifyConnectionChange(): Promise<void> {
+    for (const listener of connectionListeners) {
+        try { await listener(); }
+        catch (error) { emitLogToast('warning', 'Catalog refresh failed after Pollinations connection: ' + String(error)); }
+    }
+}
+
 export async function handleCommand(command: string): Promise<CommandResult> {
     const parts = command.trim().split(/\s+/);
 
@@ -162,6 +180,7 @@ export async function handleCommand(command: string): Promise<CommandResult> {
         case 'mode':
             return await handleModeCommand(args);
         case 'usage':
+        case 'status': // V2-friendly alias: show localized account balances and mode.
             return await handleUsageCommand(args);
         case 'connect':
             return await handleConnectCommand(args);
@@ -372,95 +391,60 @@ function handleFallbackCommand(args: string[]): CommandResult {
 
 async function handleConnectCommand(args: string[]): Promise<CommandResult> {
     const key = args[0];
-
-    if (!key) {
-        return {
-            handled: true,
-            error: t('commands.connect.usage')
-        };
+    if (!key || !key.startsWith('sk_')) {
+        return { handled: true, error: t('commands.connect.usage') };
     }
 
-    // 1. Universal Validation (No Syntax Check) - Functional Check
     emitStatusToast('info', t('commands.connect.verifying'), 'Pollinations Config');
 
     try {
-        const models = await generatePollinationsConfig(key, true);
+        // A key is valid if its account/key endpoint accepts it. A restricted key
+        // may legitimately expose zero chat models, so do not use model count as
+        // authentication or overwrite a previously working key on a failure.
+        const verified = await checkEndpoint('/account/key', key);
+        if (!verified.ok) throw new Error('Pollinations key validation failed (HTTP ' + String(verified.status || 'unknown') + ')');
 
-        // 2. Check if we got Enterprise models
-        const enterpriseModels = models.filter(m => m.id.startsWith('enter/'));
+        // Hydrate the live model registry before enumerating available chat models.
+        await ModelRegistry.refresh(key);
+        let models: Awaited<ReturnType<typeof generatePollinationsConfig>> = [];
+        try { models = await generatePollinationsConfig(key, true); }
+        catch { /* Authentication is already verified; catalog can refresh later. */ }
 
-        if (enterpriseModels.length > 0) {
-            // SUCCESS
-            saveConfig({ apiKey: key }); // Don't force mode 'pro'. Let user decide.
-            saveKeyToAuthJson(key); // NATIVE SYNC: Hot-reload on OpenCode bypasses restart requirement !
+        const enterpriseModels = models.filter(m =>
+            m.id.startsWith('enter/') && !m.name.includes('(Fallback)')
+        );
+        const check = await checkKeyPermissions(key);
+        const limited = !check.ok;
 
-            const masked = key.substring(0, 6) + '...';
-            // Count Paid Only models found
-            const diamondCount = enterpriseModels.filter(m => m.name.includes('💎')).length;
+        saveConfig({
+            apiKey: key,
+            keyHasAccessToProfile: !limited,
+            ...(limited ? { mode: 'manual' as const } : {}),
+        });
+        saveKeyToAuthJson(key);
+        // On OpenCode V2 this replays provider/model transforms without restart.
+        await notifyConnectionChange();
 
-            // CHECK RESTRICTIONS: Strict Check (Usage + Profile + Balance)
-            let forcedModeMsg = "";
-            let isLimited = false;
-            let limitReason = "";
+        const masked = key.substring(0, 6) + '...';
+        const diamondCount = enterpriseModels.filter(m => m.name.includes('💎')).length;
+        const forcedModeMsg = limited
+            ? t('commands.connect.limited', { reason: check.reason || 'Account usage/balance access missing' })
+            : '';
 
-            try {
-                // Strict Probe: Must be able to read ALL accounting data
-                const check = await checkKeyPermissions(key);
-                if (!check.ok) {
-                    isLimited = true;
-                    limitReason = check.reason || "Unknown";
-                }
-            } catch (e: any) { isLimited = true; limitReason = e.message; }
-
-            // If Limited -> FORCE MANUAL
-            if (isLimited) {
-                saveConfig({ apiKey: key, mode: 'manual', keyHasAccessToProfile: false });
-                forcedModeMsg = t('commands.connect.limited', { reason: limitReason });
-            } else {
-                saveConfig({ apiKey: key, keyHasAccessToProfile: true }); // Let user keep current mode or default
-            }
-
-            emitStatusToast('success', t('commands.connect.success_toast', { count: enterpriseModels.length }), 'Pollinations Config');
-
-            return {
-                handled: true,
-                response: t('commands.connect.success_response', { key: masked, count: enterpriseModels.length, diamond: diamondCount, forced_msg: forcedModeMsg })
-            };
-        } else {
-            // FAILURE (Valid JSON but no Enterprise models - likely Invalid Key or Free plan only?)
-            // If key is invalid, generatePollinationsConfig usually returns fallback free models BUT
-            // we specifically checked 'enter/'. If 0 enterprise models found for a *provided* key, it's suspicious.
-            // Actually config generator returns Free models + Enter models if key works.
-            // If key is BAD, fetchJson throws/logs error, and returns fallbacks (Enter GPT-4o Fallback).
-            // Wait, generate-config falls back to providing a list containing "[Enter] GPT-4o (Fallback)" if fetch failed.
-            // So we need to detect if it's a "REAL" fetch or a "FALLBACK" fetch.
-            // The fallback models have `variants: {}` usually, but real ones might too.
-            // A better check: The fallback list is hardcoded in generate-config.ts catch block.
-            // Let's modify generate-config to return EMPTY list on error?
-            // Or just check if the returned models work?
-            // Simplest: If `generatePollinationsConfig` returns any model starting with `enter/` that includes "(Fallback)" in name, we assume failure?
-            // "GPT-4o (Fallback)" is the name.
-
-            const isFallback = models.some(m => m.name.includes('(Fallback)') && m.id.startsWith('enter/'));
-
-            if (isFallback) {
-                throw new Error(t('proxy.errors.key_rejected'));
-            }
-
-            // If we are here, we got no enter models, or empty list?
-            // If key is valid but has no access?
-            throw new Error(t('proxy.errors.no_enter_models'));
-        }
-
-    } catch (e: any) {
-        // 3. FAILURE HANDLING - Revert to FREE
-        saveConfig({ apiKey: undefined, mode: 'manual' }); // Clear Key, Set Manual
-
-        emitStatusToast('error', t('toasts.invalid_key_revert'), 'Pollinations Config');
+        emitStatusToast('success', t('commands.connect.success_toast', { count: enterpriseModels.length }), 'Pollinations Config');
         return {
             handled: true,
-            error: t('proxy.errors.invalid_key_free_mode', { error: e.message || String(e) })
+            response: t('commands.connect.success_response', {
+                key: masked,
+                count: enterpriseModels.length,
+                diamond: diamondCount,
+                forced_msg: forcedModeMsg,
+            }),
         };
+    } catch (e: any) {
+        // Failed pairing must not disconnect a previously valid installation.
+        emitStatusToast('error', t('toasts.invalid_key_revert'), 'Pollinations Config');
+        return { handled: true, error: t('proxy.errors.invalid_key_free_mode', { error: String(e?.message || e) }) };
     }
 }
 
@@ -469,17 +453,24 @@ async function handleConnectCommand(args: string[]): Promise<CommandResult> {
 /** Best-effort cross-platform browser open. Never throws (headless-safe). */
 function openBrowser(url: string): boolean {
     try {
-        const cp = require('child_process');
+        // Never open a URL controlled by an unexpected device-code response.
+        const target = new URL(url);
+        if (target.protocol !== 'https:' || target.hostname !== 'enter.pollinations.ai') return false;
+        // ESM-safe import (require is unavailable in both OpenCode runtimes).
         const platform = process.platform;
-        const cmd = platform === 'win32' ? 'start ""'
+        const cmd = platform === 'win32' ? 'rundll32.exe'
             : platform === 'darwin' ? 'open'
             : 'xdg-open';
+        const argv = platform === 'win32' ? ['url.dll,FileProtocolHandler', url] : [url];
         // Detached + ignore stdio so it never blocks the proxy process.
-        const child = cp.spawn(cmd, [url], {
-            shell: platform === 'win32',
+        const child = spawn(cmd, argv, {
+            shell: false,
+            windowsHide: true,
             detached: true,
             stdio: 'ignore',
         });
+        // spawn can emit an asynchronous ENOENT on headless hosts; never crash.
+        child.on('error', () => log('[Device Login] Browser unavailable; use the supplied authorization URL.'));
         child.unref?.();
         return true;
     } catch {
@@ -566,7 +557,7 @@ export async function startDeviceLogin(): Promise<CommandResult> {
     try {
         codeResp = await postJsonEnter('/api/device/code', {
             client_id: APP_CLIENT_ID,
-            scope: 'profile usage keys',   // all scopes shown for transparency; keys (Account Admin) checked by default, user can uncheck
+            scope: 'profile usage',   // least privilege: balance/quests; never request keys (account admin) by default
         });
     } catch (e: any) {
         return { handled: true, error: t('commands.login.code_error', { error: e.message }) };
@@ -589,7 +580,9 @@ export async function startDeviceLogin(): Promise<CommandResult> {
 
     // Background poller — non-blocking. Resolves the shared promise on completion.
     loginPollActive = true;
-    const deadline = Date.now() + Math.min(expiresIn, 300000); // cap 5 min for UX
+    // Respect Pollinations' advertised device-code lifetime (currently 30 min),
+    // instead of expiring locally after only 5 min while consent is still valid.
+    const deadline = Date.now() + Math.min(expiresIn, 30 * 60 * 1000);
 
     let resolveOutcome: (o: LoginOutcome) => void;
     loginResultPromise = new Promise<LoginOutcome>((res) => { resolveOutcome = res; });
@@ -608,7 +601,9 @@ export async function startDeviceLogin(): Promise<CommandResult> {
                 // Got the key — validate & hot-load it (no restart needed)
                 const key = tok.access_token;
                 try {
-                    await generatePollinationsConfig(key, true);
+                    const verified = await checkEndpoint('/account/key', key);
+                    if (!verified.ok) throw new Error('Pollinations device key validation failed (HTTP ' + String(verified.status || 'unknown') + ')');
+                    await ModelRegistry.refresh(key);
                     // Verify what the user actually granted (they choose on the consent form).
                     // Do NOT presume profile access — check it, like /poll connect does.
                     let limited = false;
@@ -619,6 +614,7 @@ export async function startDeviceLogin(): Promise<CommandResult> {
 
                     saveConfig({ apiKey: key, keyHasAccessToProfile: !limited, ...(limited ? { mode: 'manual' } : {}) });
                     saveKeyToAuthJson(key);
+                    await notifyConnectionChange();
 
                     const msg = limited
                         ? t('commands.login.success_limited')
@@ -949,7 +945,7 @@ async function handleAgentsCommand(args: string[]): Promise<CommandResult> {
     }
 
     const query = args.join(' ').trim().toLowerCase();
-    let agents = ModelRegistry.all().filter((m) => m.agent === true);
+    let agents = ModelRegistry.all().filter((m) => m.agent === true || Boolean(m.base_model));
     if (query) {
         agents = agents.filter((m) =>
             m.name.toLowerCase().includes(query) ||
@@ -1069,17 +1065,18 @@ export async function handleModelsCommand(args: string[]): Promise<CommandResult
 
 export async function handlePricingCommand(): Promise<CommandResult> {
     try {
-        const cp = require('child_process');
-        const path = require('path');
-        // Pointeur __dirname -> dist/server. Donc on cible scripts/pollinations_pricing.js
-        const scriptPath = path.join(__dirname, 'scripts', 'pollinations_pricing.js');
-
-        // Exécution locale via Node (sécurisé pour le bundle prod, pas de npx tsx)
-        const output = cp.execSync(`node "${scriptPath}"`, { encoding: 'utf-8', stdio: 'pipe' });
-
-        return { handled: true, response: output };
+        // ESM-safe executable path; never invoke the shell or pass keys in argv.
+        const scriptPath = fileURLToPath(new URL('./scripts/pollinations_pricing.js', import.meta.url));
+        const { stdout } = await promisify(execFile)('node', [scriptPath], {
+            timeout: 45_000,
+            maxBuffer: 4 * 1024 * 1024,
+            env: { ...process.env, POLLINATIONS_API_KEY: '' },
+        });
+        if (!stdout.trim()) throw new Error('empty pricing output');
+        return { handled: true, response: stdout };
     } catch (e: any) {
-        return { handled: true, error: `Erreur lors de la récupération des prix: ${e.message}` };
+        const message = e instanceof Error ? e.message : String(e);
+        return { handled: true, error: t('commands.pricing_failed') + ': ' + message.slice(0, 180) };
     }
 }
 
@@ -1088,6 +1085,7 @@ export async function handlePricingCommand(): Promise<CommandResult> {
 function buildBadges(m: PollinationsModel): string {
     const f: string[] = [];
     if (m.paid_only) f.push('💎');
+    if (m.agent === true || Boolean(m.base_model)) f.push('🤖');
 
     const allFlags = [...(m.input_modalities || []), ...(m.output_modalities || []), m.name];
     if (m.supportsI2X) allFlags.push("👁️");

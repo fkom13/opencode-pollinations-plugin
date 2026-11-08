@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+# Also ignore a node_modules symlink in the isolated QA worktree.
+node_modules
 
 # Build output (published via npm prepare / files)
 dist/
@@ -50,3 +52,4 @@ scripts/*
 
 # Live audit temporary artifacts (never commit)
 tmp/
+scripts/tests/pollinations-v7-key-preflight.py

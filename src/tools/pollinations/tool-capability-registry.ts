@@ -145,31 +145,17 @@ export const TOOL_CAPABILITIES: ToolModelCapability[] = [
         execution: { defaultTimeoutSeconds: 60, retryPolicy: 'NO_AUTOMATIC_RETRY', idempotency: 'NONE' },
     },
 
-    // ── Tier services (true ASYNC_JOB with job.id, re-poll safe) ──
-    {
-        capability: 'video_free',
-        backend: 'playground',
-        transport: { endpoint: 'https://pruna-playground-production-861e.up.railway.app/api/p-video/generate', method: 'POST', mode: 'ASYNC_JOB' },
-        execution: {
-            defaultTimeoutSeconds: 900,
-            retryPolicy: 'REPOLL_JOB',
-            idempotency: 'NONE',
-            pollIntervalSeconds: 4,
-            supportsCancel: false,
-            recovery: 're-poll job.id (never resubmit)',
-        },
-    },
+    // ── Standalone image processors (ASYNC_JOB where applicable) ──
     {
         capability: 'remove_background',
         backend: 'imgtools',
         // No modelId — the TCR is capability-centric, not model-centric.
-        transport: { endpoint: 'https://rmbg.bgeraser.com/api/rmbg', method: 'POST', mode: 'ASYNC_JOB' },
+        transport: { endpoint: 'https://bgninja.com/api/remove', method: 'POST', mode: 'SHORT_REQUEST' },
         execution: {
-            defaultTimeoutSeconds: 300,
-            retryPolicy: 'REPOLL_JOB',
-            pollIntervalSeconds: 5,
+            defaultTimeoutSeconds: 120,
+            retryPolicy: 'NO_AUTOMATIC_RETRY',
+            idempotency: 'NONE',
             supportsCancel: false,
-            recovery: 're-poll job.id / key rotation + provider fallback',
         },
     },
     {

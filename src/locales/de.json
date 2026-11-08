@@ -3,9 +3,9 @@
     "help": {
       "title": "### 🌸 Pollinations Plugin - Befehle V7",
       "alias_note": "*(Der Alias `/poll` wird unterstützt und anstelle von `/pollinations` empfohlen!)*",
-      "mode_usage": "**Modus & Nutzung**\n- **`/poll mode [modus]`**: Modus ändern (manual, quest, quest_only, paid).\n- **`/poll usage [full]`**: Dashboard anzeigen (full = Details).\n- **`/poll fallback <main> [agent]`**: Sicherheitsnetz konfigurieren.",
+      "mode_usage": "**Modus & Nutzung**\n- **`/poll mode [modus]`**: Modus ändern (manual, quest, quest_only, paid).\n- **`/poll usage [full]`**: Dashboard anzeigen (full = Details).\n- **`/poll status`**: Kontostatus und Guthaben (Alias für /poll usage).\n- **`/poll fallback <main> [agent]`**: Sicherheitsnetz konfigurieren.",
       "configuration": "**Konfiguration**\n- **`/poll config [schlüssel] [wert]`**:\n   - `lang`: en, fr, de, es, it, etc.\n   - `status_gui`: none, alert, all\n   - `logs_gui`: none, error, verbose\n   - `threshold_quest` / `threshold_wallet`: Pollen-Schwelle (Standard 0.05 / 0.5)\n   - `status_bar`: true/false\n   - `cost_estimator`: true/false (Kosten in Ausgaben anzeigen)\n   - `enablePaidTools`: true/false (blockiert paid_only lokal — keine Server-Garantie)\n   - `costThreshold`: Limit in Pollen (Standard: 0.15)\n   - `costConfirmationRequired`: true/false (Ausgabenbestätigung)",
-      "models_pricing": "**Modelle & Preise**\n- **`/poll models [typ]`**: Modelle auflisten (Typ: image, video, audio, text)\n- **`/poll pricing`**: Detaillierte Preistabelle\n- **`/poll infos`**: Erklärungen zu Tiers und Pollen\n- **`/poll quests`**: Deine Quests & einlösbares kostenloses Pollen anzeigen\n",
+      "models_pricing": "**Modelle & Preise**\n- **`/poll models [typ]`**: Modelle auflisten (Typ: image, video, audio, text)\n- **`/poll pricing`**: Detaillierte Preistabelle\n- **`/poll infos`**: Erklärungen zu Tiers und Pollen\n- **`/poll quests`**: Deine Quests & einlösbares kostenloses Pollen anzeigen\nGehostete Agenten bleiben als Chatmodelle und per polli_agent verfügbar. Direkte Chats können variable Pollen-Kosten verursachen; das Agent-Budget gilt nur für polli_agent.",
       "configuration_intro": "**Konfiguration**\n- **`/poll config [schlüssel] [wert]`**:",
       "config": {
         "lang": "Plugin-Sprache",
@@ -101,7 +101,7 @@
       "success": "✅ Free fallback updated: {main} -> {agent}"
     },
     "connect": {
-      "usage": "❌ Usage: /poll connect <key>",
+      "usage": "❌ Verwendung: /poll connect sk_... (oder /poll login zur sicheren Anmeldung)",
       "verifying": "Verifying and downloading models...",
       "limited": "\n⚠️ Key has limited permissions (Reason: {reason}). Forced to 'manual' mode.",
       "success_toast": "Connected ✓ ({count} Enter models)",
@@ -134,7 +134,7 @@
     "infos": {
       "title": "## 🍯💚 POLLINATIONS OPENCODE PLUGIN 💚🍯\n\nWillkommen **{name}** beim Pollinations OpenCode Plugin!\n\nDieses Plugin ermöglicht es, Code und Bilder zu generieren, Videos zu analysieren und nahtlos mit den besten KI-Modellen zu interagieren. Greifen Sie über Chat, Refactoring oder Terminal auf erstklassige LLMs zu.",
       "features_title": "**Was dieses Plugin Ihnen bietet! :**",
-      "features_free": "**🛠️ Integrierte kostenlose Tools (Immer verfügbar):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`: visuelle und Entwickler-Utilities.\n- `remove_background`: schlüssellose Hintergrundentfernung mit bgeraser → ClearBackdrop-Fallback.\n- `extract_frames` / `extract_audio`: schnelle Medienextraktion.\n- `file_to_url`: sofortiges Hosting lokaler Dateien.\n- `gen_edit_image_free`: kostenlose Bildgenerierung/-bearbeitung; Live-Kontingent pro IP.\n- `gen_video_free`: kostenloses P-Video 1–10 s; Live-Kontingent pro IP.\n- `object_remover`: Objekte per Prompt entfernen (kostenlos, direkt).\n- `image_upscaler`: 2x/4x-Upscaling (kostenlos, direkt).\n- `image_enhancer`: KI-Bildverbesserung (kostenlos, direkt).",
+      "features_free": "**🛠️ Integrierte kostenlose Tools (Immer verfügbar):**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`: visuelle und Entwickler-Utilities.\n- `remove_background`: schlüssellose Hintergrundentfernung mit BGNinja → BGEraser (legacy backup); optional ClearBackdrop (with key)-Fallback.\n- `extract_frames` / `extract_audio`: schnelle Medienextraktion.\n- `file_to_url`: sofortiges Hosting lokaler Dateien.\n- `gen_edit_image_free`: kostenlose Bildgenerierung/-bearbeitung; Live-Kontingent pro IP.\n- `object_remover`: Objekte per Prompt entfernen (kostenlos, direkt).\n- `image_upscaler`: 2x/4x-Upscaling (kostenlos, direkt).\n- `image_enhancer`: KI-Bildverbesserung (kostenlos, direkt).",
       "features_pro": "**💎 Pollinations Tools (Premium - Automatisiert mit Key):**\n- `polli_gen_image` : Bildgen (Flux, Gemini) + Image-to-Image.\n- `polli_gen_video` : Text-to-Video / Image-to-Video (Veo, Wan...).\n- `polli_gen_audio`/`polli_stt` : Whisper STT, ElevenLabs TTS.\n- `polli_gen_music` : Generative Musik-Engine.\n- `polli_web_search` : Verbundene Websuche.",
       "features_config": "- **Granulare Konfiguration**, Modus- und Token-Management, Kostenschutz...",
       "about": "## 🌍 Was ist pollinations.ai?\npollinations.ai ist eine Open-Source-KI-Plattform. Wir bieten eine einheitliche API für Bild, Text, Audio und Video. Alles ist offen: Code, Roadmap, Konversationen. Machen Sie mit!\n\nKeine Blackboxes. Keine Anbieterbindung. Nur eine freundliche API und ein Discord voller hilfsbereiter Menschen.",
@@ -146,6 +146,8 @@
       "quest_paid_title": "## 🎁 Quest- & 💎 Paid-Pollen",
       "quest_paid_body": "Pollen ist in zwei Spalten aufgeteilt:\n\n- **🎁 Quest-Pollen** — verdient durch **Quests** (kostenlos). Wird vom Server zuerst verbraucht.\n- **💎 Paid-Pollen** — gekauft (Kreditkarte). Wird genutzt, wenn Quest nicht reicht, oder für `paid_only`-Modelle.\n\n> ⚠️ Das Plugin kann den Split serverseitig nicht lesen; es schätzt Quest/Paid lokal und liest den echten Split (`meter_source`) aus `/account/usage`.\n\n**Modi:**\n- `quest` (QUEST_PREFERRED) — Standard: Quest zuerst, Paid-Fallback erlaubt.\n- `quest_only` (QUEST_ELIGIBLE_ONLY) — blockiert paid_only-Modelle, nur Quest best-effort.\n- `paid` (PAID_ALLOWED) — Paid erlaubt.\n- `manual` — keine automatische Richtlinie."
     },
+    "pricing_failed": "Aktuelle Preise konnten nicht abgerufen werden",
+    "report_saved": "Vollständiger Bericht gespeichert unter {file}. Öffnen Sie diese lokale Datei, um alle Einträge zu sehen.",
     "pricing_units": {
       "tokens": "~tokens",
       "img": "🌻/Bild",
@@ -153,16 +155,16 @@
       "tok": "🌻/tok"
     },
     "login": {
-      "prompt": "## 🔐 Schnell-Login (Device Flow)\n\n**1.** Öffne: **{uri_complete}**\n_(oder gehe zu {uri} und gib den Code unten ein)_\n\n**2.** Dein Code: **`{code}`**\n\n**3.** Melde dich mit GitHub an, dann im Zustimmungsformular:\n   • ✅ Behalte **Profile** + **Usage** gewährt (nötig für Kontingent, Quests & Free-Fallback)\n   • 💡 Für einen **unbegrenzten Schlüssel**: leere das Feld **Budget** (→ Unbegrenzt) und **Expiry** (→ Nie)\n   • Klicke **Authorize**\n\nDas Plugin wartet und verbindet sich **automatisch** nach Zustimmung (ein Toast bestätigt ✅).\n\n💡 _Lieber einen manuell erstellten Schlüssel? Nutze `/poll connect sk_...`._",
+      "prompt": "## 🔐 Schnell-Login (Device Flow)\n\n**1.** Öffne: **{uri_complete}**\n_(oder gehe zu {uri} und gib den Code unten ein)_\n\n**2.** Dein Code: **`{code}`**\n\n**3.** Melde dich mit GitHub an, dann im Zustimmungsformular:\n   • ✅ Erlaube **Usage** für Kontostand und Quests; **Profile** ist optional.\n   • 🔒 Lege ein **Budget**, eine kurze **Expiry** und nur benötigte Modellkategorien fest. Keine **Keys**-Adminrechte.\n   • Klicke **Authorize**\n\nDas Plugin wartet und verbindet sich **automatisch** nach Zustimmung (ein Toast bestätigt ✅).\n\n💡 _Lieber einen manuell erstellten Schlüssel? Nutze `/poll connect sk_...`._",
       "already_running": "⏳ Ein Login läuft bereits. Schließe die Autorisierung im Browser ab oder warte einen Moment.",
       "code_error": "❌ Login konnte nicht gestartet werden: {error}\n💡 Du kannst weiterhin `/poll connect sk_...` manuell verwenden.",
       "expired": "⏱️ Login-Code abgelaufen. Führe /poll login erneut aus.",
-      "success_toast": "✅ Über Device-Login verbunden! Pro-Modelle freigeschaltet.",
+      "success_toast": "✅ Per Geräteanmeldung verbunden. Verfügbare Modelle hängen von den erteilten Rechten ab.",
       "validate_error": "❌ Schlüsselvalidierung fehlgeschlagen: {error}",
       "nothing_pending": "ℹ️ Kein Login im Gange. Führe zuerst polli_login (ohne wait) aus, um einen Code zu erhalten.",
       "opened": "🌐 Browser wird zur Autorisierung geöffnet…",
       "still_waiting": "⏳ Warte noch auf deine Autorisierung im Browser. Sobald du zustimmst, rufe polli_login erneut mit wait:true auf, um zu bestätigen.",
-      "success_limited": "⚠️ Verbunden, aber dein Schlüssel scheint eingeschränkt (Profile/Usage nicht gewährt). Kontingentanzeige, Free-Fallback und Wallet-Kontrolle funktionieren evtl. nicht. Führe Login erneut aus und gewähre Profile + Usage, oder nutze einen vollständigen Schlüssel."
+      "success_limited": "⚠️ Verbunden ohne Usage-Berechtigung: Wallet, Quests und Kontingente sind möglicherweise eingeschränkt. Manueller Modus aktiv."
     },
     "agents": {
       "title": "## 🤖 Managed Agents ({count})",
@@ -578,11 +580,11 @@
       "res_request_id": "- **Request ID** : {id}"
     },
     "remove_background": {
-      "desc": "Entfernt Bildhintergründe ohne Schlüssel und ohne Bezahlpfad. Automatisch: zuerst bgeraser Reverse, danach ClearBackdrop. Bytes werden validiert und das echte Format samt Erweiterung automatisch erkannt.",
+      "desc": "Kostenlose Freistellung: BGNinja (10/Tag/IP, 2 gleichzeitig), BGEraser-Legacy-Fallback, optional ClearBackdrop mit kostenlosem Schlüssel.",
       "arg_image": "Eingabebild: lokaler Pfad, URL oder Data-URI.",
       "arg_filename": "Benutzerdefinierter Ausgabename. Die Erweiterung wird an die echten Bytes angepasst.",
       "arg_output": "Benutzerdefiniertes Ausgabeverzeichnis.",
-      "arg_provider": "Provider: auto (bgeraser → ClearBackdrop), bgeraser oder clearbackdrop.",
+      "arg_provider": "Provider: auto (BGNinja → BGEraser (legacy backup); optional ClearBackdrop (with key)), bgeraser oder clearbackdrop.",
       "input_error": "❌ Ungültiges Eingabebild: {error}",
       "working": "Hintergrundentfernung über {provider}…",
       "success": "Hintergrund über {provider} entfernt ✓",
@@ -594,7 +596,7 @@
       "res_size": "Größe: {size}",
       "res_format": "Format: {format}",
       "res_provider": "Provider: {provider}",
-      "res_fallback": "Verwendeter Fallback: ClearBackdrop"
+      "res_fallback": "Fallback verwendet: {provider}"
     },
     "polli_agent": {
       "desc": "Delegiert eine begrenzte Aufgabe an einen Pollinations Managed Agent. Managed Agents bleiben von normalen Chat-Modellen getrennt. Das Plugin berechnet eine bewusst konservative Kostenschätzung pro Lauf und wendet das separate Agent-Budget an. Prompt Agents sind bei Pollinations auf 8 Modellschritte und 16 Tool-Aufrufe begrenzt; Code-/Endpoint-/unbekannte Runtimes gelten als höheres Risiko und benötigen Bestätigung. Dieses Budget ist ein lokaler Schutz, kein serverseitiges Hard-Cap.",
@@ -617,12 +619,12 @@
   },
   "connect_response": {
     "title_key": "## 🍯💚 POLLINATIONS PLUGIN VERBUNDEN 💚🍯\n\nWillkommen **{name}** beim Pollinations Agent Plugin!\n**Aktueller Modus**: `{mode}`",
-    "tools_intro": "### 🚀 Integrierte Multimedia-Tools für die Entwicklung\n\nDas Plugin erzeugt Code und Medien, analysiert Medien und nutzt Pollinations-Modelle ohne Medienbruch.\n\n**🛠️ Integrierte kostenlose Tools:**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`\n- `remove_background` (bgeraser → ClearBackdrop, ohne Schlüssel)\n- `extract_frames` / `extract_audio`\n- `file_to_url`\n- `gen_edit_image_free` (Bildgenerierung/-bearbeitung, Live-Kontingent pro IP)\n- `gen_video_free` (P-Video 1–10 s, Live-Kontingent pro IP)\n- `object_remover`\n- `image_upscaler`\n- `image_enhancer`\n\n**💎 Pollinations-Tools:**\n- `polli_gen_image`\n- `polli_gen_video`\n- `polli_gen_3d`\n- `polli_gen_audio` / `polli_stt`\n- `polli_gen_music`\n- `polli_web_search`",
+    "tools_intro": "### 🚀 Integrierte Multimedia-Tools für die Entwicklung\n\nDas Plugin erzeugt Code und Medien, analysiert Medien und nutzt Pollinations-Modelle ohne Medienbruch.\n\n**🛠️ Integrierte kostenlose Tools:**\n- `gen_qrcode` / `gen_diagram` / `gen_palette`\n- `remove_background` (BGNinja → BGEraser (legacy backup); optional ClearBackdrop (with key), ohne Schlüssel)\n- `extract_frames` / `extract_audio`\n- `file_to_url`\n- `gen_edit_image_free` (Bildgenerierung/-bearbeitung, Live-Kontingent pro IP)\n- `object_remover`\n- `image_upscaler`\n- `image_enhancer`\n\n**💎 Pollinations-Tools:**\n- `polli_gen_image`\n- `polli_gen_video`\n- `polli_gen_3d`\n- `polli_gen_audio` / `polli_stt`\n- `polli_gen_music`\n- `polli_web_search`",
     "terminal_cmds": "### 💻 Terminal Befehle\nVerwenden Sie `/poll help` um alle Befehle anzuzeigen.",
     "resources": "### 📚 Ressourcen\n* **Dashboard:** enter.pollinations.ai\n* **Discord:** Community beitreten\n* **Plugin:** github.com/fkom13/opencode-pollinations-plugin",
     "free_models_success": "Verfügbare Modelle: {models}",
     "free_models_error": "⚠️ Modelle konnten nicht abgerufen werden.",
-    "onboarding": "## 🌸 Willkommen beim Pollinations-Plugin\n\n**Sofortiger kostenloser Zugang — kein Schlüssel nötig**\nDieses Plugin bietet eine vollständige Umgebung für Chat, Codegenerierung und Medienbearbeitung (Bild-, Video-, Audiogenerierung, Extraktionstools...).\n\nWähle ein `pollinations/free/*`-Modell aus der Liste und beginne zu chatten.\n{freeText}\n\n**🆓 Kostenlose Bonus-Tools (kein Schlüssel):** `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background` — gratis Bild/Video + lokale Verarbeitung.\n\n---\n\n## 🚀 Multimedia-Agenten und Tools für Entwickler\n\nClaude Opus, GPT-5, Gemini 3, Veo & Wan Videogenerierung, ElevenLabs Musik... entfessle die volle Kraft der Pollinations-API!\n\nDieses Plugin nutzt ein **BYOK**-Modell (Bring Your Own Key): mit deinem eigenen API-Schlüssel kann der OpenCode-Agent direkt mit Premium-Tools interagieren und deine Mediendateien in deinem Workspace erstellen.\n\n**Schritt 1 — Kostenloses Konto erstellen**\n👉 **https://enter.pollinations.ai**\n\n**Schritt 2 — API-Schlüssel generieren**\nErstelle im Bereich **API Keys** auf `enter.pollinations.ai` einen **Secret**-Schlüssel (`sk_...`).\n\n**Schritt 3 — Schlüssel verbinden**\n```bash\n/poll connect sk_dein_schluessel\n```\n*(Der Schlüssel wird sofort in deiner OpenCode-Umgebung registriert und schaltet Pro-Modelle frei!)*\n\n---\n\n## 💰 Quest- & Paid-Pollen\n**Quest-Pollen** verdienst du kostenlos durch **Quests** — allein die Nutzung dieses Plugins schließt mehrere rückwirkend ab! Siehe `/poll quests`.\n\nWenn Quest-Pollen nicht reicht (oder für kostenpflichtige Modelle), wird **Paid-Pollen** (gekauft) verwendet. Das Plugin schätzt beide lokal und liest den echten Split (`meter_source`) aus `/account/usage`.\n\n**Hilfe?** Gib `/poll help` ein. Offizieller Discord: https://discord.gg/pollinations-ai-885844321461485618"
+    "onboarding": "## 🌸 Willkommen beim Pollinations-Plugin\n\n**Sofortiger kostenloser Zugang — kein Schlüssel nötig**\nDieses Plugin bietet eine vollständige Umgebung für Chat, Codegenerierung und Medienbearbeitung (Bild-, Video-, Audiogenerierung, Extraktionstools...).\n\nWähle ein `pollinations/free/*`-Modell aus der Liste und beginne zu chatten.\n{freeText}\n\n**🆓 Kostenlose Bonus-Tools (kein Schlüssel):** `gen_edit_image_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background` — gratis Bild/Video + lokale Verarbeitung.\n\n---\n\n## 🚀 Multimedia-Agenten und Tools für Entwickler\n\nClaude Opus, GPT-5, Gemini 3, Veo & Wan Videogenerierung, ElevenLabs Musik... entfessle die volle Kraft der Pollinations-API!\n\nDieses Plugin nutzt ein **BYOK**-Modell (Bring Your Own Key): mit deinem eigenen API-Schlüssel kann der OpenCode-Agent direkt mit Premium-Tools interagieren und deine Mediendateien in deinem Workspace erstellen.\n\n**Schritt 1 — Kostenloses Konto erstellen**\n👉 **https://enter.pollinations.ai**\n\n**Schritt 2 — API-Schlüssel generieren**\nErstelle im Bereich **API Keys** auf `enter.pollinations.ai` einen **Secret**-Schlüssel (`sk_...`).\n\n**Schritt 3 — Schlüssel verbinden**\n```bash\n/poll connect sk_dein_schluessel\n```\n*(Der Schlüssel wird sofort in deiner OpenCode-Umgebung registriert und schaltet Pro-Modelle frei!)*\n\n---\n\n## 💰 Quest- & Paid-Pollen\n**Quest-Pollen** verdienst du kostenlos durch **Quests** — allein die Nutzung dieses Plugins schließt mehrere rückwirkend ab! Siehe `/poll quests`.\n\nWenn Quest-Pollen nicht reicht (oder für kostenpflichtige Modelle), wird **Paid-Pollen** (gekauft) verwendet. Das Plugin schätzt beide lokal und liest den echten Split (`meter_source`) aus `/account/usage`.\n\n**Hilfe?** Gib `/poll help` ein. Offizieller Discord: https://discord.gg/pollinations-ai-885844321461485618"
   },
   "cost_guard": {
     "cost_validated_max": "💰 Kosten validiert (Theoretisches Max: {maxCost})",
@@ -634,5 +636,5 @@
     "estimated_max": "💰 Geschätzte Durchschnittskosten: {cost} (Max: {maxCost})",
     "estimated": "💰 Geschätzte Kosten: {cost}"
   },
-  "onboarding": "## 🌸 Willkommen beim Pollinations-Plugin\n\n**Sofortiger kostenloser Zugang — kein Schlüssel erforderlich**\nDas Plugin bietet Chat, Code und Medienwerkzeuge. Wähle ein `pollinations/free/*`-Modell und starte sofort.\n\n**🆓 Kostenlose Bonus-Tools (ohne Key):** `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.\n\n---\n\n## 🔐 Verbindung mit 1 Klick — empfohlen\nFür Pollinations-Konto, Quests, Wallet, Premium-Modelle und Paid-Tools einfach ausführen:\n\n```bash\n/poll login\n```\n\nDer Browser öffnet sich. Mit GitHub anmelden, autorisieren, und das Plugin verbindet sich automatisch. **Kein API-Key muss erstellt, kopiert oder eingefügt werden.**\n\nBereits einen Pollinations Secret-Key? Manuelles BYOK bleibt verfügbar:\n```bash\n/poll connect sk_dein_schluessel\n```\n\n---\n\n## 💰 Quest & Paid Pollen\nQuest Pollen wird über Quests verdient. Reicht es nicht aus (oder bei paid-only Modellen), wird Paid Pollen verwendet. Siehe `/poll quests` und `/poll usage full`.\n\n**Hilfe?** `/poll help`. Discord: https://discord.gg/pollinations-ai-885844321461485618"
+  "onboarding": "## 🌸 Willkommen beim Pollinations-Plugin\n\n**Sofortiger kostenloser Zugang — kein Schlüssel erforderlich**\nDas Plugin bietet Chat, Code und Medienwerkzeuge. Wähle ein `pollinations/free/*`-Modell und starte sofort.\n\n**🆓 Kostenlose Bonus-Tools (ohne Key):** `gen_edit_image_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.\n\n---\n\n## 🔐 Verbindung mit 1 Klick — empfohlen\nFür Pollinations-Konto, Quests, Wallet, Premium-Modelle und Paid-Tools einfach ausführen:\n\n```bash\n/poll login\n```\n\nDer Browser öffnet sich. Mit GitHub anmelden, autorisieren, und das Plugin verbindet sich automatisch. **Kein API-Key muss erstellt, kopiert oder eingefügt werden.**\n\nBereits einen Pollinations Secret-Key? Manuelles BYOK bleibt verfügbar:\n```bash\n/poll connect sk_dein_schluessel\n```\n\n---\n\n## 💰 Quest & Paid Pollen\nQuest Pollen wird über Quests verdient. Reicht es nicht aus (oder bei paid-only Modellen), wird Paid Pollen verwendet. Siehe `/poll quests` und `/poll usage full`.\n\n**Hilfe?** `/poll help`. Discord: https://discord.gg/pollinations-ai-885844321461485618"
 }

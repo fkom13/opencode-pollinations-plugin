@@ -49,7 +49,7 @@ function detectCategory(raw: any): ModelCategory {
     // Prefer explicit type/category from unified /models endpoint
     const explicit = String(raw.type || raw.category || raw.output_modality || '').toLowerCase();
     if (explicit === 'video' || explicit === 'image' || explicit === 'audio' || explicit === 'text'
-        || explicit === '3d' || explicit === 'embedding' || explicit === 'realtime') {
+        || explicit === '3d' || explicit === 'embedding' || explicit === 'realtime' || explicit === 'decision') {
         return explicit as ModelCategory;
     }
 
@@ -85,27 +85,29 @@ function mapRawToModel(raw: any, fallbackCategory: ModelCategory, averageCost?: 
     };
 
     const model: PollinationsModel = {
-        name: raw.name || raw.id || 'unknown',
+        name: raw.id || raw.name || 'unknown',
         title: raw.title || undefined,
-        brand: raw.brand || undefined,
+        brand: raw.publisher || raw.brand || undefined,
+        publisher: raw.publisher || raw.brand || undefined,
         description: raw.description || raw.name || '',
         category,
         aliases: raw.aliases || [],
         pricing,
-        paid_only: raw.paid_only === true,
-        community: raw.community === true || String(raw.name || raw.id || '').startsWith('community/'),
-        source: (raw.community === true || String(raw.name || raw.id || '').startsWith('community/')) ? 'community' : 'official',
+        paid_only: raw.paidOnly === true || raw.paid_only === true,
+        community: raw.community === true || raw.source === 'community' || String(raw.id || raw.name || '').startsWith('community/'),
+        source: (raw.community === true || raw.source === 'community' || String(raw.id || raw.name || '').startsWith('community/')) ? 'community' : 'official',
         agent: raw.agent === true,
         base_model: raw.base_model,
         health: raw.health,
         supported_endpoints: raw.supported_endpoints || [],
+        supported_parameters: Array.isArray(raw.supported_parameters) ? raw.supported_parameters : undefined,
         supportsI2X: inputMods.includes('image'),
         outputType: detectOutputType(raw),
         input_modalities: inputMods,
         output_modalities: outputMods,
         voices: raw.voices,
-        tools: raw.tools,
-        reasoning: raw.reasoning,
+        tools: raw.tools === true || raw.tool_calling === true || (Array.isArray(raw.capabilities) && raw.capabilities.includes('tool_calling')),
+        reasoning: raw.reasoning === true || (Array.isArray(raw.capabilities) && raw.capabilities.includes('reasoning')),
         reasoning_options: raw.reasoning_options,
         interleaved: raw.interleaved,
         capabilities: raw.capabilities,
@@ -192,7 +194,7 @@ export async function fetchAllModels(apiKey?: string): Promise<PollinationsModel
     for (const res of resultsRaw as { url: string, fallbackCategory: ModelCategory, raw: any }[]) {
         const list: any[] = Array.isArray(res.raw) ? res.raw : (res.raw.data || []);
         for (const item of list) {
-            const modelId = item.name || item.id;
+            const modelId = item.id || item.name;
             const avgCost = statsMap.get(modelId);
             const v1Item = v1Map.get(modelId);
 

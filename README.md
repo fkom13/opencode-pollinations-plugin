@@ -30,7 +30,7 @@
 ## 🚀 What's new in v7.0.0?
 
 - 🔁 **OpenCode v1 + v2 dual-stack**: one official Pollinations plugin package now supports both OpenCode generations. The installer preserves v1 `plugin` and v2 `plugins` conventions, while the runtime keeps one shared provider/tool core.
-- 🤖 **Managed Agents without polluting chat models**: Pollinations entries flagged `agent:true` stay out of the normal model picker and are delegated explicitly through `polli_agent`. Use `/poll agents [search]` to discover them.
+- 🤖 **Hosted community agents remain selectable**: `agent:true` models stay in OpenCode’s model picker for backwards compatibility and are also available via `polli_agent` and `/poll agents [search]`. ⚠️ Direct chat calls can incur variable downstream Pollen; the dedicated Agent budget applies only to `polli_agent`.
 - 💰 **Dedicated Agent budget**: `/poll config agent_budget <pollen>` controls a separate logical per-run safety envelope (default **0.60 🌻**). Hosted Prompt Agents are estimated conservatively against Pollinations' 8-model-step / 16-tool-call runtime bounds; unknown runtimes force confirmation. This is a local guard, **not** a server-side hard spending cap.
 - 🌐 **Community models are first-class but controlled**: reliable community text models are exposed dynamically only when they advertise tool calling; `/poll config community on|off` controls their chat exposure.
 - 🛡️ **Generalized Cost Guard**: confirmation tickets are registry-driven instead of hard-coded, STT/transcription is now protected, text-model costs use the correct category, and pending confirmations respect isolated XDG config roots.
@@ -40,20 +40,18 @@
 
 ## ✨ What's new in v6.5.5?
 
-- ✂️ **Resilient no-key RMBG**: `remove_background` now uses **bgeraser reverse → ClearBackdrop fallback**. BackgroundCut, key storage and `rmbg_keys` have been removed from the active plugin.
-- 🎞️ **Free P-Video contract corrected**: verified 1–10s output, 720p/1080p, 24/48 fps, seven aspect ratios, seed/draft/prompt upsampling/audio and optional first-frame image/audio; quota is read live per IP.
+- ✂️ **Resilient no-key RMBG**: `remove_background` now uses **BGNinja (10/day/IP, max 2 simultaneous) → legacy BGEraser fallback → optional ClearBackdrop (own free key)**. BackgroundCut, key storage and `rmbg_keys` have been removed from the active plugin.
 - 🖼️ **Free image gen/edit expanded**: 1–3 image editing, full ratios, custom 256–1440 dimensions, seed, prompt upsampling and edit turbo with live per-IP quota.
 - 🧬 **Real media bytes win everywhere**: reverse image tools now persist JPEG/PNG/WebP according to magic bytes, fixing JPEG responses previously saved with `.png` names.
 - 🌍 **Six-language convergence**: runtime strings, onboarding, README files and the maintained technical manual are aligned with the current free-tool behavior.
 
-- 🧊 **3D Generation (`polli_gen_3d`)**: High-fidelity 3D model generation (`trellis-2`, `hyper3d-rodin`) as standard `.glb` assets with Cost Guard protection and cache recovery.
+- 🧊 **3D Generation (`polli_gen_3d`)**: High-fidelity 3D model generation (`trellis-2`, `hyper3d-rodin`) as authentic provider-returned GLB/PLY assets with Cost Guard protection and cache recovery.
 - 🛡️ **Zero Double-Billing**: Chat retries strictly constrained to 429; client timeouts and network interruptions never re-submit or duplicate token debits.
 - 🧠 **Clean Reasoning Normalization**: Normalizes DeepSeek, Kimi, and Qwen reasoning streams — no internal thinking text leaks into the conversation.
 - 💰 **Transparent Quest & Paid Semantics**: Modern billing modes (`quest`, `quest_only`, `paid`, `manual`) with absolute Pollen threshold safeguards.
 - 📦 **Artifact Core (Magic Bytes)**: True binary file verification ensures image, video, audio, and 3D files are saved with their real file extension.
 - ⏱️ **Configurable Timeout Hierarchy**: Fine-grained per-call, per-model, and per-capability timeout control via `/poll config timeouts.*`.
 - 🎯 **Quests & 1-Click Device Login**: Automatic quest tracking (`/poll quests`) and instant browser login (`/poll login`).
-- 🆓 **6 Free Creator Tools (No API key needed)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -64,7 +62,7 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 ### 💎 Integrated Generative Tools (ENTER ONLY - requires API key)
 - 🎨 `polli_gen_image` : State-of-the-art imagery models (`Flux`, `Sana`, `Midjourney`, etc.).
 - 🎬 `polli_gen_video` : Powerful Text-to-Video and Image-to-Video models (`Wan`, `Veo`, `LTX`, `Reveal`).
-- 🧊 `polli_gen_3d` : High-quality 3D asset generation (`trellis-2`, `hyper3d-rodin`) with GLB output.
+- 🧊 `polli_gen_3d` : High-quality 3D asset generation (`trellis-2`, `hyper3d-rodin`) with native GLB/PLY output.
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Voice synthesis (ElevenLabs, OpenAI TTS) and Generative Music.
 - 🎙️ `polli_stt` : High-flying voice transcription (Whisper V3).
 - 🌐 `polli_web_search` : Connected Web & Specialized Search context (`gemini-search`, `perplexity...`).
@@ -72,11 +70,10 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 
 ### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
 - 🆓 `gen_edit_image_free` : Free image generation **and 1–3 image editing**, with live per-IP quota, full aspect ratios, custom 256–1440 dimensions, seed, prompt upsampling and edit turbo. No key.
-- 🆓 `gen_video_free` : Free P‑Video, verified **1–10s**, 720p/1080p, 24/48 fps, 7 aspect ratios, seed/draft/prompt upsampling/audio, plus optional first-frame image or audio. Live per-IP quota, no key.
 - 🧹 `object_remover` : Remove objects by prompt for free; returned media is validated by magic bytes and saved with its real extension.
 - 📐 `image_upscaler` : Free 2x/4x upscale; JPEG/PNG/WebP output is detected from real bytes, never assumed from the filename.
 - ✨ `image_enhancer` : Free 1K/2K/4K enhancement (denoise, sharpen, restore), with real output-format detection.
-- ✂️ `remove_background` : No-key background removal with resilient auto chain **bgeraser reverse → ClearBackdrop fallback**. No paid provider, no key rotation; real output format/extension is auto-detected.
+- ✂️ `remove_background` : No-key background removal with resilient auto chain **BGNinja (10/day/IP, max 2 simultaneous) → legacy BGEraser fallback → optional ClearBackdrop (own free key)**. No paid provider, no key rotation; real output format/extension is auto-detected.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Dev utilities.
 
 ### 💻 Complete List of Terminal Commands
@@ -86,6 +83,7 @@ Use the alias **`/poll`** or **`/pollinations`** anytime inside your conversatio
 - `/poll connect <key>` : Bring Your Own Key (manual `sk_...`, permanent key).
 - `/poll quests` : See your quests & free Pollen ready to claim. 🎯
 - `/poll usage full` : Real-time dashboard (Stats), active Freetiers, and Wallet Balance.
+- `/poll status` : Account status and balances (alias of /poll usage).
 - `/poll config` : Finely adjust Cost Guards, Logs, Language, and Display.
 - `/poll models` : Check the status of available Models.
 - `/poll pricing` : View real-time unified pricing (Average Cost Estimate).
@@ -180,6 +178,8 @@ Your browser opens automatically. Sign in with GitHub and click **Authorize**; t
 ```bash
 /poll connect sk_your_key_here
 ```
+
+> **Same connection on v1/v2:** `/poll login` uses Pollinations Connect. The public `pk_` identifies the app; after approval the user receives a scoped private `sk_` with model permissions, budget and expiry. Before consent, the guide/free fallbacks can appear; after consent OpenCode v2 refreshes its model catalog without restart. `Keys` admin access is unnecessary. Prefer device login to avoid putting a private key in command history; `/poll connect sk_...` is for trusted local terminals.
 
 ---
 

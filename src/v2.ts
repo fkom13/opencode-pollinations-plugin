@@ -5,11 +5,13 @@ import type { AddressInfo } from 'net';
 import { createRequire } from 'module';
 import { generatePollinationsConfig } from './server/generate-config.js';
 import { loadConfig, migrateLegacyConfig } from './server/config.js';
-import { handleCommand } from './server/commands.js';
+import { handleCommand, subscribeConnectionChange } from './server/commands.js';
+import { paginateCommandOutput, redactCommandOutput, persistCommandReport } from './server/command-display.js';
 import { handleChatCompletion } from './server/proxy.js';
 import { createToolRegistry } from './tools/index.js';
 import { ModelRegistry } from './server/models/index.js';
 import { log } from './server/logger.js';
+import { t } from './locales/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -72,21 +74,34 @@ function v2ToolResult(value: unknown, metadata?: Record<string, unknown>): any {
   return metadata ? { content, metadata } : { content };
 }
 
-function mapV2Model(raw: any, providerID: any): any {
+export function mapV2Model(raw: any, providerID: any): any {
   const id = Model.ID.make(raw.id);
   const base = Model.Info.default(providerID, id);
   const variants = Object.entries(raw.variants || {}).map(([variantID, settings]) => ({
     id: Model.VariantID.make(variantID),
     settings: settings as Record<string, unknown>,
   }));
+  // V1 advertises reasoning=true plus effort variants. V2 needs explicit
+  // capabilities.reasoning; variants alone don't enable its reasoning UX.
+  const effortLevels = Object.keys(raw.variants || {}).filter((value) =>
+    ['minimal', 'low', 'medium', 'high', 'max', 'xhigh'].includes(value)
+  );
+  const reasoning = raw.reasoning === true
+    ? { supported: true, ...(effortLevels.length ? { effort: effortLevels } : {}) }
+    : { supported: false };
   return {
     ...base,
     name: raw.name || raw.id,
     capabilities: {
+      ...base.capabilities,
       tools: raw.tool_call === true,
+      reasoning,
       input: raw.modalities?.input || ['text'],
       output: raw.modalities?.output || ['text'],
     },
+    compatibility: raw.interleaved?.field
+      ? { ...((base as any).compatibility || {}), reasoningField: raw.interleaved.field }
+      : (base as any).compatibility,
     variants,
     limit: {
       context: raw.limit?.context || 128000,
@@ -148,12 +163,27 @@ export const PollinationsV2 = Plugin.define({
         });
       }
     });
-    await ctx.provider.reload();
-    await ctx.model.reload();
+    // Initial transforms are active immediately during OpenCode startup.
+    // Reloading here can race the location plugin activation transaction.
+    // Device pairing completes asynchronously; replay OpenCode V2's transforms
+    // whenever credentials are updated by /poll login or /poll connect.
+    const unsubscribeConnectionChange = subscribeConnectionChange(async () => {
+      if (disposed) return;
+      const key = loadConfig().apiKey;
+      await ModelRegistry.refresh(key);
+      const updated = await generatePollinationsConfig();
+      if (disposed) return;
+      currentModels = updated.map((m) => mapV2Model(m, providerID));
+      await ctx.provider.reload();
+      await ctx.model.reload();
+      currentTools = createToolRegistry();
+      await ctx.tool.reload();
+      log(`[V2] Pairing refreshed ${currentModels.length} Pollinations models and ${Object.keys(currentTools).length} tools.`);
+    });
 
-    const legacyTools = createToolRegistry();
+    let currentTools = createToolRegistry();
     await ctx.tool.transform((editor) => {
-      for (const [name, legacy] of Object.entries(legacyTools)) {
+      for (const [name, legacy] of Object.entries(currentTools)) {
         editor.add({
           name,
           description: legacy.description || name,
@@ -189,21 +219,43 @@ export const PollinationsV2 = Plugin.define({
           const raw = String(input.prompt?.text || '').trim();
           const args = raw.replace(/^\/?poll(?:inations)?\b/i, '').trim();
           const command = `/poll ${args || 'help'}`;
+          // Do not persist a raw /poll connect key in the synthetic message metadata.
+          const safeCommand = /^\/poll connect\s+/i.test(command) ? '/poll connect [REDACTED]' : command;
           const result = await handleCommand(command);
           const text = result.error ? `❌ ${result.error}` : (result.response || '🌸 Pollinations');
-          await ctx.session.synthetic({
-            sessionID: input.sessionID,
-            text,
-            description: 'Pollinations command',
-            metadata: { plugin: 'pollinations', command },
-            delivery: input.delivery,
-            resume: false,
-          });
+          // OpenCode V2 renders synthetic.description as the visible TUI message.
+          // A static label hides the actual /poll result and confuses users.
+          // Keep full output in text while displaying a safe, bounded preview.
+          const safeText = redactCommandOutput(text);
+          // Preserve the complete, redacted result across readable TUI pages.
+          let pages = paginateCommandOutput(safeText);
+          // Big tables would flood the TUI with dozens of synthetic turns.
+          // Persist a private complete report, show a compact preview and its path.
+          if (pages.length > 8) {
+            try {
+              const file = persistCommandReport(safeText, safeCommand);
+              pages = [pages[0].slice(0, 380) + '\n\n' + t('commands.report_saved', { file })];
+            } catch (e) {
+              // Never silently lose output if disk storage is unavailable.
+              log('[V2] Full command report could not be saved; keeping paged output');
+            }
+          }
+          for (let i = 0; i < pages.length; i++) {
+            const heading = pages.length > 1 ? '🌸 ' + safeCommand + ' (' + (i + 1) + '/' + pages.length + ')\n' : '';
+            const description = heading + pages[i];
+            await ctx.session.synthetic({
+              sessionID: input.sessionID,
+              text: pages[i],
+              description,
+              metadata: { plugin: 'pollinations', command: safeCommand, page: i + 1, pages: pages.length },
+              delivery: input.delivery,
+              resume: false,
+            });
+          }
         },
       });
     });
-    await ctx.command.reload();
-
+    // Command registration is applied synchronously during setup.
     try {
       const worker = await import('./server/models/worker.js');
       worker.ToolRegistryWorker.start();
@@ -211,10 +263,11 @@ export const PollinationsV2 = Plugin.define({
       log(`[V2] Tool registry worker start failed: ${e}`);
     }
 
-    log(`[V2] Provider registered immediately with ${currentModels.length} cached/fallback models and ${Object.keys(legacyTools).length} tools.`);
+    log(`[V2] Provider registered immediately with ${currentModels.length} cached/fallback models and ${Object.keys(currentTools).length} tools.`);
 
-    // Refresh catalog asynchronously; replay provider/model transforms once live data arrives.
-    void (async () => {
+    // Refresh after the startup transaction commits; never race activation.
+    const startupRefreshTimer = setTimeout(() => {
+      void (async () => {
       try {
         const config = loadConfig();
         await ModelRegistry.refresh(config.apiKey);
@@ -227,10 +280,13 @@ export const PollinationsV2 = Plugin.define({
       } catch (e) {
         log(`[V2] Live catalog refresh failed; keeping startup catalog: ${e}`);
       }
-    })();
+      })();
+    }, 1200);
 
     return async () => {
       disposed = true;
+      clearTimeout(startupRefreshTimer);
+      unsubscribeConnectionChange();
       try {
         const worker = await import('./server/models/worker.js');
         worker.ToolRegistryWorker.stop();

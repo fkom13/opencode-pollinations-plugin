@@ -30,7 +30,7 @@
 ## 🚀 Novedades v7.0.0
 
 - 🔁 **Dual-stack OpenCode v1 + v2**: un único paquete del plugin oficial de Pollinations soporta ambas generaciones de OpenCode, preservando `plugin` en v1 y `plugins` en v2 con un núcleo común.
-- 🤖 **Managed Agents separados del chat normal**: las entradas `agent:true` no aparecen en el selector de modelos y se delegan explícitamente mediante `polli_agent`. Usa `/poll agents [búsqueda]` para descubrirlas.
+- 🤖 **Agentes comunitarios seleccionables**: los modelos `agent:true` permanecen en el selector de OpenCode por compatibilidad y también se pueden invocar con `polli_agent` o `/poll agents [búsqueda]`. ⚠️ El chat directo puede gastar Pollen variable; el presupuesto Agent solo se aplica a `polli_agent`.
 - 💰 **Presupuesto Agent dedicado**: `/poll config agent_budget <pollen>` define una protección lógica independiente por ejecución (por defecto **0,60 🌻**). Los Prompt Agents alojados se estiman de forma conservadora con límites de 8 pasos de modelo / 16 llamadas a tools; runtimes desconocidos fuerzan confirmación. No es un hard cap del servidor.
 - 🌐 **Modelos Community controlados**: los modelos comunitarios fiables se exponen dinámicamente en chat solo si anuncian tool calling; `/poll config community on|off` controla su exposición.
 - 🛡️ **Cost Guard generalizado**: confirmaciones resueltas por registro, STT protegido, categoría correcta para costes de texto y tickets aislados por XDG.
@@ -40,20 +40,18 @@
 
 ## ✨ Novedades v6.5.5
 
-- ✂️ **RMBG resistente sin clave**: `remove_background` usa ahora **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, el almacenamiento/rotación de claves y `rmbg_keys` se eliminaron del plugin activo.
-- 🎞️ **Contrato P‑Video gratuito corregido**: salida verificada 1–10 s, 720p/1080p, 24/48 fps, siete relaciones, seed/draft/mejora de prompt/audio e imagen inicial/audio opcionales; cuota por IP leída en vivo.
+- ✂️ **RMBG resistente sin clave**: `remove_background` usa ahora **BGNinja (10/día/IP, 2 simultáneas) → alternativa histórica BGEraser → ClearBackdrop con clave gratuita opcional**. BackgroundCut, el almacenamiento/rotación de claves y `rmbg_keys` se eliminaron del plugin activo.
 - 🖼️ **Generación/edición de imagen gratis ampliada**: edición de 1–3 imágenes, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición con cuota por IP en vivo.
 - 🧬 **Mandandan los bytes reales del medio**: las herramientas reverse guardan JPEG/PNG/WebP según magic bytes, corrigiendo respuestas JPEG antes guardadas con nombre `.png`.
 - 🌍 **Convergencia en seis idiomas**: runtime, onboarding, los seis README y el manual técnico mantenido reflejan el comportamiento actual.
 
-- 🧊 **Generación 3D (`polli_gen_3d`)**: Generación de modelos 3D (`trellis-2`, `hyper3d-rodin`) en formato estándar `.glb` con protección Cost Guard y recuperación desde caché.
+- 🧊 **Generación 3D (`polli_gen_3d`)**: Generación de modelos 3D (`trellis-2`, `hyper3d-rodin`) en los formatos reales GLB/PLY con protección Cost Guard y recuperación desde caché.
 - 🛡️ **Cero Doble Facturación**: Reintentos de chat estrictamente limitados al error 429; los timeouts y cortes de red nunca vuelven a enviar peticiones de pago.
 - 🧠 **Normalización de Razonamiento**: Limpieza automática de flujos SSE en DeepSeek, Kimi y Qwen — sin filtraciones de pensamientos en el chat.
 - 💰 **Semántica Quest & Paid Transparente**: Nuevos modos de facturación (`quest`, `quest_only`, `paid`, `manual`) con límites de alerta en Pollen absoluto.
-- 📦 **Artifact Core (Magic Bytes)**: Verificación física binaria (JPEG, PNG, GLB, MP4, MP3, WebM) garantizando extensiones correctas en disco.
+- 📦 **Artifact Core (Magic Bytes)**: Verificación física binaria (JPEG, PNG, GLB, PLY, MP4, MP3, WebM) garantizando extensiones correctas en disco.
 - ⏱️ **Jerarquía de Timeouts Configurable**: Control detallado de tiempos de espera por llamada, por modelo y por capacidad con `/poll config timeouts.*`.
 - 🎯 **Quests y Login en 1 Clic**: Seguimiento retroactivo de misiones (`/poll quests`) e inicio de sesión automático en navegador (`/poll login`).
-- 🆓 **6 Herramientas de Creador Gratuitas (sin clave)**: `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -64,7 +62,7 @@ Aparte de conversar, cuando conectas tu API Key, el Agente OpenCode adquiere sup
 ### 💎 Herramientas Generativas (ENTER ONLY - requiere API Key)
 - 🎨 `polli_gen_image` : Modelos creativos líderes (`Flux`, `Sana`, `Midjourney`, etc.).
 - 🎬 `polli_gen_video` : Modelos robustos de Texto-a-Vídeo e Imagen-a-Vídeo (`Wan`, `Veo`, `LTX`, `Reveal`).
-- 🧊 `polli_gen_3d` : Generación de activos 3D de alta fidelidad (`trellis-2`, `hyper3d-rodin`) en GLB.
+- 🧊 `polli_gen_3d` : Generación de activos 3D de alta fidelidad (`trellis-2`, `hyper3d-rodin`) en GLB o PLY según el proveedor.
 - 🔊 `polli_gen_audio` y `polli_gen_music` : Síntesis de voz mágica (ElevenLabs, OpenAI TTS) y Música de IA.
 - 🎙️ `polli_stt` : Alta eficiencia en el paso de voz a texto (Whisper V3).
 - 🌐 `polli_web_search` : Búsqueda web inteligente y conocimiento en tiempo real (`gemini-search`, `perplexity...`).
@@ -72,11 +70,10 @@ Aparte de conversar, cuando conectas tu API Key, el Agente OpenCode adquiere sup
 
 ### 🧰 Herramientas de Creador Gratuitas (Siempre disponibles — sin clave API)
 - 🆓 `gen_edit_image_free` : Generación gratis y **edición de 1–3 imágenes**, cuota por IP leída en vivo, relaciones completas, dimensiones custom 256–1440, seed, mejora de prompt y turbo de edición. Sin clave.
-- 🆓 `gen_video_free` : P‑Video gratis, **1–10 s verificados**, 720p/1080p, 24/48 fps, 7 relaciones, seed/draft/mejora de prompt/audio, con imagen inicial o audio opcionales. Cuota por IP en vivo, sin clave.
 - 🧹 `object_remover` : Eliminación gratis de objetos por prompt; el resultado se valida por magic bytes y se guarda con su extensión real.
 - 📐 `image_upscaler` : Aumento 2x/4x gratis; la salida JPEG/PNG/WebP se detecta por los bytes reales, nunca por el nombre del archivo.
 - ✨ `image_enhancer` : Mejora gratis 1K/2K/4K (reducción de ruido, nitidez y restauración), con detección del formato real.
-- ✂️ `remove_background` : Eliminación de fondo sin clave con cadena resistente **bgeraser reverse → fallback ClearBackdrop**. Sin proveedor de pago ni rotación de claves; formato/extensión reales autodetectados.
+- ✂️ `remove_background` : Eliminación de fondo sin clave con cadena resistente **BGNinja (10/día/IP, 2 simultáneas) → alternativa histórica BGEraser → ClearBackdrop con clave gratuita opcional**. Sin proveedor de pago ni rotación de claves; formato/extensión reales autodetectados.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url`: Utilidades para desarrolladores.
 
 ### 💻 Lista Completa de Comandos en Terminal
@@ -86,6 +83,7 @@ Solo llama al bot usando los alias **`/poll`** o **`/pollinations`** en tu termi
 - `/poll connect <clave>` : Configuración manual "Bring Your Own Key" (`sk_...`).
 - `/poll quests` : Mira tus misiones y el Pollen gratis disponible para reclamar. 🎯
 - `/poll usage full` : Panel de control en tiempo real, recargas de saldo y uso del Portafolio.
+- `/poll status` : Estado de cuenta y saldos (alias de /poll usage).
 - `/poll config` : Refinamiento de idiomas, límites de costes (Cost Guards), timeouts y logs.
 - `/poll models` : Ver los modelos actualmente disponibles y en línea.
 - `/poll pricing` : Consultar la lista de precios unificados de Pollen al día.
@@ -181,6 +179,8 @@ El navegador se abre automáticamente. Inicia sesión con GitHub y pulsa **Autho
 ```bash
 /poll connect sk_tu_clave_aqui
 ```
+
+> **Misma conexión en v1/v2:** `/poll login` usa Pollinations Connect. La clave pública `pk_` identifica la aplicación; tras autorizar, el usuario recibe una `sk_` privada con permisos, presupuesto y caducidad. Antes pueden aparecer solo modelos de ayuda/gratuitos; después v2 actualiza el catálogo sin reiniciar. No se requieren permisos administrativos `Keys`. Prefiere el navegador a guardar claves en el historial; `/poll connect sk_...` es para terminales locales de confianza.
 
 ---
 

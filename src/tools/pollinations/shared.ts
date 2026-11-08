@@ -614,13 +614,24 @@ export function per1pollen(cost: number | null): string {
     return `${x.toFixed(1)}`;
 }
 
+// Pollinations' live /models JSON sends unit prices as decimal *strings*.
+// Never return a string to Cost Guard: "0.004".toFixed() would throw.
+export function numericCatalogPrice(value: unknown): number | undefined {
+    if (typeof value !== 'string' && typeof value !== 'number') return undefined;
+    if (typeof value === 'string' && !value.trim()) return undefined;
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
 export function estimateImageCost(model: string): number {
     // Try ModelRegistry first (averageCost or catalogue pricing)
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('image', model);
         if (m) {
-            if (m.averageCost !== undefined) return m.averageCost;
-            if (m.pricing.completionImageTokens !== undefined) return m.pricing.completionImageTokens;
+            const avg = numericCatalogPrice(m.averageCost);
+            if (avg !== undefined) return avg;
+            const image = numericCatalogPrice(m.pricing.completionImageTokens);
+            if (image !== undefined) return image;
         }
     }
     return 0.0002;
@@ -631,14 +642,17 @@ export function estimateVideoCost(model: string, duration: number): number {
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('video', model);
         if (m) {
-            if (m.averageCost !== undefined) return m.averageCost;
-            if (m.pricing.completionVideoSeconds !== undefined) {
-                return duration * m.pricing.completionVideoSeconds;
+            const avg = numericCatalogPrice(m.averageCost);
+            if (avg !== undefined) return avg;
+            const perSecond = numericCatalogPrice(m.pricing.completionVideoSeconds);
+            if (perSecond !== undefined) {
+                return duration * perSecond;
             }
-            if (m.pricing.completionVideoTokens !== undefined) {
+            const perToken = numericCatalogPrice(m.pricing.completionVideoTokens);
+            if (perToken !== undefined) {
                 // seedance-style token billing (~21780 tokens/s observed)
                 const tokensPerSecond = 21780;
-                return (duration * tokensPerSecond) * m.pricing.completionVideoTokens;
+                return (duration * tokensPerSecond) * perToken;
             }
         }
     }
@@ -649,9 +663,8 @@ export function estimateTtsCost(textLength: number): number {
     // Try ModelRegistry first
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('audio', 'elevenlabs');
-        if (m && m.averageCost !== undefined) {
-            return m.averageCost;
-        }
+        const avg = numericCatalogPrice(m?.averageCost);
+        if (avg !== undefined) return avg;
     }
     return (textLength / 1000) * 0.00018;
 }
@@ -660,9 +673,8 @@ export function estimateMusicCost(duration: number): number {
     // Try ModelRegistry first
     if (ModelRegistry.isReady()) {
         const m = ModelRegistry.getByNameOrAlias('audio', 'elevenmusic');
-        if (m && m.averageCost !== undefined) {
-            return m.averageCost;
-        }
+        const avg = numericCatalogPrice(m?.averageCost);
+        if (avg !== undefined) return avg;
     }
     return duration * 0.005;
 }

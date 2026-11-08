@@ -1,8 +1,10 @@
 /**
  * remove_background — resilient no-key background removal.
  *
- * Auto chain: bgeraser reverse (primary) -> ClearBackdrop (fallback).
- * No paid provider, no key store, no rotation, no hidden billing path.
+ * Default: BGNinja (documented API, 10/day/IP, 2 concurrent/IP).
+ * Auto fallback: legacy BGEraser; optional ClearBackdrop with free user key.
+ * No paid route; BGEraser availability/limits are not guaranteed.
+ * No paid provider, no rotation, no hidden billing path.
  */
 import { tool, type ToolDefinition } from '@opencode-ai/plugin/tool';
 import * as path from 'path';
@@ -14,10 +16,32 @@ import { detectArtifactType, persistArtifact, resolveArtifactInput } from '../po
 import { emitStatusToast } from '../../server/toast.js';
 import { t } from '../../locales/index.js';
 
-const CLEARBACKDROP_HOST = 'api.clearbackdrop.com';
-const CLEARBACKDROP_PATH = '/v1/remove';
+const BGNINJA_HOST = 'bgninja.com';
+const BGNINJA_PATH = '/api/remove';
+const CLEARBACKDROP_HOST = 'clearbackdrop.com';
+const CLEARBACKDROP_PATH = '/api/v1/remove-background';
 
-type Provider = 'auto' | 'bgeraser' | 'clearbackdrop';
+// The provider allows at most 2 simultaneous calls from one public IP.
+// This local guard covers a single plugin process, not independent clients.
+const BGNINJA_MAX_CONCURRENCY = 2;
+let bgNinjaActive = 0;
+const bgNinjaQueue: Array<() => void> = [];
+async function withBgNinjaSlot<T>(action: () => Promise<T>): Promise<T> {
+    if (bgNinjaActive >= BGNINJA_MAX_CONCURRENCY) {
+        await new Promise<void>(resolve => bgNinjaQueue.push(resolve));
+    } else {
+        bgNinjaActive++;
+    }
+    try {
+        return await action();
+    } finally {
+        const next = bgNinjaQueue.shift();
+        if (next) next(); // slot ownership transfers without decrement
+        else bgNinjaActive--;
+    }
+}
+
+type Provider = 'auto' | 'bgninja' | 'bgeraser' | 'clearbackdrop';
 
 function assertImage(buf: Buffer, provider: string): void {
     const detected = detectArtifactType(buf);
@@ -35,6 +59,24 @@ async function removeViaBgeraser(imageData: Buffer, mimeType: string, filename: 
     return res.data;
 }
 
+async function removeViaBgNinja(imageData: Buffer, mimeType: string, filename: string): Promise<Buffer> {
+    const { boundary, body } = buildMultipart([
+        { name: 'file', value: imageData, filename, contentType: mimeType },
+    ]);
+    return withBgNinjaSlot(async () => {
+    const res = await httpsPost(BGNINJA_HOST, BGNINJA_PATH, {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Accept': 'image/png,image/*,*/*',
+        'User-Agent': 'OpenCode-Pollinations-Plugin/7',
+    }, body);
+    if (res.status < 200 || res.status >= 300) {
+        throw new Error(`BGNinja HTTP ${res.status}: ${res.body.toString('utf8').slice(0, 160)}`);
+    }
+    assertImage(res.body, 'BGNinja');
+    return res.body;
+    });
+}
+
 async function removeViaClearBackdrop(imageData: Buffer, mimeType: string, filename: string): Promise<Buffer> {
     const { boundary, body } = buildMultipart([
         { name: 'image', value: imageData, filename, contentType: mimeType },
@@ -42,7 +84,8 @@ async function removeViaClearBackdrop(imageData: Buffer, mimeType: string, filen
     const res = await httpsPost(CLEARBACKDROP_HOST, CLEARBACKDROP_PATH, {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
         'Accept': 'image/png,image/webp,image/*,*/*',
-        'User-Agent': 'OpenCode-Pollinations-Plugin/6.5',
+        'User-Agent': 'OpenCode-Pollinations-Plugin/7',
+        ...(process.env.CLEARBACKDROP_API_KEY ? { 'X-API-Key': process.env.CLEARBACKDROP_API_KEY } : {}),
     }, body);
     if (res.status < 200 || res.status >= 300) {
         throw new Error(`ClearBackdrop HTTP ${res.status}: ${res.body.toString('utf8').slice(0, 160)}`);
@@ -57,7 +100,7 @@ export const removeBackgroundTool: ToolDefinition = tool({
         image_path: tool.schema.string().describe(t('tools.remove_background.arg_image')),
         filename: tool.schema.string().optional().describe(t('tools.remove_background.arg_filename')),
         output_path: tool.schema.string().optional().describe(t('tools.remove_background.arg_output')),
-        provider: tool.schema.enum(['auto', 'bgeraser', 'clearbackdrop']).optional()
+        provider: tool.schema.enum(['auto', 'bgninja', 'bgeraser', 'clearbackdrop']).optional()
             .describe(t('tools.remove_background.arg_provider')),
     },
 
@@ -75,13 +118,19 @@ export const removeBackgroundTool: ToolDefinition = tool({
 
         const basename = path.basename(input.filename || 'image');
         const attempts: Array<{ name: Exclude<Provider, 'auto'>; run: () => Promise<Buffer> }> = [];
+        if (provider === 'auto' || provider === 'bgninja') {
+            attempts.push({ name: 'bgninja', run: () => removeViaBgNinja(input.buf, input.mime, basename) });
+        }
+        // A no-key fallback prevents an empty auto chain on BGNinja HTTP 402/429.
+        // Legacy BGEraser has no confirmed contractual unlimited API guarantee.
         if (provider === 'auto' || provider === 'bgeraser') {
             attempts.push({ name: 'bgeraser', run: () => removeViaBgeraser(input.buf, input.mime, basename) });
         }
-        if (provider === 'auto' || provider === 'clearbackdrop') {
+        // Anonymous ClearBackdrop access ended 2026-11-05.
+        // Only use with explicit user-provided key.
+        if (provider === 'clearbackdrop' || (provider === 'auto' && !!process.env.CLEARBACKDROP_API_KEY)) {
             attempts.push({ name: 'clearbackdrop', run: () => removeViaClearBackdrop(input.buf, input.mime, basename) });
         }
-
         const failures: string[] = [];
         for (const attempt of attempts) {
             try {
@@ -107,7 +156,7 @@ export const removeBackgroundTool: ToolDefinition = tool({
                     t('tools.remove_background.res_size', { size: formatFileSize(persisted.size) }),
                     t('tools.remove_background.res_format', { format: (persisted.detected?.format || persisted.ext).toUpperCase() }),
                     t('tools.remove_background.res_provider', { provider: attempt.name }),
-                    provider === 'auto' && attempt.name === 'clearbackdrop' ? t('tools.remove_background.res_fallback') : '',
+                    provider === 'auto' && attempt.name !== 'bgninja' ? t('tools.remove_background.res_fallback', { provider: attempt.name }) : '',
                 ].filter(Boolean).join('\n');
             } catch (err: any) {
                 failures.push(`${attempt.name}: ${err.message || String(err)}`);

@@ -1,7 +1,7 @@
 /**
  * Artifact Core (v6.5) — shared input/output primitives.
  *
- * Extracted from the Free Tools (gen_video_free.resolveAsset/mimeFor,
+ * Extracted from the Free Tools (legacy playground media tools,
  * imgtools buildMultipart/getDims) and generalized for Pollinations tools,
  * Free services and local operations.
  *
@@ -52,6 +52,15 @@ export function detectArtifactType(buf: Buffer): DetectedArtifact | null {
     if (buf.toString('ascii', 0, 4) === 'glTF') {
         return { format: 'glb', ext: 'glb', mime: 'model/gltf-binary' };
     }
+    // PLY geometry can be ASCII or binary, but must have a valid header.
+    // Asset Harvester returns PLY rather than GLB.
+    if (buf.toString('ascii', 0, 3) === 'ply' && (buf[3] === 10 || buf[3] === 13)) {
+        const header = buf.toString('ascii', 0, Math.min(buf.length, 65536));
+        if (/^ply\r?\nformat (ascii|binary_little_endian|binary_big_endian) 1\.0\r?\n/.test(header)
+            && /\bend_header\r?\n/.test(header)) {
+            return { format: 'ply', ext: 'ply', mime: 'application/x-ply' };
+        }
+    }
     // MP4 (ftyp box at offset 4)
     if (buf.length > 12 && buf.toString('ascii', 4, 8) === 'ftyp') {
         return { format: 'mp4', ext: 'mp4', mime: 'video/mp4' };
@@ -81,7 +90,7 @@ export function detectArtifactType(buf: Buffer): DetectedArtifact | null {
 
 const EXT_MIME: Record<string, string> = {
     jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
-    gif: 'image/gif', glb: 'model/gltf-binary', mp4: 'video/mp4', webm: 'video/webm',
+    gif: 'image/gif', glb: 'model/gltf-binary', ply: 'application/x-ply', mp4: 'video/mp4', webm: 'video/webm',
     mov: 'video/quicktime', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
     m4a: 'audio/mp4', flac: 'audio/flac', txt: 'text/plain', json: 'application/json',
 };

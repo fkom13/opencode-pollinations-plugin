@@ -1,6 +1,8 @@
 # 📘 Technical Manual — OpenCode Pollinations Plugin v7.0
 > **Version**: 7.0.0 | **Status**: Release Candidate | **Last Updated**: 2026-09-30
 
+> **Service update, 2026-11-08:** The free Pruna P-Video Playground is discontinued. 3D may return GLB or PLY. RMBG defaults to anonymous BGNinja with BGEraser fallback and optional user-key ClearBackdrop.
+
 ## Table of Contents
 - [Architecture Overview](#architecture-overview)
 - [Data Flow](#data-flow)
@@ -553,7 +555,7 @@ Located in `src/tools/power/`.
 
 | Tool File | Tool Name | Description |
 |-----------|-----------|-------------|
-| `remove_background.ts` | `remove_background` | No-key RMBG: bgeraser reverse primary → ClearBackdrop fallback; magic-byte output validation |
+| `remove_background.ts` | `remove_background` | BGNinja anonymous primary → BGEraser fallback → optional ClearBackdrop key; magic-byte output validation |
 | `extract_audio.ts` | `extract_audio` | Extract the audio track from a video file |
 | `extract_frames.ts` | `extract_frames` | Extract frames from a video at a given interval |
 | `file_to_url.ts` | `file_to_url` | Upload a local file and return a public URL |
@@ -564,10 +566,10 @@ Located in `src/tools/power/`.
 
 1. Resolve the input from a local path, HTTP(S) URL or data URI.
 2. Validate the real input media type from bytes.
-3. Try the bgeraser reverse backend first.
-4. If bgeraser fails in `provider=auto`, retry once through ClearBackdrop (`https://api.clearbackdrop.com/v1/remove`).
-5. Validate the returned image bytes and persist with the real detected extension (JPEG/PNG/WebP), even when an upstream filename or Content-Type is wrong.
-6. `provider=bgeraser` and `provider=clearbackdrop` force one provider; `provider=auto` is the recommended resilient mode.
+3. Try the BGNinja anonymous API first (10/day/IP, up to 2 concurrent requests per process).
+4. On BGNinja failure, `provider=auto` tries the no-key BGEraser legacy backend (no guaranteed availability).
+5. If both anonymous services fail and `CLEARBACKDROP_API_KEY` is configured, try the optional ClearBackdrop endpoint; validate output bytes and save with the detected JPEG/PNG/WebP extension.
+6. `provider=bgninja`, `bgeraser` or `clearbackdrop` forces one route; `provider=auto` is the recommended chain. No paid route is enabled.
 
 There is deliberately **no `rmbg_keys` tool and no BackgroundCut path** in the current runtime.
 
@@ -576,13 +578,12 @@ There is deliberately **no `rmbg_keys` tool and no BackgroundCut path** in the c
 | Tool | Current no-key contract | Resilience |
 |------|-------------------------|------------|
 | `gen_edit_image_free` | text generation or 1–3 image edit; ratios `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`; `custom` generation 256–1440 (multiple of 16); `match_input_image` edit; seed, prompt upsampling, edit turbo | Live per-IP quota; magic-byte output detection |
-| `gen_video_free` | P‑Video 1–10 s verified output; 720p/1080p; 24/48 fps; seven aspect ratios; optional first-frame image/audio; seed, draft, prompt upsampling, save-audio | Live `p-video` quota; same-job polling only; MP4/WebM magic-byte validation |
 | `object_remover` | prompt-based object removal | Input/output magic-byte validation; real extension |
 | `image_upscaler` | 2× / 4× | Real JPEG/PNG/WebP extension follows bytes |
 | `image_enhancer` | target longest side 1K / 2K / 4K | Real JPEG/PNG/WebP extension follows bytes |
-| `remove_background` | bgeraser → ClearBackdrop | One free fallback; no keys; real extension |
+| `remove_background` | BGNinja anonymous → legacy BGEraser → optional ClearBackdrop user key | Quota/concurrency limit; output type validated |
 
-The free playground quotas are intentionally read at execution time rather than documented as fixed constants. P‑Video accepts a submitted duration greater than 10 seconds but the free backend was verified to return approximately 10 seconds, so the public tool enforces 1–10 seconds.
+**Deprecation:** personal Pruna free P-Video is gone; `gen_video_free` remains historical in published v6.5.5 and is removed in v7. The active free image generation/editing tool remains `gen_edit_image_free`. Pollinations video via `polli_gen_video` requires a key and may incur a charge.
 
 ---
 
@@ -754,7 +755,7 @@ Inject "⚠️ Switched to free model" warning into stream
 | gen_video, transcribe_audio | v6.1 | Multimodal |
 | polli_web_search | v6.1 | Web research |
 | gen_diagram, gen_palette, gen_qrcode | v6.1 | Design tools |
-| remove_background resilient free chain | v6.5.x | bgeraser reverse → ClearBackdrop; no key store/rotation |
+| remove_background resilient free chain | v6.5.x | BGNinja → BGEraser → optional ClearBackdrop key; no paid routes |
 | extract_audio, extract_frames | v6.1 | Media power tools |
 | file_to_url | v6.1 | Local file upload |
 | status.ts status bar module | v6.1 | Session idle hook |

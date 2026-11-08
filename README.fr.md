@@ -30,7 +30,7 @@
 ## 🚀 Nouveautés v7.0.0
 
 - 🔁 **Dual-stack OpenCode v1 + v2** : un seul package du plugin officiel Pollinations prend désormais en charge les deux générations d’OpenCode. L’installateur respecte `plugin` en v1 et `plugins` en v2, avec un cœur provider/tools commun.
-- 🤖 **Managed Agents sans polluer les modèles de chat** : les entrées Pollinations `agent:true` restent hors du sélecteur normal et sont déléguées explicitement via `polli_agent`. `/poll agents [recherche]` permet de les découvrir.
+- 🤖 **Agents communautaires toujours sélectionnables** : les modèles `agent:true` restent dans le sélecteur OpenCode pour préserver la compatibilité ; ils sont aussi disponibles via `polli_agent` et `/poll agents [recherche]`. ⚠️ Le chat direct peut dépenser du Pollen variable ; le budget Agent dédié ne s’applique qu’à `polli_agent`.
 - 💰 **Budget Agent dédié** : `/poll config agent_budget <pollen>` définit une enveloppe logique séparée par exécution (défaut **0,60 🌻**). Les Prompt Agents hébergés sont estimés de façon conservatrice avec les bornes Pollinations de 8 étapes modèle / 16 appels tools ; les runtimes inconnus imposent une confirmation. Ce budget est une protection locale, **pas** un plafond serveur strict.
 - 🌐 **Modèles Community contrôlés** : les modèles texte communautaires fiables sont exposés dynamiquement en chat uniquement s’ils annoncent le tool calling ; `/poll config community on|off` contrôle leur exposition.
 - 🛡️ **Cost Guard généralisé** : confirmations résolues par le registre plutôt que par une liste statique, STT désormais protégé, coûts texte dans la bonne catégorie et tickets isolés par le répertoire XDG actif.
@@ -40,20 +40,18 @@
 
 ## ✨ Nouveautés v6.5.5
 
-- ✂️ **RMBG sans clé résilient** : `remove_background` utilise maintenant **bgeraser reverse → fallback ClearBackdrop**. BackgroundCut, le stockage/roulement des clés et `rmbg_keys` sont retirés du plugin actif.
-- 🎞️ **Contrat P‑Video gratuit corrigé** : sortie vérifiée 1–10 s, 720p/1080p, 24/48 fps, sept ratios, seed/draft/prompt upsampling/audio et image de première frame/audio optionnels ; quota par IP lu en direct.
+- ✂️ **RMBG sans clé résilient** : `remove_background` utilise maintenant **BGNinja (10/jour/IP, 2 simultanés) → secours historique BGEraser → ClearBackdrop avec clé gratuite facultative**. BackgroundCut, le stockage/roulement des clés et `rmbg_keys` sont retirés du plugin actif.
 - 🖼️ **Génération/édition image gratuite étendue** : édition de 1 à 3 images, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition avec quota live par IP.
 - 🧬 **Les vrais octets média gagnent partout** : les outils image reverse sauvegardent JPEG/PNG/WebP selon les magic bytes, corrigeant les JPEG auparavant enregistrés sous un nom `.png`.
 - 🌍 **Convergence six langues** : runtime, onboarding, six README et manuel technique maintenu sont alignés sur le comportement réel des outils gratuits.
 
-- 🧊 **Génération 3D (`polli_gen_3d`)** : Génération de modèles 3D (`trellis-2`, `hyper3d-rodin`) au format standard `.glb` avec protection Cost Guard et reprise sur cache.
+- 🧊 **Génération 3D (`polli_gen_3d`)** : Génération de modèles 3D (`trellis-2`, `hyper3d-rodin`) aux formats réels GLB/PLY avec protection Cost Guard et reprise sur cache.
 - 🛡️ **Protection Anti-Double Facturation** : Retries chat strictement limités au code 429 ; les timeouts et coupures réseau ne rejouent jamais de requêtes payantes.
 - 🧠 **Normalisation du Raisonnement** : Nettoyage automatique des flux SSE de DeepSeek, Kimi et Qwen pour éviter toute fuite de texte de pensée dans le chat.
 - 💰 **Sémantique Quest & Paid Transparente** : Nouveaux modes de facturation (`quest`, `quest_only`, `paid`, `manual`) avec planchers d'alerte en Pollen absolu.
-- 📦 **Artifact Core (Magic Bytes)** : Vérification réelle des octets binaires (JPEG, PNG, GLB, MP4, MP3, WebM) garantissant la bonne extension de fichier sur le disque.
+- 📦 **Artifact Core (Magic Bytes)** : Vérification réelle des octets binaires (JPEG, PNG, GLB, PLY, MP4, MP3, WebM) garantissant la bonne extension de fichier sur le disque.
 - ⏱️ **Hiérarchie de Timeouts Configurable** : Contrôle fin des timeouts par appel, par modèle et par capacité via `/poll config timeouts.*`.
 - 🎯 **Quêtes & Connexion 1-Clic** : Suivi rétroactif des quêtes (`/poll quests`) et connexion automatique dans le navigateur (`/poll login`).
-- 🆓 **6 Outils Créateurs Gratuits (sans clé)** : `gen_edit_image_free`, `gen_video_free`, `object_remover`, `image_upscaler`, `image_enhancer`, `remove_background`.
 
 ---
 
@@ -64,7 +62,7 @@ Au-delà de la discussion textuelle, connecter votre clé donne aux Agents OpenC
 ### 💎 Outils Génératifs Intégrés (ENTER ONLY - requiert une clé API)
 - 🎨 `polli_gen_image` : Modèles d'imagerie de pointe (`Flux`, `Sana`, `Midjourney`, etc.).
 - 🎬 `polli_gen_video` : Puissants modèles Texte-vers-Vidéo et Image-vers-Vidéo (`Wan`, `Veo`, `LTX`, `Reveal`).
-- 🧊 `polli_gen_3d` : Génération d'actifs 3D haute qualité (`trellis-2`, `hyper3d-rodin`) au format GLB.
+- 🧊 `polli_gen_3d` : Génération d'actifs 3D haute qualité (`trellis-2`, `hyper3d-rodin`) aux formats GLB ou PLY selon le fournisseur.
 - 🔊 `polli_gen_audio` & `polli_gen_music` : Synthèse vocale (ElevenLabs, OpenAI TTS) et Musique Générative.
 - 🎙️ `polli_stt` : Transcription vocale de haute volée (Whisper V3).
 - 🌐 `polli_web_search` : Outil de recherche web connecté et contextes spécialisés (`gemini-search`, `perplexity...`).
@@ -72,11 +70,10 @@ Au-delà de la discussion textuelle, connecter votre clé donne aux Agents OpenC
 
 ### 🧰 Outils Bonus Créateurs Gratuits (Toujours disponibles — sans clé API)
 - 🆓 `gen_edit_image_free` : Génération gratuite et **édition de 1 à 3 images**, quota par IP lu en direct, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition. Sans clé.
-- 🆓 `gen_video_free` : P‑Video gratuit, **1–10 s vérifiées**, 720p/1080p, 24/48 fps, 7 ratios, seed/draft/prompt upsampling/audio, avec image de première frame ou audio optionnels. Quota par IP lu en direct, sans clé.
 - 🧹 `object_remover` : Suppression gratuite d’objets par prompt ; le média renvoyé est validé par magic bytes et sauvegardé avec sa vraie extension.
 - 📐 `image_upscaler` : Agrandissement gratuit 2x/4x ; la sortie JPEG/PNG/WebP est détectée dans les octets réels, jamais supposée depuis le nom de fichier.
 - ✨ `image_enhancer` : Amélioration gratuite 1K/2K/4K (débruitage, netteté, restauration), avec détection du vrai format de sortie.
-- ✂️ `remove_background` : Détourage sans clé avec chaîne résiliente **bgeraser reverse → fallback ClearBackdrop**. Aucun provider payant, aucune rotation de clés ; format/extension réels auto-détectés.
+- ✂️ `remove_background` : Détourage sans clé avec chaîne résiliente **BGNinja (10/jour/IP, 2 simultanés) → secours historique BGEraser → ClearBackdrop avec clé gratuite facultative**. Aucun provider payant, aucune rotation de clés ; format/extension réels auto-détectés.
 - 🛠️ `gen_qrcode`, `gen_diagram`, `gen_palette`, `extract_frames`, `extract_audio`, `file_to_url` : Utilitaires développeurs.
 
 ### 💻 Liste Complète des Commandes Terminal
@@ -86,6 +83,7 @@ Utilisez l'alias **`/poll`** ou **`/pollinations`** à tout moment dans le termi
 - `/poll connect <clé>` : Configuration manuelle "Bring Your Own Key" (`sk_...`).
 - `/poll quests` : Consultez vos quêtes et le Pollen gratuit à réclamer. 🎯
 - `/poll usage full` : Tableau de bord en temps réel (Statistiques), Quêtes actives et Solde du Portefeuille.
+- `/poll status` : État du compte et soldes (alias de /poll usage).
 - `/poll config` : Ajustement fin du Cost Guard, des timeouts, des logs, de la langue et de l'affichage.
 - `/poll models` : Vérifiez l'état des modèles disponibles.
 - `/poll pricing` : Consultez la tarification unifiée en temps réel (Estimation du coût moyen).
@@ -181,6 +179,8 @@ Le navigateur s’ouvre automatiquement. Connectez-vous avec GitHub puis cliquez
 ```bash
 /poll connect sk_votre_cle_ici
 ```
+
+> **Même connexion sur v1/v2 :** `/poll login` utilise Pollinations Connect. La clé publique `pk_` identifie l’application ; après autorisation, l’utilisateur reçoit une clé privée `sk_` limitée par permissions, budget et expiration. Avant accord, les modèles de découverte/gratuits peuvent seuls apparaître ; après, OpenCode v2 actualise son catalogue sans redémarrage. Le droit administrateur `Keys` est inutile. Préférez l’appairage navigateur pour éviter de placer une clé dans l’historique ; `/poll connect sk_...` est réservé aux terminaux locaux de confiance.
 
 ---
 

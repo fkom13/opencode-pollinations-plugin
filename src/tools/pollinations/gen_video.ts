@@ -45,7 +45,7 @@ import { t } from '../../locales/index.js';
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const CHEAPEST_MODEL = 'grok-video';
+const CHEAPEST_MODEL = 'x-ai/grok-imagine-video-1.5-lite'; // live official 2026-11-07
 const DEFAULT_DURATION = 3;
 const DEFAULT_ASPECT_RATIO = '16:9';
 

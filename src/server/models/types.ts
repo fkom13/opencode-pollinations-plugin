@@ -7,7 +7,7 @@
 
 // ─── Core Model Interface ────────────────────────────────────────────────
 
-export type ModelCategory = 'image' | 'video' | 'audio' | 'text' | '3d' | 'embedding' | 'realtime';
+export type ModelCategory = 'image' | 'video' | 'audio' | 'text' | '3d' | 'embedding' | 'realtime' | 'decision';
 
 export interface ModelPricing {
     currency: string;  // Always 'pollen'
@@ -27,7 +27,8 @@ export interface ModelPricing {
 export interface PollinationsModel {
     name: string;
     title?: string;
-    brand?: string;
+    brand?: string; // legacy alias
+    publisher?: string;
     description: string;
     category: ModelCategory;
     aliases: string[];
@@ -39,6 +40,7 @@ export interface PollinationsModel {
     base_model?: string;
     health?: { status?: string; success_rate?: number | null; requests?: number };
     supported_endpoints?: string[];
+    supported_parameters?: string[]; // live provider-specific parameter contract
     supportsI2X: boolean;       // input_modalities includes "image"
     outputType: ModelCategory;  // Derived from output_modalities[0]
     voices?: string[];

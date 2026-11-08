@@ -537,8 +537,14 @@ async function testTcrRetryPolicies() {
         assert(c && c.execution.retryPolicy === 'NO_AUTOMATIC_RETRY', `${cap}: NO_AUTOMATIC_RETRY`);
     }
 
+    assert(!tcr.resolveCapability('video_free'), 'retired Pruna video_free capability is absent');
+
+    const bgninja = tcr.resolveCapability('remove_background');
+    assert(bgninja && bgninja.transport.endpoint === 'https://bgninja.com/api/remove', 'RMBG points to live BGNinja API');
+    assert(bgninja && bgninja.execution.retryPolicy === 'NO_AUTOMATIC_RETRY', 'RMBG POST must not auto-replay');
+
     // async job tiers → re-poll job.id, never resubmit
-    for (const cap of ['video_free', 'remove_background', 'object_remove', 'image_upscale', 'image_enhance']) {
+    for (const cap of ['object_remove', 'image_upscale', 'image_enhance']) {
         const c = tcr.resolveCapability(cap);
         assert(c && c.execution.retryPolicy === 'REPOLL_JOB', `${cap}: async poll → REPOLL_JOB (never resubmit)`);
     }

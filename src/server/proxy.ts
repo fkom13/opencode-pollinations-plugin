@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { loadConfig, saveConfig } from './config.js';
 import { handleCommand } from './commands.js';
+import { redactCommandOutput } from './command-display.js';
 import { emitStatusToast, emitLogToast } from './toast.js';
 import { buildConnectResponse } from './connect-response.js';
 
@@ -165,16 +166,21 @@ function truncateTools(tools: any[], limit: number = 120): any[] {
     return tools.slice(0, limit);
 }
 
-// v6.5: single source for the dynamic paid_only list (saved by generate-config.ts).
-function isPaidOnlyModel(model: string): boolean {
+// The cached paid_only catalog is necessary for Quest-only safety.
+// Never interpret a missing or malformed file as evidence of Quest eligibility.
+export function paidOnlyClassification(model: string): 'paid' | 'eligible' | 'unknown' {
     try {
-        const standardPaidPath = path.join(getConfigDir(), 'pollinations-paid-models.json');
-        if (fs.existsSync(standardPaidPath)) {
-            const paidModels = JSON.parse(fs.readFileSync(standardPaidPath, 'utf-8'));
-            return Array.isArray(paidModels) && paidModels.includes(model);
+        const file = path.join(getConfigDir(), 'pollinations-paid-models.json');
+        if (!fs.existsSync(file)) return 'unknown';
+        const paidModels = JSON.parse(fs.readFileSync(file, 'utf-8'));
+        if (!Array.isArray(paidModels) || !paidModels.every((id: unknown) => typeof id === 'string')) {
+            return 'unknown';
         }
-    } catch (e) { log(`[Proxy] Error checking paid models: ${e}`); }
-    return false;
+        return paidModels.includes(model) ? 'paid' : 'eligible';
+    } catch (e) {
+        log(`[Proxy] paid_only classification unavailable: ${e}`);
+        return 'unknown';
+    }
 }
 
 // --- INTERFACES ---
@@ -474,9 +480,9 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
                 }
                 text = text.trim();
 
-                log(`[Command Check] Extracted: "${text.substring(0, 50)}..." from type: ${typeof lastMsg.content}`);
+                log(`[Command Check] Extracted: "${redactCommandOutput(text).substring(0, 50)}..." from type: ${typeof lastMsg.content}`);
                 if (text.startsWith('/pollinations') || text.startsWith('/poll')) {
-                    log(`[Command] Intercepting: ${text}`);
+                    log(`[Command] Intercepting: ${redactCommandOutput(text)}`);
                     const cmdResult = await handleCommand(text);
                     if (cmdResult.handled) {
                         if (true) { // ALWAYS MOCK STREAM for Compatibility
@@ -579,9 +585,26 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         // A.1 PAID-ONLY MODEL RESOLUTION (v6.5)
         // Paid-only models always debit pack (upstream contract). The dynamic
         // list is saved by generate-config.ts from the live catalog.
-        const paidOnlyRequested = isEnterprise && isPaidOnlyModel(actualModel);
+        const paidClassification = isEnterprise ? paidOnlyClassification(actualModel) : 'eligible';
+        const paidOnlyRequested = isEnterprise && paidClassification === 'paid';
 
         // QUEST_ELIGIBLE_ONLY: hard-block paid_only models (no paid route).
+        // Without the paid-only catalog, Quest-only must fail closed. A
+        // server-issued questPollenOnly key is still the only hard upstream
+        // guarantee against an unexpected Paid debit.
+        if (isEnterprise && config.mode === 'quest_only' && paidClassification === 'unknown') {
+            log(`[QuestOnly] Missing paid-only catalog, refusing unclassified model ${actualModel}`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                id: `chatcmpl-quest-unknown-${Date.now()}`, object: 'chat.completion',
+                created: Math.floor(Date.now() / 1000), model: actualModel,
+                choices: [{ index: 0, message: { role: 'assistant',
+                    content: 'Quest-only protection: model billing classification is unavailable. Refresh the Pollinations catalog or use a server-issued questPollenOnly key; request was not sent.'
+                }, finish_reason: 'stop' }],
+                usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+            }));
+            return;
+        }
         if (paidOnlyRequested && config.mode === 'quest_only') {
             log(`[QuestOnly] BLOCKED: Paid Only Model (${actualModel}).`);
             emitStatusToast('warning', t('proxy.warnings.paid_blocked_questonly_title', { model: actualModel }), 'Quest-Only Mode');
@@ -741,8 +764,32 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
         if (!isEnterprise && !proxyBody.seed) {
             proxyBody.seed = Math.floor(Math.random() * 1000000);
         }
-        if (isEnterprise) proxyBody.private = true;
+        // Some official Pollinations chat routes pass unknown body fields through
+        // to strict upstream APIs. Verified 2026-11-07: OpenAI gpt-4o-mini (400)
+        // and Mistral Large 4 (422) reject `private`. Do not inject an
+        // unsupported argument into these models; leave other routes unchanged.
+        // This is NOT a general privacy guarantee: callers should rely on
+        // provider terms and account settings, not the undocumented flag.
+        const noPrivateUpstreamModels = new Set([
+            'openai/gpt-4o-mini',
+            'mistralai/mistral-large-4',
+        ]);
+        if (isEnterprise && !noPrivateUpstreamModels.has(actualModel)) {
+            proxyBody.private = true;
+        } else if (noPrivateUpstreamModels.has(actualModel)) {
+            delete proxyBody.private;
+        }
         if (proxyBody.stream_options) delete proxyBody.stream_options;
+
+        // OpenCode v1/v2 variant settings use camelCase reasoningEffort.
+        // Always normalize before forwarding; otherwise no-tool chats lose
+        // the selected low/high effort and only tool-enabled GPTs honor it.
+        if (proxyBody.reasoningEffort !== undefined) {
+            if (proxyBody.reasoning_effort === undefined) {
+                proxyBody.reasoning_effort = proxyBody.reasoningEffort;
+            }
+            delete proxyBody.reasoningEffort;
+        }
 
         // 3.6 STOP SEQUENCES (-REMOVED-)
         // We do NOT inject 'stop' automatically anymore.
@@ -783,9 +830,6 @@ export async function handleChatCompletion(req: http.IncomingMessage, res: http.
             if (actualModel.includes("gpt") || actualModel.includes("openai") || actualModel.includes("azure") || actualModel.includes("midijourney") || actualModel.includes("grok")) {
                 const limit = (actualModel.includes("midijourney") || actualModel.includes("grok")) ? 128 : 120;
                 proxyBody.tools = truncateTools(proxyBody.tools, limit);
-
-                if (proxyBody.reasoning_effort) delete proxyBody.reasoning_effort;
-                if (proxyBody.reasoningEffort) delete proxyBody.reasoningEffort;
 
                 if (proxyBody.messages) {
                     proxyBody.messages.forEach((m: any) => {

@@ -200,7 +200,6 @@ async function testToolsRegistry() {
     for (const t of [
         'gen_qrcode',
         'gen_edit_image_free',
-        'gen_video_free',
         'object_remover',
         'image_upscaler',
         'image_enhancer',
@@ -208,6 +207,7 @@ async function testToolsRegistry() {
         'polli_login',
     ]) {
         assert(names.includes(t), `free tool present: ${t}`);
+    assert(!names.includes('gen_video_free'), 'deprecated free video tool not registered');
     }
 }
 

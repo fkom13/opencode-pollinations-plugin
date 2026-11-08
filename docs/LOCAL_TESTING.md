@@ -115,6 +115,33 @@ V2.0.19 local compatibility adapter:
 /home/fkomp/Desktop/oracle/opencode-pollinations-plugin/dev/opencode-v2-local/
 ```
 
+## Verified OpenCode V2.2.5 pairing and model loading (2026-11-06)
+
+The local V2 adapter was exercised with the real OpenCode **2.2.5** CLI inside a separate XDG/HOME test environment. No system-wide OpenCode settings or V1 credentials were modified.
+
+- **Before pairing:** a keyless registry exposes **13 tools** (including `polli_login`), while decision, 3D and managed-agent paid tools remain gated.
+- **Existing-key pairing:** `/poll connect` was executed against the real Pollinations account API in the isolated test environment. It verified the key, saved it to private files (`0600`), returned a redacted response and expanded the registry to **25 tools**.
+- **Authenticated V2 startup:** the actual `opencode v2.2.5 --standalone models` command completed with exit code **0**, listing **177 Pollinations models** for the tested account. Model counts depend on the account, permissions and upstream catalog.
+- **Device-code pairing:** Pollinations `/api/device/code` returned HTTP **200**, a user code, a device code and a verification URL. Its advertised lifetime was **1,800 seconds (30 minutes)**. The background poller now honors the provider's expiry instead of stopping after five minutes. Final consent and token exchange still require a human to approve in the browser; do not substitute mocked consent for that acceptance test.
+- **Language coverage:** the English, French, Spanish, German, Italian and Chinese locales share the same command keys; the i18n parity and UX vocabulary tests pass.
+- **Isolation:** do not copy production API keys into prompts, CLI arguments, CI artifacts, or documentation. When validating an existing key, keep all OpenCode config/auth paths inside the dedicated test environment and remove its credentials after validation.
+
+An intermittent `Location plugins did not finish activating` was observed during some instantaneous, isolated CLI startups; subsequent runs completed normally. Validate against an actual running OpenCode session and don't interpret a single startup timeout as a failed Pollinations account authorization.
+
+## V1 + V2 release acceptance, 2026-11-07
+
+See `docs/RELEASE_CANDIDATE_V7_QA_20261107.md` for the full audited test matrix,
+remaining provider limitations and exact V1/V2 versions. The live V1.19.5 TUI
+runs the **local `dist/index.js`** and renders `/poll help` and `/poll pricing`
+completely. OpenCode V2.2.5 TUI runs the **same build** through the local V2
+adapter; `/poll help` is paginated and very large output (models, pricing,
+quests) is available from private 0600 files under the isolated XDG state.
+
+All six READMEs and locale help strings document `/poll status` as an alias of
+`/poll usage`. All user keys remain outside the package. The release candidate
+has not been published or merged, and new paid media calls were not made during
+these tests.
+
 ## Release checks
 
 Before publishing:

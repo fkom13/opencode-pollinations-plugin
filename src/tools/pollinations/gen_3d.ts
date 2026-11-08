@@ -30,6 +30,7 @@ import {
     fetchEnterBalance,
     sanitizeFilename,
     validateHttpUrl,
+    numericCatalogPrice,
 } from './shared.js';
 import { ModelRegistry } from '../../server/models/index.js';
 import { checkCostControl } from './cost-guard.js';
@@ -49,16 +50,26 @@ const VALID_RESOLUTIONS = ['low', 'medium', 'high'];
 // Live-observed flat costs (Phase 2 / 2.2). Registry pricing wins when present.
 const THREE_D_COST_FALLBACK: Record<string, number> = {
     'trellis-2': 0.24,
+    'trellis-2-low': 0.24,
+    'trellis-2-medium': 0.24,
+    'trellis-2-high': 0.24,
+    'microsoft/trellis-2': 0.24,
     'hyper3d-rodin': 0.10,
+    'rodin': 0.10,
+    'hyper3d/rodin-2.5': 0.10,
+    'nvidia/asset-harvester': 0.07,
+    'tripo3d/p2': 1.10,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function estimate3DCost(model: string): number {
     const m = ModelRegistry.getByNameOrAlias('3d', model);
-    if (m?.pricing?.completionImageTokens !== undefined) return m.pricing.completionImageTokens;
-    if (m?.averageCost !== undefined) return m.averageCost;
-    return THREE_D_COST_FALLBACK[model] ?? 0.24;
+    const registryPrice = numericCatalogPrice(m?.pricing?.completionImageTokens);
+    if (registryPrice !== undefined) return registryPrice;
+    const average = numericCatalogPrice(m?.averageCost);
+    if (average !== undefined) return average;
+    return THREE_D_COST_FALLBACK[model] ?? Number.NaN;
 }
 
 // ─── Tool Definition ──────────────────────────────────────────────────────
@@ -94,7 +105,16 @@ export const polliGen3dTool: ToolDefinition = tool({
             emitStatusToast('warning', t('tools.gen3d.unknown_model', { model }), '🧊 polli_gen_3d');
         }
 
-        // Reference image (1 ref max — trellis uses the image only)
+        // Match the live model's declared input modalities.
+        // Trellis and Asset Harvester need an image; Tripo P2 is text-only.
+        const registryModel = ModelRegistry.getByNameOrAlias('3d', model);
+        const inputs = registryModel?.input_modalities || [];
+        if (inputs.length && !inputs.includes('text') && !args.image) {
+            return '3D model ' + model + ' requires an image URL (image-only input).';
+        }
+        if (inputs.length && !inputs.includes('image') && args.image) {
+            return '3D model ' + model + ' does not support image input.';
+        }
         if (args.image && !validateHttpUrl(args.image)) {
             return t('tools.gen3d.invalid_image_url');
         }
@@ -110,6 +130,9 @@ export const polliGen3dTool: ToolDefinition = tool({
 
         // Estimate cost + Cost Guard
         const estimatedCost = estimate3DCost(model);
+        if (!Number.isFinite(estimatedCost) || estimatedCost < 0) {
+            return 'Unknown 3D price for ' + model + '. Refresh model catalog before paid generation.';
+        }
         const costCheck = checkCostControl('polli_gen_3d', args, model, estimatedCost, '3d');
         if (!costCheck.allowed) {
             return costCheck.message || t('tools.gen3d.blocked');
@@ -129,11 +152,11 @@ export const polliGen3dTool: ToolDefinition = tool({
             // Build canonical GET /3d/{prompt}
             const params = new URLSearchParams({
                 model,
-                resolution,
                 seed: String(seed),
                 nologo: 'true',
                 private: 'true',
             });
+            if (model.includes('trellis-2')) params.set('resolution', resolution);
             if (args.image) params.set('image', args.image);
 
             const promptEncoded = encodeURIComponent(prompt);
@@ -151,7 +174,7 @@ export const polliGen3dTool: ToolDefinition = tool({
             // Artifact validation: GLB magic bytes ('glTF'). Never write a
             // fake format with an arbitrary extension.
             const detected = detectArtifactType(glbData);
-            if (!detected || detected.format !== 'glb') {
+            if (!detected || !['glb', 'ply'].includes(detected.format)) {
                 return t('tools.gen3d.err_format', {
                     detected: detected ? detected.format : 'unknown',
                 });
@@ -161,7 +184,7 @@ export const polliGen3dTool: ToolDefinition = tool({
             let outputDir = getDefaultOutputDir('3d');
             let filename = args.filename ? sanitizeFilename(args.filename) : undefined;
             if (args.save_to) {
-                if (args.save_to.match(/\.glb$/i)) {
+                if (args.save_to.match(/\.(glb|ply)$/i)) {
                     outputDir = path.dirname(args.save_to);
                     filename = path.basename(args.save_to);
                 } else {
@@ -169,12 +192,12 @@ export const polliGen3dTool: ToolDefinition = tool({
                 }
             }
             ensureDir(outputDir);
-            if (!filename) filename = generateFilename('3d', model, 'glb');
+            if (!filename) filename = generateFilename('3d', model, detected.ext);
 
             const persisted = persistArtifact(glbData, {
                 outputDir,
                 filename,
-                preferredExt: 'glb',
+                preferredExt: detected.ext,
                 detectExt: true,
             });
 

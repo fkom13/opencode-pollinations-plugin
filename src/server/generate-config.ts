@@ -163,7 +163,11 @@ export async function generatePollinationsConfig(forceApiKey?: string, forceStri
             const paidModels: string[] = [];
             enterList.forEach((m: any) => {
                 if (m.tools !== true) return; // OpenCode chat models must support tools
-                if (m.agent === true) return; // Managed Agents are discovered separately; do not nest them as the primary OpenCode model
+                // Backwards compatibility: hosted/community agents are callable
+                // model IDs in Pollinations. Keep them in OpenCode V1/V2 selector
+                // as in the published plugin, while ALSO exposing polli_agent
+                // for consent-aware, estimated-budget task delegation.
+                // Agent inner steps/tools can incur variable downstream Pollen.
                 if (m.community === true && config.communityModels?.enabled === false) return; // Community exposed by default; user can hide
                 const mapped = mapModel(m, 'enter/', '');
                 modelsOutput.push(mapped);
@@ -260,7 +264,8 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
 
     // Get capability icons from API metadata
     const capabilityIcons = getCapabilityIcons(raw);
-    const finalName = `${paidPrefix}${baseName}${capabilityIcons}${freeSuffix}`;
+    const hostedAgentPrefix = raw.agent === true || Boolean(raw.base_model) ? '🤖 ' : '';
+    const finalName = `${paidPrefix}${hostedAgentPrefix}${baseName}${capabilityIcons}${freeSuffix}`;
 
     // Context length: from API (dynamic), fallback 128K
     const contextLength = raw.context_length || raw.context_window || 128000;
@@ -287,7 +292,7 @@ function mapModel(raw: any, prefix: string, namePrefix: string): OpenCodeModel {
     modelObj.attachment = supportsVision;  // Active le bouton d'attachement d'images dans l'IDE
     modelObj.tool_call = raw.tools === true;
     modelObj.reasoning = raw.reasoning === true;
-    modelObj.temperature = true; // Tous les modèles Pollinations supportent temperature
+    modelObj.temperature = !Array.isArray(raw.supported_parameters) || raw.supported_parameters.includes('temperature'); // honor live hoster's declared API parameters
 
     // --- ENRICHISSEMENT ---
     // 1. DÉTECTION ET CONFIGURATION DE LA VISION

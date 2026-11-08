@@ -5,11 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
-## [7.0.0] — 2026-09-30
+## [7.0.0] — UNRELEASED (QA candidate 2026-11-08)
+
+### QA evidence and current limitations (2026-11-08)
+
+- **Real native tool loops:** OpenCode v1.19.5 and v2.2.5 successfully executed `gen_palette`, supplied the result back to the model, and received a correct reply. Native v2 tool feedback passed for Qwen 3.8 Flash, GLM 5.3 Flash, DeepSeek V4.1 Flash 1017, Gemini 3.8 Flash, Claude Haiku 5.5 and Kimi K3.1 Pro.
+- **Reasoning:** Qwen, GLM, DeepSeek and Kimi provided genuine structured reasoning in native v2, separate from user-facing text. Not all providers expose internal reasoning.
+- **Agents and other providers:** A Pollinations model invoked `polli_agent` and used a real hosted Title Generator result. The separate OpenCode `opencode/beam-free` provider executed the same plugin's local `gen_palette`.
+- **Budget confirmation:** A paid `polli_decision` call was blocked with paid tools off; with temporary isolated permission, it required a Cost Guard confirmation ticket, and `polli_gen_confirm` returned a real structured decision. The isolated setting was reset.
+- **Discontinued free video:** `gen_video_free` was removed because the former personal Pruna P-Video Playground is no longer available. The no-key `gen_edit_image_free` remains. Historical changelog references are not current availability promises.
+- **Verified file formats:** 3D can return valid GLB **or PLY**; a binary PLY was observed and persisted correctly. No universal GLB guarantee. RMBG now defaults to BGNinja anonymous, with legacy BGEraser and optional ClearBackdrop-key fallbacks.
+- **Remaining limitations:** OpenCode v2 headless `run` may hang even with the plugin disabled; native server/API tool loops succeeded. The previous 115-model text sampling yielded 110 genuine responses, 2 fallback-only, 2 audio-specialized, and 1 timeout. These results do not prove every modality/tool feature on every model.
 
 ### 🔁 OpenCode v1 + v2 dual-stack
 
-- **One package, two host generations** — the official Pollinations OpenCode plugin keeps the legacy v1 server/plugin contract while adding an OpenCode v2 adapter through `@opencode/plugin`. Shared models, tools, billing and safety logic remain single-source.
+- **One package, two host generations** — the independently maintained community plugin (linked by Pollinations) keeps the legacy v1 server/plugin contract while adding an OpenCode v2 adapter through `@opencode/plugin`. Shared models, tools, billing and safety logic remain single-source.
 - **Native v2 provider lifecycle** — cached/free fallback models register immediately, then the live Pollinations catalog refreshes asynchronously without blocking OpenCode startup.
 - **Native `/poll` on v2** — slash commands are registered through the v2 server command API. The experimental external TUI extension was removed after reproducing `Keymap.Provider is missing`; no parallel TUI plugin is shipped.
 - **Installer generation detection** — fresh installs use v1 `plugin` or v2 `plugins` automatically while preserving an explicit existing generation.
@@ -19,11 +29,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 - **Community models are explicit metadata** — no slash-name heuristic. Reliable community text models can enter the normal chat catalog only when the live entry advertises `tools: true`.
 - **Configurable exposure** — `/poll config community on|off`, enabled by default.
-- **Agent separation** — live entries with `agent: true` are deliberately excluded from the normal chat model picker.
+- **Agent backwards compatibility** — hosted `agent: true` model IDs remain available in OpenCode if tool-compatible, while the separate `polli_agent` tool enforces a local Agent budget. Direct hosted-agent chat has no such local guard.
 
 ### 🤖 Managed Agent delegation
 
-- **`polli_agent`** — explicit delegation tool for Pollinations Managed Agents, shared by OpenCode v1 and v2. `/poll agents [search]` provides discovery without turning agents into ordinary chat models.
+- **`polli_agent`** — explicit budget-aware hosted-agent delegation for OpenCode v1/v2; `/poll agents [search]` lists agents. Direct agent model selection remains for backwards compatibility.
 - **Dedicated Agent budget** — `managedAgents.budget` / `/poll config agent_budget <pollen>` provides an independent local per-run safety envelope (default 0.60 🌻). `managedAgents.enabled` / `/poll config agents on|off` controls exposure.
 - **Conservative estimator** — hosted Prompt Agents are estimated against the Pollinations runtime ceiling of 8 model steps / 16 tool calls, cumulative context growth and an unknown-tool reserve. Runtimes without an exposed base model are treated as unknown and forced through confirmation.
 - **Honest safety semantics** — Agent budget is a plugin-local Cost Guard threshold, not a server-side hard spending cap and does not alter the account key budget.
