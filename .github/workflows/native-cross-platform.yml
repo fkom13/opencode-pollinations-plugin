@@ -32,6 +32,10 @@ jobs:
         run: node scripts/tests/test-native-opencode-host.mjs
         env:
           SKIP_NETWORK: '1'
+      - name: Execute free tools and inspect generated SVG/PNG files (no Pollinations key)
+        run: node scripts/tests/test-free-design-native-platform.mjs
+        env:
+          TEST_EXTERNAL_FREE_TOOLS: '1'
       - name: Windows NTFS ACL audit (synthetic credentials only)
         run: node scripts/tests/test-windows-ntfs-acl.mjs
   macos:
@@ -57,3 +61,7 @@ jobs:
         run: node scripts/tests/test-native-opencode-host.mjs
         env:
           SKIP_NETWORK: '1'
+      - name: Execute free tools and inspect generated SVG/PNG files (no Pollinations key)
+        run: node scripts/tests/test-free-design-native-platform.mjs
+        env:
+          TEST_EXTERNAL_FREE_TOOLS: '1'
