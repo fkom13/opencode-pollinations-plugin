@@ -157,6 +157,12 @@ async function main() {
     // ── Whitelist sanity: whitelisted files still exist & are the right ones ──
     log.section('Whitelist sanity');
     for (const [f, why] of Object.entries(WHITELIST_FILES)) {
+        // docs/ is intentionally gitignored: local migration notes are optional
+        // in a clean checkout, unlike maintained public files under version control.
+        if (f === 'docs/V65_MIGRATION.md' && !fs.existsSync(path.join(ROOT, f))) {
+            log.info(`optional local-only doc not present in checkout: ${f}`);
+            continue;
+        }
         assert(fs.existsSync(path.join(ROOT, f)), `whitelisted ${f} exists (${why})`);
     }
 

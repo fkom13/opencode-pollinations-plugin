@@ -23,13 +23,18 @@ try {
     'const before = Object.keys(mod.createToolRegistry());',
     'cfg.saveConfig({apiKey:"sk_test_dummy_never_valid"});',
     'const after = Object.keys(mod.createToolRegistry());',
-    'const protectedConfig = (fs.statSync(cfg.CONFIG_FILE).mode & 0o077) === 0;',
-    'console.log(JSON.stringify({before,after,protectedConfig}));',
+    'const configExists = fs.statSync(cfg.CONFIG_FILE).isFile();',
+    '// chmod 0600 is POSIX-only; on Windows, NTFS access is governed by ACLs.',
+    'const protectedConfig = process.platform === "win32" ? null : (fs.statSync(cfg.CONFIG_FILE).mode & 0o077) === 0;',
+    'console.log(JSON.stringify({before,after,configExists,protectedConfig}));',
   ].join('\n');
   const child = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
     cwd: root,
     env: {
       ...process.env,
+      HOME: base,
+      USERPROFILE: base,
+      APPDATA: join(base, 'appdata'),
       XDG_CONFIG_HOME: join(base, 'config'),
       XDG_DATA_HOME: join(base, 'data'),
       XDG_STATE_HOME: join(base, 'state'),
@@ -47,9 +52,16 @@ try {
     assert(result.after.includes(name), 'connected tool missing: ' + name);
   }
   assert(result.after.length > result.before.length, 'authenticated tool inventory should expand');
-  assert(result.protectedConfig, 'credential config must be chmod 0600');
+  assert(result.configExists, 'credential config must be created inside the isolated profile');
+  if (process.platform === 'win32') {
+    assert.equal(result.protectedConfig, null, 'Windows permissions must be audited via NTFS ACLs, not POSIX chmod bits');
+    console.log('✓ Windows isolated config created (NTFS ACL permissions require separate verification)');
+  } else {
+    assert(result.protectedConfig, 'POSIX credential config must be chmod 0600');
+    console.log('✓ POSIX credential config has chmod 0600');
+  }
   console.log('✓ keyless tools: ' + result.before.length + ' / connected tools: ' + result.after.length);
-  console.log('✓ protected config and gated Decision/3D/agent tools');
+  console.log('✓ gated Decision/3D/agent tools');
 } finally {
   rmSync(base, { recursive: true, force: true });
 }

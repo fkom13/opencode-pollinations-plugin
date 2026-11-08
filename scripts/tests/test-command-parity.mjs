@@ -79,11 +79,18 @@ try{
   const secretOutput=redactCommandOutput('Key '+key+' Authorization: Bearer '+key);
   assert.ok(!secretOutput.includes(key));
   const report=persistCommandReport('Private key: '+key+'\nEND_MARKER', '/poll models text');
-  assert.equal(fs.statSync(report).mode & 0o077,0,'report must be private 0600');
+  assert.ok(fs.statSync(report).isFile(), 'command report must exist');
+  // POSIX chmod bits are not meaningful for Windows NTFS ACL security.
+  // Do not label an ACL unverified by this test as a verified 0600 file.
+  if (process.platform !== 'win32')
+    assert.equal(fs.statSync(report).mode & 0o077, 0, 'POSIX report must be private 0600');
   const saved=fs.readFileSync(report,'utf8');
   assert.ok(!saved.includes(key) && saved.includes('END_MARKER'));
-  assert.ok(report.startsWith(temp+'/state/'),'report must stay in isolated state');
-  console.log('COMMAND_PARITY_OK','V1_SSE',sseChecked,'LOCALES',translations,'HELP_PAGES',sections,'NO_TRUNCATION',true,'KEY_REDACTION',true,'PRIVATE_REPORT',true);
+  const relReport = path.relative(path.join(temp, 'state'), report);
+  assert.ok(relReport && relReport !== '..' && !relReport.startsWith('..' + path.sep) && !path.isAbsolute(relReport),
+    'report must stay in isolated state');
+  console.log('COMMAND_PARITY_OK','V1_SSE',sseChecked,'LOCALES',translations,'HELP_PAGES',sections,'NO_TRUNCATION',true,'KEY_REDACTION',true,
+    'POSIX_MODE_CHECKED',process.platform !== 'win32','WIN_ACL_NOT_ASSERTED',process.platform === 'win32');
 } finally {
   // Avoid touching any real user credential, config, or library outside temp.
   fs.rmSync(temp,{recursive:true,force:true});

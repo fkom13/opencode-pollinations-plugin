@@ -377,11 +377,15 @@ async function testGen3dConfirmationDispatcher() {
     const gen3dMod = await importDist('tools/pollinations/gen_3d.js');
 
     // Preserve the real config to restore after the test
-    const original = configMod.loadConfig();
+    const originalRawConfig = fs.existsSync(configMod.CONFIG_FILE)
+        ? fs.readFileSync(configMod.CONFIG_FILE)
+        : null;
 
     try {
-        // 1. Default Cost Guard: costConfirmationRequired=true, costThreshold=0.15
-        configMod.saveConfig({ costConfirmationRequired: true, costThreshold: 0.15, enablePaidTools: true });
+        // The registry intentionally hides paid tools when no API key is configured.
+        // CI has no credentials, so install a NON-WORKING test-only fixture key.
+        // Execution is still mocked below: absolutely no 3D API request occurs.
+        configMod.saveConfig({ apiKey: 'sk_fixture_only', costConfirmationRequired: true, costThreshold: 0.15, enablePaidTools: true });
 
         // 2. polli_gen_3d / trellis estimated cost (0.24) > threshold (0.15)
         const check = costGuard.checkCostControl('polli_gen_3d', {}, 'trellis-2', 0.24, '3d');
@@ -418,12 +422,10 @@ async function testGen3dConfirmationDispatcher() {
         assert(/cancel|annul|abandon|abort/i.test(cancelOut), '3D: cancel returns a cancellation message');
     assert(costGuard.getPendingRequest(check2.pendingRequestId) === null, '3D: cancel removes pending request');
     } finally {
-        // Restore the user's real config
-        configMod.saveConfig({
-            costConfirmationRequired: original.costConfirmationRequired ?? true,
-            costThreshold: original.costThreshold ?? 0.15,
-            enablePaidTools: original.enablePaidTools ?? false,
-        });
+        // Byte-for-byte restore of any pre-existing user configuration.
+        // In a fresh CI runner, remove the entire fixture file.
+        if (originalRawConfig === null) fs.rmSync(configMod.CONFIG_FILE, { force: true });
+        else fs.writeFileSync(configMod.CONFIG_FILE, originalRawConfig, { mode: 0o600 });
     }
 }
 
