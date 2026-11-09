@@ -1,5 +1,5 @@
 # 📘 Technical Manual — OpenCode Pollinations Plugin v7.0
-> **Version**: 7.0.0 | **Status**: Release Candidate | **Last Updated**: 2026-09-30
+> **Version**: 7.0.0 | **Status**: Stable release | **Last Updated**: 2026-11-09
 
 > **Service update, 2026-11-08:** The free Pruna P-Video Playground is discontinued. 3D may return GLB or PLY. RMBG defaults to anonymous BGNinja with BGEraser fallback and optional user-key ClearBackdrop.
 
@@ -66,7 +66,7 @@ OpenCode v1.x                         OpenCode v2.x
 - The external v2 TUI extension is intentionally **not packaged**: OpenCode 2.0.x could produce a duplicated Solid `Keymap.Provider` context. `/poll` therefore lives in the server plugin and works without a parallel TUI plugin.
 - Free routing is anonymous: `free/*` never requires a quota/account read before reaching the public free endpoint.
 - v2 auth/config respects its active XDG roots so an isolated v2 installation does not silently inherit v1 credentials.
-- The canonical local-testing procedure is documented in `docs/LOCAL_TESTING.md`.
+- The maintained compatibility procedure is summarized in the Local development section of README.md and the tracked dev/opencode-v2-local/README.md. Historical local QA files are not part of the public source distribution.
 
 ### Community models vs Managed Agents
 

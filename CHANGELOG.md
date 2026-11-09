@@ -5,7 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
-## [7.0.0] — UNRELEASED (QA candidate 2026-11-08)
+## [7.0.0] — 2026-11-09
+
+### Release certification (2026-11-09)
+
+- GitHub Support lifted the erroneous billing lock on the fkom13 account; official GitHub Actions now run successfully.
+- Five-platform/Node regression and package jobs passed: Ubuntu 18/20/22, Windows 22 and macOS 22. Actual native OpenCode v2.2.5 startup, provider and command registration passed on Windows/macOS; a Windows NTFS ACL security gate passed for isolated synthetic credentials.
+- Keyless creator utilities gen_palette, gen_qrcode and gen_diagram generated verified SVG/PNG outputs on Linux, Windows and macOS without a Pollinations key. Mermaid diagram rendering uses the external free Mermaid.ink service.
+- Real authenticated OpenCode v1/v2 model-to-tool loops passed on Linux; interactive model-to-tool execution was not independently verified on Windows/macOS. External provider capacity, quotas and paid model compatibility remain outside the scope of deterministic CI.
+- The v7 package is an independently maintained community integration linked from the official Pollinations README, not a Pollinations-maintained official release.
 
 ### QA evidence and current limitations (2026-11-08)
 

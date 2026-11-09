@@ -29,7 +29,8 @@
 
 ## 🚀 What's new in v7.0.0?
 
-- 🔁 **OpenCode v1 + v2 dual-stack**: one official Pollinations plugin package now supports both OpenCode generations. The installer preserves v1 `plugin` and v2 `plugins` conventions, while the runtime keeps one shared provider/tool core.
+- 🔁 **OpenCode v1 + v2 dual-stack**: this independent community plugin, listed in the official Pollinations README, now supports both OpenCode generations. The installer preserves v1 `plugin` and v2 `plugins` conventions, while the runtime keeps one shared provider/tool core.
+- **Real QA:** Cross-platform QA: five GitHub CI jobs passed (Ubuntu Node 18/20/22, Windows Node 22, macOS Node 22). Real OpenCode v2.2.5 loaded the plugin and its native /poll command on Windows/macOS. Without a Pollinations API key, gen_palette, gen_qrcode and gen_diagram generated real files on all three systems. Authenticated model-to-tool calls were separately verified on Linux, not claimed as fully tested on Windows/macOS.
 - 🤖 **Hosted community agents remain selectable**: `agent:true` models stay in OpenCode’s model picker for backwards compatibility and are also available via `polli_agent` and `/poll agents [search]`. ⚠️ Direct chat calls can incur variable downstream Pollen; the dedicated Agent budget applies only to `polli_agent`.
 - 💰 **Dedicated Agent budget**: `/poll config agent_budget <pollen>` controls a separate logical per-run safety envelope (default **0.60 🌻**). Hosted Prompt Agents are estimated conservatively against Pollinations' 8-model-step / 16-tool-call runtime bounds; unknown runtimes force confirmation. This is a local guard, **not** a server-side hard spending cap.
 - 🌐 **Community models are first-class but controlled**: reliable community text models are exposed dynamically only when they advertise tool calling; `/poll config community on|off` controls their chat exposure.
@@ -142,9 +143,9 @@ Pollinations for OpenCode natively speaks your language:
 
 ## 🧪 Local development: OpenCode V1 + V2
 
-There is **one canonical source repository** for both generations. Build once with `npm run build`. For explicit local testing, OpenCode V1 should load `dist/index.js`; our PC2 OpenCode 2.0.19 sandbox loads `dev/opencode-v2-local/`, a tiny adapter that exports the current `dist/v2.js`. The published package remains a **single hybrid package**: V1 calls `server()`, V2 calls `setup()` according to OpenCode's official dual-version plugin contract.
+One source repository and one hybrid package support both generations: v1 loads dist/index.js and v2 uses its native setup() contract. The dev/opencode-v2-local adapter is for source-only development. Native versions 1.19.5 and 2.2.5 were tested.
 
-Full procedure: [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md).
+Detailed architecture and compatibility: [TECHNICAL_MANUAL.md](TECHNICAL_MANUAL.md).
 
 ## 🚀 Getting Started & Onboarding
 

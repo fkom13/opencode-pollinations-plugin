@@ -29,7 +29,8 @@
 
 ## 🚀 Novità v7.0.0
 
-- 🔁 **Dual-stack OpenCode v1 + v2**: un solo pacchetto del plugin ufficiale Pollinations supporta entrambe le generazioni OpenCode, mantenendo `plugin` in v1 e `plugins` in v2 con un core condiviso.
+- 🔁 **Dual-stack OpenCode v1 + v2**: questo plugin indipendente della community, citato nel README ufficiale di Pollinations, supporta entrambe le generazioni OpenCode, mantenendo `plugin` in v1 e `plugins` in v2 con un core condiviso.
+- **Real QA:** QA multipiattaforma: cinque job CI superati (Ubuntu Node 18/20/22, Windows e macOS Node 22). OpenCode v2.2.5 ha caricato il plugin e il comando /poll su Windows/macOS. Senza chiave Pollinations, gen_palette, gen_qrcode e gen_diagram hanno prodotto file reali su tutti e tre i sistemi. La chiamata autenticata modello-strumento è stata verificata separatamente su Linux, non completamente su Windows/macOS.
 - 🤖 **Agenti Community ancora selezionabili**: i modelli `agent:true` restano nel selettore OpenCode per compatibilità e si possono chiamare anche con `polli_agent` o `/poll agents [ricerca]`. ⚠️ La chat diretta può consumare Pollen variabile; il budget Agent vale solo per `polli_agent`.
 - 💰 **Budget Agent dedicato**: `/poll config agent_budget <pollen>` imposta una protezione logica separata per esecuzione (default **0,60 🌻**). I Prompt Agents ospitati sono stimati in modo conservativo sui limiti di 8 step modello / 16 chiamate tool; runtime sconosciuti richiedono conferma. Non è un hard cap lato server.
 - 🌐 **Community models controllati**: i modelli community affidabili compaiono dinamicamente in chat solo con tool calling; `/poll config community on|off` controlla l’esposizione.
@@ -143,9 +144,9 @@ Pollinations per OpenCode parla la tua lingua nativamente:
 
 ## 🧪 Sviluppo locale: OpenCode V1 + V2
 
-Esiste **un solo repository sorgente canonico** per entrambe le generazioni. Si esegue una sola build con `npm run build`. Per i test locali espliciti, OpenCode V1 carica `dist/index.js`; nella sandbox PC2 con OpenCode 2.0.19, V2 carica `dev/opencode-v2-local/`, un piccolo adattatore che esporta il `dist/v2.js` corrente. Il pacchetto pubblicato resta **un unico pacchetto ibrido**: V1 usa `server()`, V2 usa `setup()`.
+Un repository e pacchetto ibrido per entrambe le generazioni: v1 carica dist/index.js, v2 usa il contratto nativo setup(). dev/opencode-v2-local serve solo per test di sviluppo. Versioni native testate: 1.19.5 e 2.2.5.
 
-Procedura completa: [`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md).
+Documentation : [TECHNICAL_MANUAL.md](TECHNICAL_MANUAL.md).
 
 ## 🚀 Guida all'Installazione Base
 

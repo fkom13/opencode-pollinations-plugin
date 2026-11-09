@@ -29,7 +29,8 @@
 
 ## 🚀 v7.0.0 新功能
 
-- 🔁 **OpenCode v1 + v2 双栈**：同一个 Pollinations 官方插件包同时支持两代 OpenCode；安装器保留 v1 的 `plugin` 与 v2 的 `plugins` 约定，共享同一 provider/tools 核心。
+- 🔁 **OpenCode v1 + v2 双栈**：这一由社区独立维护、并在 Pollinations 官方 README 中列出的插件同时支持两代 OpenCode；安装器保留 v1 的 `plugin` 与 v2 的 `plugins` 约定，共享同一 provider/tools 核心。
+- **Real QA:** 跨平台 QA：Ubuntu Node 18/20/22、Windows 和 macOS Node 22 共 5 个 CI 任务全部通过。Windows/macOS 上验证了 OpenCode v2.2.5 原生插件加载与 /poll 命令；不使用 Pollinations API 密钥，gen_palette、gen_qrcode、gen_diagram 在三个系统上均输出了真实文件。经过身份验证的模型到工具调用在 Linux 上单独验证，尚未在 Windows/macOS 上做完整验证。
 - 🤖 **社区托管 Agent 保留在模型选择器中**：为兼容旧版，`agent:true` 模型仍可直接选择，也可通过 `polli_agent` 或 `/poll agents [搜索]` 调用。⚠️ 直接聊天可能产生不固定的下游 Pollen 消耗；独立 Agent 预算仅适用于 `polli_agent`。
 - 💰 **独立 Agent 预算**：`/poll config agent_budget <pollen>` 设置每次运行的本地逻辑预算（默认 **0.60 🌻**）。托管 Prompt Agent 按 Pollinations 的 8 个模型步骤 / 16 次工具调用上限做保守估算；未知 runtime 强制确认。该预算不是服务端硬性消费上限。
 - 🌐 **受控 Community 模型**：可靠的社区文本模型仅在声明 tool calling 时动态进入聊天；`/poll config community on|off` 控制暴露。
@@ -143,9 +144,9 @@ Pollinations for OpenCode 已提供母语原生语言支持，沟通无缝顺畅
 
 ## 🧪 本地开发：OpenCode V1 + V2
 
-V1 与 V2 **共用唯一的规范源码仓库**，只需运行一次 `npm run build`。本地显式测试时，OpenCode V1 加载 `dist/index.js`；PC2 上的 OpenCode 2.0.19 沙箱使用 `dev/opencode-v2-local/`，这个极小适配器只导出当前的 `dist/v2.js`。发布到 npm 的仍然是 **同一个混合包**：V1 调用 `server()`，V2 调用 `setup()`。
+一个代码库和一个混合包同时支持两代 OpenCode：v1 加载 dist/index.js，v2 使用原生 setup() 接口。dev/opencode-v2-local 仅用于开发测试。已验证原生版本：1.19.5 和 2.2.5。
 
-完整流程：[`docs/LOCAL_TESTING.md`](docs/LOCAL_TESTING.md)。
+Documentation : [TECHNICAL_MANUAL.md](TECHNICAL_MANUAL.md).
 
 ## 🚀 起步向导指引 (Onboarding)
 
