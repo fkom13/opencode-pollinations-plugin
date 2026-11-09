@@ -1,5 +1,7 @@
 # 🌸 Pollinations AI Plugin für OpenCode (v7.0.0)
 
+> ⚠️ **Service update, November 2026.** Der persönliche Pruna P-Video Playground ist eingestellt. `gen_video_free` ist eventuell noch im veröffentlichten v6.5.5-Paket vorhanden, funktioniert aber nicht mehr und wird in v7 entfernt. `gen_edit_image_free` bleibt verfügbar; `polli_gen_video` erfordert Authentifizierung und kann Pollen kosten.
+
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>Die ultimative Brücke zwischen OpenCode und dem Pollinations.ai Ökosystem</h3>

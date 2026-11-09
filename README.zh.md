@@ -1,5 +1,7 @@
 # 🌸 Pollinations AI 插件 - OpenCode版 (v7.0.0)
 
+> ⚠️ **Service update, November 2026.** 个人 Pruna P-Video Playground 已停用。`gen_video_free` 可能仍存在于已发布的 v6.5.5 包中，但已失效且将在 v7 删除。`gen_edit_image_free` 仍可用；`polli_gen_video` 需要认证并可能消耗 Pollen。
+
 <div align="center">
   <img src="https://avatars.githubusercontent.com/u/88394740?s=400&v=4" alt="Pollinations.ai Logo" width="180">
   <h3>连接 OpenCode 终端与 Pollinations.ai 生态的终极桥梁</h3>
