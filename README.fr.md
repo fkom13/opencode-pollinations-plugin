@@ -1,4 +1,4 @@
-# 🌸 Plugin Pollinations AI pour OpenCode (v7.0.0)
+# 🌸 Plugin Pollinations AI pour OpenCode (v7.0.1)
 
 > ⚠️ **Service update, November 2026.** Le Playground personnel Pruna P-Video a disparu. `gen_video_free` peut figurer dans la version v6.5.5 déjà publiée mais ne fonctionne plus et est supprimé en v7. `gen_edit_image_free` reste disponible ; `polli_gen_video` exige une authentification et peut coûter des Pollens.
 
@@ -33,6 +33,8 @@
 
 - 🔁 **Dual-stack OpenCode v1 + v2** : ce plugin communautaire indépendant, référencé dans le README officiel de Pollinations, prend désormais en charge les deux générations d’OpenCode. L’installateur respecte `plugin` en v1 et `plugins` en v2, avec un cœur provider/tools commun.
 - **Real QA:** QA multiplateforme : cinq jobs CI réussis (Ubuntu Node 18/20/22, Windows et macOS Node 22). OpenCode v2.2.5 charge le plugin et la commande native /poll sur Windows/macOS. Sans clé Pollinations, gen_palette, gen_qrcode et gen_diagram produisent des fichiers réels sur les trois systèmes. La boucle modèle-vers-outil authentifiée a été vérifiée séparément sous Linux, pas entièrement sous Windows/macOS.
+- 🧠 **NOUVEAU polli_decision :** décisions structurées choice, score et noul avec modèles compatibles découverts en direct ; confirmation Cost Guard pour les appels payants.
+- ⚙️ **polli_config piloté par les agents :** consultation masquée et modification du mode, des protections, des modèles communautaires, des agents, du budget, des délais et de la langue.
 - 🤖 **Agents communautaires toujours sélectionnables** : les modèles `agent:true` restent dans le sélecteur OpenCode pour préserver la compatibilité ; ils sont aussi disponibles via `polli_agent` et `/poll agents [recherche]`. ⚠️ Le chat direct peut dépenser du Pollen variable ; le budget Agent dédié ne s’applique qu’à `polli_agent`.
 - 💰 **Budget Agent dédié** : `/poll config agent_budget <pollen>` définit une enveloppe logique séparée par exécution (défaut **0,60 🌻**). Les Prompt Agents hébergés sont estimés de façon conservatrice avec les bornes Pollinations de 8 étapes modèle / 16 appels tools ; les runtimes inconnus imposent une confirmation. Ce budget est une protection locale, **pas** un plafond serveur strict.
 - 🌐 **Modèles Community contrôlés** : les modèles texte communautaires fiables sont exposés dynamiquement en chat uniquement s’ils annoncent le tool calling ; `/poll config community on|off` contrôle leur exposition.
@@ -70,6 +72,8 @@ Au-delà de la discussion textuelle, connecter votre clé donne aux Agents OpenC
 - 🎙️ `polli_stt` : Transcription vocale de haute volée (Whisper V3).
 - 🌐 `polli_web_search` : Outil de recherche web connecté et contextes spécialisés (`gemini-search`, `perplexity...`).
 - 🤖 `polli_agent` : Délégation explicite vers les Managed Agents Pollinations avec budget Agent dédié par exécution et estimation Cost Guard conservatrice.
+- 🧠 `polli_decision` : décisions `choice`, `score` et `noul` via le catalogue de modèles de décision Pollinations ; clé connectée obligatoire, Cost Guard pour les décisions payantes.
+- ⚙️ `polli_config` : outil pour agents avec `action=view|update`, gestion du mode, des dépenses, des modèles Community, des Managed Agents, du budget, des délais, de la langue et de l’affichage.
 
 ### 🧰 Outils Bonus Créateurs Gratuits (Toujours disponibles — sans clé API)
 - 🆓 `gen_edit_image_free` : Génération gratuite et **édition de 1 à 3 images**, quota par IP lu en direct, ratios complets, dimensions custom 256–1440, seed, prompt upsampling et turbo d’édition. Sans clé.
@@ -93,6 +97,57 @@ Utilisez l'alias **`/poll`** ou **`/pollinations`** à tout moment dans le termi
 - `/poll mode <mode>` : Basculez entre les modes de facturation (`quest`, `quest_only`, `paid`, `manual`).
 - `/poll fallback` : Définissez le modèle de secours ultime pour le chat.
 - `/poll infos` : Découvrez les fonctionnalités et le guide d'utilisation.
+
+---
+
+
+### 🧠 Décisions structurées et configuration par les agents (v7)
+
+`polli_decision` utilise les modèles de la catégorie décision, pas tous les LLM ni les modèles image/vidéo. Paramètres obligatoires : `state` (1–50 000 caractères) et `questions_json` (chaîne JSON de 1 à 20 questions nommées, 30 000 caractères maximum). Chaque question exige `type` et `instructions`. Types : `choice` (objet `criteria` obligatoire), `score` et `noul` (probabilité d’une affirmation oui/non). Paramètres facultatifs : `model` (identifiant ou alias du catalogue décision) et `allow_paid` (faux par défaut). `respan/span-01-lite` n’accepte que `noul` avec instructions simples.
+
+Seuls les tarifs explicitement nuls sont considérés gratuits ; un tarif absent ou inconnu n’est pas gratuit par défaut. Pour un modèle payant, `allow_paid=true` et une confirmation par `polli_gen_confirm` sont nécessaires. Le Cost Guard est une protection locale estimée, pas un plafond serveur garanti. Une clé Pollinations autorisée pour les décisions est obligatoire.
+
+**polli_decision — JSON example:**
+
+```json
+{
+  "state": "Un ticket client indique une panne de paiement.",
+  "questions_json": "{\"urgent\": {\"type\": \"noul\", \"instructions\": \"Faut-il escalader immédiatement cet incident ?\"}}"
+}
+```
+
+`polli_config` : `view` affiche les paramètres avec clé masquée ; `update` ne modifie que les propriétés fournies. Champs disponibles : `mode`, `costEstimator`, `statusBar`, `costConfirmationRequired`, `enablePaidTools`, `enableDeveloperTools`, `costThreshold`, `thresholdsQuest`, `thresholdsWallet`, `lang` ; nouveaux champs v7 : `communityModelsEnabled`, `managedAgentsEnabled`, `agentBudget` (plus de 0 et au maximum 1000 Pollen), `timeouts_json` (JSON validé) et `resetTimeouts`. Rechargement parfois nécessaire pour les modèles/outils.
+
+**polli_config — JSON update example:**
+
+```json
+{
+  "action": "update",
+  "communityModelsEnabled": true,
+  "managedAgentsEnabled": true,
+  "agentBudget": 0.6,
+  "enablePaidTools": false,
+  "costConfirmationRequired": true,
+  "timeouts_json": "{\"default\": 300, \"capabilities\": {\"video\": 1800}}"
+}
+```
+
+**Commandes terminal importantes et nouvelles** (v1/v2 avec `/poll`) :
+
+- `/poll agents [search]` — Lister et filtrer les Managed Agents disponibles
+- `/poll config community on|off` — Afficher/masquer les modèles Community compatibles
+- `/poll config agents on|off` — Activer/désactiver l’outil Managed Agents
+- `/poll config agent_budget 0.60` — Budget logique par délégation en Pollen
+- `/poll config enablePaidTools false` — Bloquer localement les outils payants (pas un plafond serveur)
+- `/poll config costConfirmationRequired true` — Confirmation explicite au-dessus du seuil
+- `/poll config costThreshold 0.15` — Seuil estimé des outils en Pollen
+- `/poll config timeouts.default 300` — Délai global en secondes
+- `/poll config timeouts.video 1800` — Délai vidéo ; aussi image, audio, threeD, realtime, embed
+- `/poll config timeouts.model.MODEL_ID 900` — Délai par modèle (MODEL_ID sans point)
+- `/poll config timeouts.reset` — Rétablir les délais par défaut
+- `/poll mode quest|quest_only|paid|manual` — Politique du chat, indépendante du Cost Guard des outils
+
+Les réglages chat, outils payants et Managed Agents sont indépendants. Le mode `quest_only` reste une protection locale best-effort, et le budget Agent ne s’applique pas au chat direct avec un modèle agent.
 
 ---
 

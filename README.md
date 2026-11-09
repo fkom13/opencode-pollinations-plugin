@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI Plugin for OpenCode (v7.0.0)
+# 🌸 Pollinations AI Plugin for OpenCode (v7.0.1)
 
 > ⚠️ **Service update, November 2026.** The retired personal Pruna P-Video Playground is no longer available. `gen_video_free` may remain in published v6.5.5 but does not work and is removed in v7. `gen_edit_image_free` remains available; `polli_gen_video` requires Pollinations authentication and may cost Pollen.
 
@@ -33,6 +33,8 @@
 
 - 🔁 **OpenCode v1 + v2 dual-stack**: this independent community plugin, listed in the official Pollinations README, now supports both OpenCode generations. The installer preserves v1 `plugin` and v2 `plugins` conventions, while the runtime keeps one shared provider/tool core.
 - **Real QA:** Cross-platform QA: five GitHub CI jobs passed (Ubuntu Node 18/20/22, Windows Node 22, macOS Node 22). Real OpenCode v2.2.5 loaded the plugin and its native /poll command on Windows/macOS. Without a Pollinations API key, gen_palette, gen_qrcode and gen_diagram generated real files on all three systems. Authenticated model-to-tool calls were separately verified on Linux, not claimed as fully tested on Windows/macOS.
+- 🧠 **NEW polli_decision:** structured choice, score and noul decisions using compatible live decision models; billed calls require Cost Guard confirmation and a Pollinations key.
+- ⚙️ **Agent-controlled polli_config:** inspect redacted settings or update chat mode, tool spending guards, v7 community/agent controls, agent budget, UI and timeouts.
 - 🤖 **Hosted community agents remain selectable**: `agent:true` models stay in OpenCode’s model picker for backwards compatibility and are also available via `polli_agent` and `/poll agents [search]`. ⚠️ Direct chat calls can incur variable downstream Pollen; the dedicated Agent budget applies only to `polli_agent`.
 - 💰 **Dedicated Agent budget**: `/poll config agent_budget <pollen>` controls a separate logical per-run safety envelope (default **0.60 🌻**). Hosted Prompt Agents are estimated conservatively against Pollinations' 8-model-step / 16-tool-call runtime bounds; unknown runtimes force confirmation. This is a local guard, **not** a server-side hard spending cap.
 - 🌐 **Community models are first-class but controlled**: reliable community text models are exposed dynamically only when they advertise tool calling; `/poll config community on|off` controls their chat exposure.
@@ -70,6 +72,8 @@ Beyond text discussion, connecting your key gives OpenCode Agents access to our 
 - 🎙️ `polli_stt` : High-flying voice transcription (Whisper V3).
 - 🌐 `polli_web_search` : Connected Web & Specialized Search context (`gemini-search`, `perplexity...`).
 - 🤖 `polli_agent` : Explicit delegation to Pollinations Managed Agents with a dedicated per-run Agent budget and conservative Cost Guard estimation.
+- 🧠 `polli_decision`: structured `choice`, `score`, `noul` results from the live Pollinations decision-model catalog; requires a connected key and uses Cost Guard for billed decisions.
+- ⚙️ `polli_config`: agent-facing `action=view|update` management for chat mode, paid-tool protections, community/Managed Agents, budget, timeouts, language and display. Requires a connected key.
 
 ### 🧰 Free Creator Bonus Tools (Always available — no API key needed)
 - 🆓 `gen_edit_image_free` : Free image generation **and 1–3 image editing**, with live per-IP quota, full aspect ratios, custom 256–1440 dimensions, seed, prompt upsampling and edit turbo. No key.
@@ -92,6 +96,57 @@ Use the alias **`/poll`** or **`/pollinations`** anytime inside your conversatio
 - `/poll pricing` : View real-time unified pricing (Average Cost Estimate).
 - `/poll fallback` : Define the ultimate Safety Net Chat model.
 - `/poll infos` : Discover community rules and the leveling system.
+
+---
+
+
+### 🧠 v7 structured decisions and agent-controlled configuration
+
+`polli_decision` calls the Pollinations decision endpoint, not an arbitrary chat/image/video model. Required: `state` (1–50,000 characters) and `questions_json` (JSON string containing 1–20 named questions, max 30,000 characters). Each question needs `type` and `instructions`. Supported types: `choice` (requires a `criteria` object), `score` and `noul` (probability of a yes/no proposition). Optional: `model` (decision-catalog ID or alias) and `allow_paid` (default false). Special case: `respan/span-01-lite` supports only `noul` with plain instructions.
+
+The tool checks live model health and explicit zero-price metadata, never assumes unknown pricing means free. When a paid model is selected, set `allow_paid=true`; a separate approval through `polli_gen_confirm` remains mandatory. Cost Guard is a local estimate, not a server-side hard cap. A Pollinations API key with decision permission is required.
+
+**polli_decision — JSON example:**
+
+```json
+{
+  "state": "A customer support ticket reports that payments are failing.",
+  "questions_json": "{\"urgent\": {\"type\": \"noul\", \"instructions\": \"Should the issue be escalated immediately?\"}}"
+}
+```
+
+`polli_config` has two actions: `view` returns a redacted configuration; `update` applies only the provided fields. Supported parameters: `mode`, `costEstimator`, `statusBar`, `costConfirmationRequired`, `enablePaidTools`, `enableDeveloperTools`, `costThreshold`, `thresholdsQuest`, `thresholdsWallet`, `lang`; new v7 fields `communityModelsEnabled`, `managedAgentsEnabled`, `agentBudget` (0–1000 Pollen, excluding 0), `timeouts_json` (validated JSON) and `resetTimeouts`. Tool visibility or model selection may require a reload.
+
+**polli_config — JSON update example:**
+
+```json
+{
+  "action": "update",
+  "communityModelsEnabled": true,
+  "managedAgentsEnabled": true,
+  "agentBudget": 0.6,
+  "enablePaidTools": false,
+  "costConfirmationRequired": true,
+  "timeouts_json": "{\"default\": 300, \"capabilities\": {\"video\": 1800}}"
+}
+```
+
+**New/important terminal commands** (available in v1/v2 as `/poll`):
+
+- `/poll agents [search]` — List available hosted agents, with optional search
+- `/poll config community on|off` — Expose or hide compatible community chat models
+- `/poll config agents on|off` — Enable/disable Managed Agent tool exposure
+- `/poll config agent_budget 0.60` — Set a separate logical per-delegation Agent budget in Pollen
+- `/poll config enablePaidTools false` — Locally disable paid tools (not a guaranteed server spending cap)
+- `/poll config costConfirmationRequired true` — Ask for explicit confirmation above the cost threshold
+- `/poll config costThreshold 0.15` — Set the estimated tool confirmation threshold in Pollen
+- `/poll config timeouts.default 300` — Set global timeout in seconds
+- `/poll config timeouts.video 1800` — Set video timeout; also image, audio, threeD, realtime, embed
+- `/poll config timeouts.model.MODEL_ID 900` — Set a model-specific timeout (MODEL_ID without dots)
+- `/poll config timeouts.reset` — Reset timeout overrides to defaults
+- `/poll mode quest|quest_only|paid|manual` — Set chat routing/billing policy; separate from tool Cost Guard
+
+The production deployment is separate from chat routing: `quest_only` is only best-effort and may still incur upstream Paid debits; an Agent budget applies only to `polli_agent`, not direct agent chat.
 
 ---
 

@@ -26,7 +26,15 @@ You must strictly understand the 3 INDEPENDENT categories of settings before exp
 === 3. UI & NOTIFICATIONS (General display) ===
 - statusBar: Show/Hide the floating status bar notification in the OpenCode UI.
 
-Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protection!`,
+Use action=view to inspect a redacted configuration; action=update to change selected fields.
+V7 independent groups:
+- communityModelsEnabled: expose compatible community chat models.
+- managedAgentsEnabled: expose hosted polli_agent delegation.
+- agentBudget: local per-call Pollen budget for Managed Agents, NOT a server hard cap.
+- timeouts_json: JSON default/longRunning/max or capabilities or model overrides.
+- resetTimeouts: restore the timeout defaults, incompatible with timeouts_json.
+Tool-specific Cost Guard settings and conversational chat mode are independent.
+All changes may require OpenCode reload to update registered tools/models.`,
     args: {
         action: tool.schema.enum(['view', 'update'])
             .describe('Action to perform: "view" to see current configuration, "update" to modify it.'),
@@ -40,6 +48,11 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
         thresholdsQuest: tool.schema.number().optional().describe('Absolute Quest pollen floor (e.g. 0.05) for quest_only fallback.'),
         thresholdsWallet: tool.schema.number().optional().describe('Absolute Paid pollen floor (e.g. 0.5) for paid mode fallback.'),
         lang: tool.schema.enum(['en', 'fr', 'es', 'de', 'it', 'zh']).optional().describe('Plugin language for commands and toasts (en, fr, es, de, it, zh).'),
+        communityModelsEnabled: tool.schema.boolean().optional().describe('V7: expose compatible community text models in chat.'),
+        managedAgentsEnabled: tool.schema.boolean().optional().describe('V7: enable or disable the polli_agent tool (reload may be needed).'),
+        agentBudget: tool.schema.number().optional().describe('V7: logical per-run Managed Agent budget in Pollen, greater than 0 and at most 1000.'),
+        timeouts_json: tool.schema.string().optional().describe('JSON overrides: default/longRunning/max seconds, capabilities {image,video,audio,threeD,realtime,embed}, overrides {modelName: seconds}.'),
+        resetTimeouts: tool.schema.boolean().optional().describe('Restore timeout defaults. Cannot combine with timeouts_json.'),
     },
     async execute(args, context) {
         if (args.action === 'view') {
@@ -63,6 +76,71 @@ Use 'action=update' to change these. NEVER confuse Chat Mode with Tools Protecti
             if (args.enableDeveloperTools !== undefined) updates.enableDeveloperTools = args.enableDeveloperTools;
             if (args.costThreshold !== undefined) updates.costThreshold = args.costThreshold;
             if (args.lang !== undefined) updates.lang = args.lang;
+            if (args.communityModelsEnabled !== undefined) {
+                updates.communityModels = { ...currentConfig.communityModels, enabled: args.communityModelsEnabled };
+            }
+            if (args.managedAgentsEnabled !== undefined || args.agentBudget !== undefined) {
+                if (args.agentBudget !== undefined &&
+                    (!Number.isFinite(args.agentBudget) || args.agentBudget <= 0 || args.agentBudget > 1000)) {
+                    return 'Invalid agentBudget: expected a finite number in (0, 1000] Pollen.';
+                }
+                updates.managedAgents = {
+                    ...currentConfig.managedAgents,
+                    ...(args.managedAgentsEnabled !== undefined ? { enabled: args.managedAgentsEnabled } : {}),
+                    ...(args.agentBudget !== undefined ? { budget: args.agentBudget } : {}),
+                };
+            }
+            if (args.resetTimeouts === true && args.timeouts_json !== undefined) {
+                return 'Use resetTimeouts or timeouts_json, not both.';
+            }
+            if (args.resetTimeouts === true) {
+                updates.timeouts = undefined;
+            } else if (args.timeouts_json !== undefined) {
+                let patch: Record<string, any>;
+                try {
+                    const data = JSON.parse(args.timeouts_json);
+                    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                        return 'Invalid timeouts_json: expected a JSON object.';
+                    }
+                    patch = data;
+                } catch {
+                    return 'Invalid timeouts_json: expected valid JSON.';
+                }
+                const validTop = new Set(['default', 'longRunning', 'max', 'capabilities', 'overrides']);
+                if (Object.keys(patch).some(k => !validTop.has(k))) {
+                    return 'Invalid timeouts_json: unknown timeout field.';
+                }
+                const isSeconds = (n: unknown, min: number) =>
+                    typeof n === 'number' && Number.isFinite(n) && n >= min && n <= 3600;
+                for (const key of ['default', 'longRunning', 'max']) {
+                    if (patch[key] !== undefined && !isSeconds(patch[key], 1)) {
+                        return 'Invalid timeouts_json: ' + key + ' must be between 1 and 3600 seconds.';
+                    }
+                }
+                for (const key of ['capabilities', 'overrides']) {
+                    if (patch[key] === undefined) continue;
+                    if (!patch[key] || typeof patch[key] !== 'object' || Array.isArray(patch[key])) {
+                        return 'Invalid timeouts_json: ' + key + ' must be an object.';
+                    }
+                    for (const [name, seconds] of Object.entries(patch[key])) {
+                        if (!name.trim() || ['__proto__', 'prototype', 'constructor'].includes(name) ||
+                            (key === 'capabilities' && !['image', 'video', 'audio', 'threeD', 'realtime', 'embed'].includes(name)) ||
+                            !isSeconds(seconds, 10)) {
+                            return 'Invalid timeouts_json: invalid ' + key + ' name or seconds (10-3600).';
+                        }
+                    }
+                }
+                updates.timeouts = {
+                    ...(currentConfig.timeouts || {}),
+                    ...patch,
+                    ...(patch.capabilities ? {
+                        capabilities: { ...(currentConfig.timeouts?.capabilities || {}), ...patch.capabilities },
+                    } : {}),
+                    ...(patch.overrides ? {
+                        overrides: { ...(currentConfig.timeouts?.overrides || {}), ...patch.overrides },
+                    } : {}),
+                };
+            }
 
             if (args.thresholdsQuest !== undefined || args.thresholdsWallet !== undefined) {
                 updates.thresholds = { ...currentConfig.thresholds };

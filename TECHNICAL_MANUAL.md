@@ -1,5 +1,5 @@
 # 📘 Technical Manual — OpenCode Pollinations Plugin v7.0
-> **Version**: 7.0.0 | **Status**: Stable release | **Last Updated**: 2026-11-09
+> **Version**: 7.0.1 | **Status**: Stable release | **Last Updated**: 2026-11-09
 
 > **Service update, 2026-11-08:** The free Pruna P-Video Playground is discontinued. 3D may return GLB or PLY. RMBG defaults to anonymous BGNinja with BGEraser fallback and optional user-key ClearBackdrop.
 
@@ -86,6 +86,109 @@ The same generic Cost Guard and `polli_gen_confirm` dispatcher are shared by Ope
 
 ---
 
+## v7.0.1 — Decision engine and agent-facing configuration manager
+
+### polli_decision — typed decisions, not a general-purpose chat model
+
+The connected-only `polli_decision` tool accepts a Pollinations API key with `/alpha/decisions` permission, fetches the live `/models?category=decision` catalog, and sends a structured request to `/alpha/decisions`. It does **not** claim compatibility with every OpenCode chat, image, or video model. Model availability is determined by the current decision catalog and provider health.
+
+| Tool argument | Type | Required | Contract |
+|---|---|---|---|
+| `state` | string | yes | Context, 1–50,000 characters |
+| `questions_json` | string containing JSON | yes | Named JSON object, 1–20 questions, at most 30,000 characters |
+| `model` | string | no | Exact live decision-catalog ID or alias; if omitted, selects a healthy model whose metadata explicitly certifies zero Pollen price |
+| `allow_paid` | boolean | no | Must be true before considering a billed model, **still** requires Cost Guard approval |
+
+Each named question needs a `type` and a nonempty `instructions` string. Supported `type` values are `choice` (requires a `criteria` object), `score` and `noul` (probabilistic yes/no predicate). Currently `respan/span-01-lite` accepts only `noul` without criteria. A model marked free but with unknown/non-numeric pricing is **not** treated as a proven free model. Missing a zero-priced model is a safe non-execution result.
+
+Example tool arguments:
+
+```json
+{
+  "state": "A production incident interrupts customer payments.",
+  "questions_json": "{\"urgent\":{\"type\":\"noul\",\"instructions\":\"Does this require immediate escalation?\"}}",
+  "allow_paid": false
+}
+```
+
+If no verified free decision model is available, specify an eligible decision model in `model` and set `allow_paid=true`. The tool then calls `checkCostControl` (decision category) with confirmation required and a zero threshold. The **first invocation does not run the paid API call**: it creates a pending request; run `polli_gen_confirm` with `request_id` and `action=confirm` to proceed (or `cancel` to abort). The estimate is conservative, but **not an upstream enforceable spending ceiling**.
+
+### polli_config — agent configuration management (view/update)
+
+The v7.0.1 agent-facing tool `polli_config` is registered when a Pollinations key is present. `action=view` returns the current configuration with the key redacted; `action=update` accepts a partial set of fields and leaves unrelated settings unchanged. It shares persistent plugin config with the native `/poll config` command; it does not manage OpenCode's provider credentials or MCP servers.
+
+| Setting | Type / accepted values | Group |
+|---|---|---|
+| `action` | `view` or `update` (required) | Operation |
+| `mode` | `manual`, `quest`, `quest_only`, `paid` | Chat routing |
+| `thresholdsQuest`, `thresholdsWallet` | number (Pollen) | Chat fallback floors |
+| `enablePaidTools` | boolean | Local tool-spending protection |
+| `costConfirmationRequired` | boolean | Ask for user confirmation above the threshold |
+| `costThreshold` | number (Pollen) | Tool confirmation threshold |
+| `costEstimator` | boolean | Show estimated costs |
+| `communityModelsEnabled` | boolean | V7 community model listing |
+| `managedAgentsEnabled` | boolean | V7 managed-agent tool exposure |
+| `agentBudget` | number, `0 < budget <= 1000` Pollen | V7 local per-delegation Agent estimate |
+| `timeouts_json` | JSON string (validated, partial) | Timeout overrides |
+| `resetTimeouts` | boolean | Restore timeout defaults; cannot combine with `timeouts_json` |
+| `enableDeveloperTools` | boolean | Developer-only discovery tools (reload may be needed) |
+| `statusBar` | boolean | UI |
+| `lang` | `en`, `fr`, `es`, `de`, `it`, `zh` | Localization |
+
+The `timeouts_json` object supports `default`, `longRunning`, `max` (1–3600 seconds), `capabilities` keyed by `image`, `video`, `audio`, `threeD`, `realtime`, `embed` (10–3600), and `overrides` keyed by model name (10–3600). Invalid names, nonnumeric values, mixed reset+override or out-of-range budgets are rejected **without saving**.
+
+Example:
+
+```json
+{
+  "action": "update",
+  "communityModelsEnabled": true,
+  "managedAgentsEnabled": true,
+  "agentBudget": 0.6,
+  "enablePaidTools": false,
+  "costConfirmationRequired": true,
+  "costThreshold": 0.15,
+  "timeouts_json": "{\"default\":300,\"capabilities\":{\"video\":1800}}"
+}
+```
+
+Changes affecting tool registration or visible chat models may need an OpenCode reload/restart. `enablePaidTools=false` locally rejects paid-only models but cannot guarantee that Pollinations will never charge Paid Pollen for an eligible usage due to server-side bucket selection. Likewise `agentBudget` is a **local logical estimate**, not an account wallet limit.
+
+### Native /poll terminal commands — v1 and v2
+
+The slash-command parser and `polli_config` are distinct interfaces using the same plugin configuration:
+
+| Command | Purpose |
+|---|---|
+| `/poll help` | Interactive help |
+| `/poll login` / `/poll connect KEY` | Browser device pairing / manual key pairing (never post the key publicly) |
+| `/poll usage [full]` / `/poll status` | Current account stats and optional detailed usage |
+| `/poll quests` | Quest status |
+| `/poll models [category]` / `/poll pricing` | Catalog and dynamic pricing |
+| `/poll agents [search]` | List/search available hosted agents |
+| `/poll config` | Show the current redacted config and help |
+| `/poll config community on|off` | Community chat models |
+| `/poll config agents on|off` | Managed Agents tool availability |
+| `/poll config agent_budget 0.60` | Pollen budget per Managed Agent delegation |
+| `/poll config enablePaidTools false` | Local paid-only tool guard |
+| `/poll config costConfirmationRequired true` | Confirmation behavior |
+| `/poll config costThreshold 0.15` | Estimated cost threshold |
+| `/poll config threshold_quest 0.05` / `threshold_wallet 0.5` | Chat fallback floors |
+| `/poll config status_gui all|alert|none` / `logs_gui none|error|verbose` | UI notifications |
+| `/poll config cost_estimator true|false` / `status_bar true|false` | Cost display and floating bar |
+| `/poll config lang en|fr|es|de|it|zh` | Language |
+| `/poll config timeouts.default 300` | Global timeout (seconds) |
+| `/poll config timeouts.longRunning 900` / `timeouts.max 3600` | Long-running/max duration |
+| `/poll config timeouts.video 1800` | Capability override (also image/audio/threeD/realtime/embed) |
+| `/poll config timeouts.model.MODEL_ID 900` | Model override; current CLI parser expects a model identifier without dots |
+| `/poll config timeouts.reset` | Reset timeout overrides |
+| `/poll mode quest|quest_only|paid|manual` | Chat mode (independent of paid tools) |
+| `/poll fallback MODEL [AGENT]` | Free chat fallback targets |
+| `/poll infos` | Plugin information |
+
+`quest` prioritizes Quest but may use Paid downstream. `quest_only` is a best-effort local restriction rather than an upstream billing guarantee. `paid` allows paid routing; `manual` disables the automatic mode policy. Changing a setting through the tool or command never grants model permissions or funds a Pollinations account.
+
+---
 ## Source Tree Overview & Organization
 
 In v6.1.0-beta.33, to ensure the repository remains a clean distribution, redundant and administrative scripts were strictly isolated from the production source.

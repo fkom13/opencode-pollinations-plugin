@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [S
 
 ---
 
+## [7.0.1] — 2026-11-09
+
+Documentation and configuration-manager parity hotfix (no changes to media generation or model proxy). All six README languages now describe `polli_decision`, `polli_config`, the full v7 command/configuration surface, billing restrictions and concrete JSON examples. The technical manual includes the decision schema and native terminal command map. The agent-facing `polli_config` now exposes Community model visibility, Managed Agent enablement and local budget, and validated timeout overrides/reset, matching v7 native command capabilities. Isolated regression tests prevent invalid configuration writes and key disclosure.
+
 ## [7.0.0] — 2026-11-09
 
 ### Release certification (2026-11-09)

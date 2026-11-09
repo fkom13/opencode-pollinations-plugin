@@ -1,4 +1,4 @@
-# 🌸 Pollinations AI 插件 - OpenCode版 (v7.0.0)
+# 🌸 Pollinations AI 插件 - OpenCode版 (v7.0.1)
 
 > ⚠️ **Service update, November 2026.** 个人 Pruna P-Video Playground 已停用。`gen_video_free` 可能仍存在于已发布的 v6.5.5 包中，但已失效且将在 v7 删除。`gen_edit_image_free` 仍可用；`polli_gen_video` 需要认证并可能消耗 Pollen。
 
@@ -33,6 +33,8 @@
 
 - 🔁 **OpenCode v1 + v2 双栈**：这一由社区独立维护、并在 Pollinations 官方 README 中列出的插件同时支持两代 OpenCode；安装器保留 v1 的 `plugin` 与 v2 的 `plugins` 约定，共享同一 provider/tools 核心。
 - **Real QA:** 跨平台 QA：Ubuntu Node 18/20/22、Windows 和 macOS Node 22 共 5 个 CI 任务全部通过。Windows/macOS 上验证了 OpenCode v2.2.5 原生插件加载与 /poll 命令；不使用 Pollinations API 密钥，gen_palette、gen_qrcode、gen_diagram 在三个系统上均输出了真实文件。经过身份验证的模型到工具调用在 Linux 上单独验证，尚未在 Windows/macOS 上做完整验证。
+- 🧠 **全新 polli_decision：**通过兼容的决策模型执行 choice、score 和 noul 结构化决策；付费调用受 Cost Guard 和人工确认保护。
+- ⚙️ **供 Agent 使用的 polli_config：**安全查看（密钥脱敏）和更新模式、费用保护、社区模型、托管 Agent、预算以及超时设置。
 - 🤖 **社区托管 Agent 保留在模型选择器中**：为兼容旧版，`agent:true` 模型仍可直接选择，也可通过 `polli_agent` 或 `/poll agents [搜索]` 调用。⚠️ 直接聊天可能产生不固定的下游 Pollen 消耗；独立 Agent 预算仅适用于 `polli_agent`。
 - 💰 **独立 Agent 预算**：`/poll config agent_budget <pollen>` 设置每次运行的本地逻辑预算（默认 **0.60 🌻**）。托管 Prompt Agent 按 Pollinations 的 8 个模型步骤 / 16 次工具调用上限做保守估算；未知 runtime 强制确认。该预算不是服务端硬性消费上限。
 - 🌐 **受控 Community 模型**：可靠的社区文本模型仅在声明 tool calling 时动态进入聊天；`/poll config community on|off` 控制暴露。
@@ -70,6 +72,8 @@
 - 🎙️ `polli_stt` : 媲美专家的 AI 语言文字转化抓取轨道 (基于 Whisper V3)。
 - 🌐 `polli_web_search` : 面向全球互联与深度资料调研辅助模型 (`gemini-search`, `perplexity...`)。
 - 🤖 `polli_agent`：显式委派给 Pollinations Managed Agent，使用独立的单次 Agent 预算与保守的 Cost Guard 估算。
+- 🧠 `polli_decision`：实时决策模型目录提供 `choice`、`score`、`noul` 结构化答案；需要 Pollinations 密钥，付费决策需 Cost Guard 确认。
+- ⚙️ `polli_config`：使用 `action=view|update` 查看/修改聊天模式、工具费用、社区模型、托管 Agent、预算、超时、语言和界面设置。
 
 ### 🧰 免费的创作者辅助系统 (永远可以使用 — 无需密钥)
 - 🆓 `gen_edit_image_free`：免费图像生成与 **1–3 张图像编辑**，实时读取每 IP 配额，支持完整宽高比、自定义 256–1440 尺寸、seed、提示词增强和编辑 turbo。无需密钥。
@@ -93,6 +97,57 @@
 - `/poll mode <mode>` : 切换计费模式 (`quest`, `quest_only`, `paid`, `manual`)。
 - `/poll fallback` : 定义在免费服务崩溃时你的紧急底层大模型通道。
 - `/poll infos` : 详细的功能特性说明与使用指南。
+
+---
+
+
+### 🧠 v7 结构化决策与 Agent 配置管理
+
+`polli_decision` 仅使用 Pollinations 的 decision 类别模型，并非支持所有对话、图像、视频模型。必填：`state`（1–50,000 字符）、`questions_json`（JSON 字符串，包含 1–20 个命名问题，最多 30,000 字符）。每题需要 `type` 和 `instructions`；可选类型 `choice`（必须含 `criteria` 对象）、`score` 和 `noul`（二元命题的概率）。可选参数：`model`（模型 ID 或别名）、`allow_paid`（默认 false）。`respan/span-01-lite` 仅支持 `noul`。
+
+只有明确声明费率为零的模型才视为免费；未知价格不等于免费。选择计费模型时必须设置 `allow_paid=true`，并经 `polli_gen_confirm` 二次确认。Cost Guard 是本地估算保护，并非服务端硬限额。需要有决策权限的 Pollinations 密钥。
+
+**polli_decision — JSON example:**
+
+```json
+{
+  "state": "客户报告支付系统发生故障。",
+  "questions_json": "{\"urgent\": {\"type\": \"noul\", \"instructions\": \"该故障是否需要立即升级处理？\"}}"
+}
+```
+
+`polli_config` 支持 `view`（密钥脱敏）和 `update`。参数：`mode`、`costEstimator`、`statusBar`、`costConfirmationRequired`、`enablePaidTools`、`enableDeveloperTools`、`costThreshold`、`thresholdsQuest`、`thresholdsWallet`、`lang`；v7 新增：`communityModelsEnabled`、`managedAgentsEnabled`、`agentBudget`（大于 0、最多 1000 Pollen）、`timeouts_json`、`resetTimeouts`。模型/工具变化可能需要重新加载。
+
+**polli_config — JSON update example:**
+
+```json
+{
+  "action": "update",
+  "communityModelsEnabled": true,
+  "managedAgentsEnabled": true,
+  "agentBudget": 0.6,
+  "enablePaidTools": false,
+  "costConfirmationRequired": true,
+  "timeouts_json": "{\"default\": 300, \"capabilities\": {\"video\": 1800}}"
+}
+```
+
+**新增和重要终端命令**（v1/v2 均可使用 `/poll`）：
+
+- `/poll agents [search]` — 查看及搜索托管 Agent
+- `/poll config community on|off` — 显示或隐藏兼容的社区聊天模型
+- `/poll config agents on|off` — 启用/停用托管 Agent 工具
+- `/poll config agent_budget 0.60` — 按次委派的本地 Pollen 预算
+- `/poll config enablePaidTools false` — 在本地阻止付费工具
+- `/poll config costConfirmationRequired true` — 超过阈值时必须确认
+- `/poll config costThreshold 0.15` — 工具估算确认阈值（Pollen）
+- `/poll config timeouts.default 300` — 全局超时（秒）
+- `/poll config timeouts.video 1800` — 视频及其他类型超时
+- `/poll config timeouts.model.MODEL_ID 900` — 指定模型的超时（MODEL_ID 不含点）
+- `/poll config timeouts.reset` — 重置超时设置
+- `/poll mode quest|quest_only|paid|manual` — 聊天计费模式，与工具 Cost Guard 独立
+
+聊天模式、工具费用保护和 Agent 预算相互独立。`quest_only` 是本地尽力保护，不保证服务端扣费绝对为零。
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "opencode-pollinations-plugin",
   "displayName": "Pollinations",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "description": "Native Pollinations.ai Provider Plugin for OpenCode — free & premium AI models, media tools, quests, cost guards",
   "author": "fkom13",
   "license": "MIT",
@@ -41,12 +41,12 @@
   },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
-    "test": "npm run build && node scripts/tests/test-suite.cjs && node scripts/tests/test-v65.cjs && node scripts/tests/test-v7.cjs && node scripts/tests/test-i18n.cjs && node scripts/tests/test-ux-vocab.cjs && npm run test:decision && npm run test:pairing && npm run test:commands && npm run test:tools && npm run test:reasoning && npm run test:pricing && npm run test:quota && npm run test:quest-guard",
+    "test": "npm run build && node scripts/tests/test-suite.cjs && node scripts/tests/test-v65.cjs && node scripts/tests/test-v7.cjs && node scripts/tests/test-i18n.cjs && node scripts/tests/test-ux-vocab.cjs && npm run test:decision && npm run test:pairing && npm run test:commands && npm run test:tools && npm run test:reasoning && npm run test:pricing && npm run test:quota && npm run test:quest-guard && npm run test:config-manager && npm run test:docs-v7",
     "test:unit": "node scripts/tests/test-suite.cjs",
     "test:v65": "node scripts/tests/test-v65.cjs",
     "test:i18n": "node scripts/tests/test-i18n.cjs",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build && npm run test:unit && npm run test:v65 && npm run test:v7 && npm run test:i18n && npm run test:vocab && npm run test:decision && npm run test:pairing && npm run test:commands && npm run test:tools && npm run test:reasoning && npm run test:pricing && npm run test:quota && npm run test:quest-guard",
+    "prepublishOnly": "npm run build && npm run test:unit && npm run test:v65 && npm run test:v7 && npm run test:i18n && npm run test:vocab && npm run test:decision && npm run test:pairing && npm run test:commands && npm run test:tools && npm run test:reasoning && npm run test:pricing && npm run test:quota && npm run test:quest-guard && npm run test:config-manager && npm run test:docs-v7",
     "test:vocab": "node scripts/tests/test-ux-vocab.cjs",
     "test:v7": "node scripts/tests/test-v7.cjs",
     "test:decision": "node scripts/tests/test-decision.cjs",
@@ -56,7 +56,9 @@
     "test:reasoning": "node scripts/tests/test-reasoning-v1-v2.mjs",
     "test:pricing": "node scripts/tests/test-catalog-string-prices.mjs",
     "test:quota": "node scripts/tests/test-quota-native-balances.mjs",
-    "test:quest-guard": "node scripts/tests/test-quest-classification-failclosed.mjs"
+    "test:quest-guard": "node scripts/tests/test-quest-classification-failclosed.mjs",
+    "test:config-manager": "node scripts/tests/test-config-manager.mjs",
+    "test:docs-v7": "node scripts/tests/test-v7-documentation.mjs"
   },
   "files": [
     "dist",
